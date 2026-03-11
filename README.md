@@ -25,6 +25,7 @@ Useful commands:
 
 - `./scripts/install-system-deps-almalinux.sh`
 - `./scripts/bootstrap.sh`
+- `./scripts/bootstrap-apps-standby.sh`
 - `./scripts/bootstrap-workspace-repos.sh`
 - `pnpm build`
 - `pnpm typecheck`
