@@ -17,6 +17,18 @@
 
 `SHM` is not a second source of truth. It executes desired state defined by `SHP`.
 
+## Bootstrap
+
+This repository is bootstrapped as a `pnpm` workspace with a shared TypeScript base config.
+
+Useful commands:
+
+- `./scripts/install-system-deps-almalinux.sh`
+- `./scripts/bootstrap.sh`
+- `./scripts/bootstrap-workspace-repos.sh`
+- `pnpm build`
+- `pnpm typecheck`
+
 ## Communication model
 
 Recommended control channel:
@@ -130,9 +142,9 @@ Non-`/opt` runtime paths:
 - `/var/lib/shm/`
 - `/var/log/shm/`
 
-## Planned repository layout
+## Repository layout
 
-Planned structure:
+Current scaffold:
 
 - `apps/agent`: long-running node agent service
 - `apps/cli`: local maintenance and break-glass CLI

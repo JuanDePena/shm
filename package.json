@@ -1,0 +1,26 @@
+{
+  "name": "simplehost-manager",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "bootstrap": "pnpm install",
+    "build": "pnpm -r --if-present build",
+    "start:agent": "pnpm build && node apps/agent/dist/index.js",
+    "start:cli": "pnpm build && node apps/cli/dist/index.js",
+    "install:deps": "./scripts/install-system-deps-almalinux.sh",
+    "bootstrap:workspace": "./scripts/bootstrap-workspace-repos.sh",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "clean": "pnpm -r --if-present clean",
+    "test": "pnpm -r --if-present test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "typescript": "^5.8.3"
+  }
+}
