@@ -14,6 +14,7 @@ export type ShmJobStatus = "applied" | "skipped" | "failed";
 
 export interface ShmJobEnvelope {
   id: string;
+  desiredStateVersion: string;
   kind: ShmJobKind;
   nodeId: string;
   createdAt: string;
@@ -37,6 +38,55 @@ export interface ShmNodeSnapshot {
   stateDir: string;
   reportBufferDir: string;
   generatedAt: string;
+}
+
+export interface ShmNodeRegistrationRequest {
+  nodeId: string;
+  hostname: string;
+  version: string;
+  supportedJobKinds: ShmJobKind[];
+  generatedAt: string;
+}
+
+export interface ShmNodeRegistrationResponse {
+  nodeId: string;
+  acceptedAt: string;
+  pollIntervalMs: number;
+}
+
+export interface ShmJobClaimRequest {
+  nodeId: string;
+  hostname: string;
+  version: string;
+  maxJobs: number;
+}
+
+export interface ShmJobClaimResponse {
+  nodeId: string;
+  claimedAt: string;
+  jobs: ShmJobEnvelope[];
+}
+
+export interface ShmJobReportRequest {
+  nodeId: string;
+  result: ShmJobResult;
+}
+
+export interface ShmSpoolEntry {
+  schemaVersion: 1;
+  job: ShmJobEnvelope;
+  state: "claimed" | "executed";
+  claimedAt: string;
+  executedAt?: string;
+  resultStatus?: ShmJobStatus;
+}
+
+export interface ShmBufferedReport {
+  schemaVersion: 1;
+  result: ShmJobResult;
+  bufferedAt: string;
+  deliveryAttempts: number;
+  lastDeliveryError?: string;
 }
 
 export function isSupportedJobKind(value: string): value is ShmJobKind {

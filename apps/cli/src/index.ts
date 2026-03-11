@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
-import { isSupportedJobKind } from "@simplehost/manager-contracts";
+import {
+  claimJobs,
+  registerNode
+} from "@simplehost/manager-control-plane-client";
+import { isSupportedJobKind, supportedJobKinds } from "@simplehost/manager-contracts";
 import { createDemoJob, executeAllowlistedJob } from "@simplehost/manager-drivers";
 import {
   createShmRuntimeConfig,
@@ -25,12 +29,24 @@ async function createSnapshotForCli() {
   };
 }
 
+function createRegistrationPayload(snapshot: Awaited<ReturnType<typeof createSnapshotForCli>>) {
+  const config = createShmRuntimeConfig();
+
+  return {
+    nodeId: snapshot.nodeId,
+    hostname: snapshot.hostname,
+    version: config.version,
+    supportedJobKinds: [...supportedJobKinds],
+    generatedAt: snapshot.generatedAt
+  };
+}
+
 async function main(): Promise<void> {
   const config = createShmRuntimeConfig();
   const command = process.argv[2] ?? "help";
 
   if (command === "help") {
-    console.log("Usage: shm <health|paths|run-job <kind>>");
+    console.log("Usage: shm <health|paths|register|claim|run-job <kind>>");
     return;
   }
 
@@ -52,6 +68,32 @@ async function main(): Promise<void> {
         2
       )
     );
+    return;
+  }
+
+  if (command === "register") {
+    const snapshot = await createSnapshotForCli();
+    const registration = await registerNode(
+      config.controlPlaneUrl,
+      createRegistrationPayload(snapshot)
+    );
+
+    console.log(JSON.stringify(registration, null, 2));
+    return;
+  }
+
+  if (command === "claim") {
+    const snapshot = await createSnapshotForCli();
+    await registerNode(config.controlPlaneUrl, createRegistrationPayload(snapshot));
+
+    const claimed = await claimJobs(config.controlPlaneUrl, {
+      nodeId: snapshot.nodeId,
+      hostname: snapshot.hostname,
+      version: config.version,
+      maxJobs: 4
+    });
+
+    console.log(JSON.stringify(claimed, null, 2));
     return;
   }
 

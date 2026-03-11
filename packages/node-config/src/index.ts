@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -89,4 +89,21 @@ export async function readJsonFile<T>(targetPath: string): Promise<T | null> {
   } catch {
     return null;
   }
+}
+
+export async function listJsonFiles(directoryPath: string): Promise<string[]> {
+  try {
+    const entries = await readdir(directoryPath, { withFileTypes: true });
+
+    return entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .map((entry) => path.join(directoryPath, entry.name))
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+export async function removeFileIfExists(targetPath: string): Promise<void> {
+  await rm(targetPath, { force: true });
 }

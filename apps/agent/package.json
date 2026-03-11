@@ -15,6 +15,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@simplehost/manager-control-plane-client": "workspace:*",
     "@simplehost/manager-contracts": "workspace:*",
     "@simplehost/manager-drivers": "workspace:*",
     "@simplehost/manager-node-config": "workspace:*",

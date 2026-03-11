@@ -28,6 +28,10 @@ Useful commands:
 - `./scripts/bootstrap-workspace-repos.sh`
 - `pnpm build`
 - `pnpm typecheck`
+- `pnpm start:agent`
+- `pnpm start:cli`
+- `node apps/cli/dist/index.js register`
+- `node apps/cli/dist/index.js claim`
 
 ## Communication model
 
@@ -52,6 +56,14 @@ Recommended lifecycle:
 
 Supported operation types should remain explicit and driver-based. Do not design around arbitrary shell execution from the UI or API.
 
+Current bootstrap implementation:
+
+1. the agent writes node identity and local execution state under `/var/lib/shm`
+2. the agent registers itself with `SHP`
+3. the agent flushes buffered reports from previous runs
+4. the agent claims allowlisted jobs from `SHP`
+5. the agent executes them locally and reports the results back
+
 ## Local persistence
 
 Recommended persistence model for `SHM`:
@@ -72,6 +84,12 @@ Recommended persisted JSON files:
 - `/var/lib/shm/last-applied-state.json`
 - `/var/lib/shm/job-spool/<job-id>.json`
 - `/var/lib/shm/report-buffer/<job-id>.json`
+
+Current bootstrap file semantics:
+
+- `job-spool/<job-id>.json`: claimed or executed local work unit
+- `report-buffer/<job-id>.json`: completed result waiting to be delivered to `SHP`
+- `last-applied-state.json`: last desired-state revision seen by the agent
 
 Allowed local persisted state:
 
@@ -159,7 +177,7 @@ Current scaffold:
 
 - [`/opt/simplehost/AGENTS.md`](/opt/simplehost/AGENTS.md)
 - [`/opt/simplehost/repos/simplehost-panel/README.md`](/opt/simplehost/repos/simplehost-panel/README.md)
-- [`/opt/simplehost/repos/simplehost-platform-config/runbooks/ARQUITECTURE.md`](/opt/simplehost/repos/simplehost-platform-config/runbooks/ARQUITECTURE.md)
-- [`/opt/simplehost/repos/simplehost-platform-config/runbooks/CONTAINERS.md`](/opt/simplehost/repos/simplehost-platform-config/runbooks/CONTAINERS.md)
-- [`/opt/simplehost/repos/simplehost-platform-config/runbooks/DATABASES.md`](/opt/simplehost/repos/simplehost-platform-config/runbooks/DATABASES.md)
-- [`/opt/simplehost/repos/simplehost-platform-config/runbooks/PROXY.md`](/opt/simplehost/repos/simplehost-platform-config/runbooks/PROXY.md)
+- [`/opt/simplehost/repos/simplehost-platform-config/docs/ARQUITECTURE.md`](/opt/simplehost/repos/simplehost-platform-config/docs/ARQUITECTURE.md)
+- [`/opt/simplehost/repos/simplehost-platform-config/docs/CONTAINERS.md`](/opt/simplehost/repos/simplehost-platform-config/docs/CONTAINERS.md)
+- [`/opt/simplehost/repos/simplehost-platform-config/docs/DATABASES.md`](/opt/simplehost/repos/simplehost-platform-config/docs/DATABASES.md)
+- [`/opt/simplehost/repos/simplehost-platform-config/docs/PROXY.md`](/opt/simplehost/repos/simplehost-platform-config/docs/PROXY.md)

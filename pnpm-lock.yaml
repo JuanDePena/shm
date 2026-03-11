@@ -20,6 +20,9 @@ importers:
       '@simplehost/manager-contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@simplehost/manager-control-plane-client':
+        specifier: workspace:*
+        version: link:../../packages/control-plane-client
       '@simplehost/manager-drivers':
         specifier: workspace:*
         version: link:../../packages/drivers
@@ -35,6 +38,9 @@ importers:
       '@simplehost/manager-contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@simplehost/manager-control-plane-client':
+        specifier: workspace:*
+        version: link:../../packages/control-plane-client
       '@simplehost/manager-drivers':
         specifier: workspace:*
         version: link:../../packages/drivers
@@ -46,6 +52,12 @@ importers:
         version: link:../../packages/renderers
 
   packages/contracts: {}
+
+  packages/control-plane-client:
+    dependencies:
+      '@simplehost/manager-contracts':
+        specifier: workspace:*
+        version: link:../contracts
 
   packages/drivers:
     dependencies:

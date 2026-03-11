@@ -44,6 +44,7 @@ export function createDemoJob(
 ): ShmJobEnvelope {
   return {
     id: `job-${Date.now()}`,
+    desiredStateVersion: `rev-${Date.now()}`,
     kind,
     nodeId,
     createdAt: new Date().toISOString(),
