@@ -161,6 +161,35 @@ async function validateApacheConfiguration(): Promise<{
   };
 }
 
+async function reloadApacheService(): Promise<{
+  command: string | null;
+  skipped: boolean;
+}> {
+  const candidates = [
+    ["systemctl", ["reload", "httpd.service"]],
+    ["apachectl", ["-k", "graceful"]],
+    ["httpd", ["-k", "graceful"]]
+  ] as const;
+
+  for (const [command, args] of candidates) {
+    const result = await runOptionalCommand(command, [...args]);
+
+    if (!result.ran) {
+      continue;
+    }
+
+    return {
+      command: `${command} ${args.join(" ")}`,
+      skipped: false
+    };
+  }
+
+  return {
+    command: null,
+    skipped: true
+  };
+}
+
 async function writeFileAtomic(targetPath: string, content: string): Promise<void> {
   const tempPath = `${targetPath}.tmp`;
 
@@ -200,6 +229,91 @@ function absoluteDnsName(zoneName: string, recordName: string): string {
 interface PowerDnsZoneSnapshot {
   id: string;
   rrsets?: Array<Record<string, unknown>>;
+}
+
+function normalizePowerDnsRecordContent(value: string, type: string): string {
+  const trimmed = value.trim();
+
+  if (type === "NS" || type === "CNAME") {
+    return trimmed.replace(/\.$/, "").toLowerCase();
+  }
+
+  return trimmed;
+}
+
+async function verifyPowerDnsZone(
+  payload: DnsSyncPayload,
+  context: DriverExecutionContext
+): Promise<{ rrsetCount: number; validatedRecordCount: number }> {
+  const zoneState = await readPowerDnsZone(payload, context);
+
+  if (!zoneState.exists || !zoneState.zone) {
+    throw new Error(`PowerDNS zone ${payload.zoneName} could not be read back after PATCH.`);
+  }
+
+  const actualGroups = new Map<string, Set<string>>();
+
+  for (const rrset of zoneState.zone.rrsets ?? []) {
+    const nameValue = typeof rrset.name === "string" ? rrset.name : "";
+    const typeValue = typeof rrset.type === "string" ? rrset.type : "";
+    const recordsValue = Array.isArray(rrset.records) ? rrset.records : [];
+    const groupKey = `${nameValue.replace(/\.$/, "").toLowerCase()}:${typeValue}`;
+    const contents = actualGroups.get(groupKey) ?? new Set<string>();
+
+    for (const record of recordsValue) {
+      if (!record || typeof record !== "object" || Array.isArray(record)) {
+        continue;
+      }
+
+      const contentValue = (record as Record<string, unknown>).content;
+
+      if (typeof contentValue === "string") {
+        contents.add(normalizePowerDnsRecordContent(contentValue, typeValue));
+      }
+    }
+
+    actualGroups.set(groupKey, contents);
+  }
+
+  const expectedGroups = new Map<string, Set<string>>();
+
+  for (const record of payload.records) {
+    const absoluteName = absoluteDnsName(payload.zoneName, record.name);
+    const key = `${absoluteName.replace(/\.$/, "").toLowerCase()}:${record.type}`;
+    const contents = expectedGroups.get(key) ?? new Set<string>();
+    contents.add(normalizePowerDnsRecordContent(record.value, record.type));
+    expectedGroups.set(key, contents);
+  }
+
+  const nsKey = `${payload.zoneName.replace(/\.$/, "").toLowerCase()}:NS`;
+  const nsContents = expectedGroups.get(nsKey) ?? new Set<string>();
+
+  for (const nameserver of payload.nameservers) {
+    nsContents.add(normalizePowerDnsRecordContent(nameserver, "NS"));
+  }
+
+  expectedGroups.set(nsKey, nsContents);
+
+  for (const [groupKey, expectedContents] of expectedGroups) {
+    const actualContents = actualGroups.get(groupKey);
+
+    if (!actualContents) {
+      throw new Error(`PowerDNS verification failed: missing rrset ${groupKey}.`);
+    }
+
+    for (const content of expectedContents) {
+      if (!actualContents.has(content)) {
+        throw new Error(
+          `PowerDNS verification failed: ${groupKey} is missing content ${content}.`
+        );
+      }
+    }
+  }
+
+  return {
+    rrsetCount: (zoneState.zone.rrsets ?? []).length,
+    validatedRecordCount: payload.records.length + payload.nameservers.length
+  };
 }
 
 async function readPowerDnsZone(
@@ -418,6 +532,7 @@ async function executeProxyRenderJob(
     try {
       await writeFileAtomic(deployedPath, rendered);
       const validation = await validateApacheConfiguration();
+      const reload = await reloadApacheService();
 
       if (hadExistingFile) {
         await rm(backupPath, { force: true });
@@ -433,14 +548,29 @@ async function executeProxyRenderJob(
           deployedPath,
           serverName: payload.serverName,
           aliases: payload.serverAliases ?? [],
-          validation
+          validation,
+          reload
         }
       );
     } catch (error) {
+      const rollback: Record<string, unknown> = {
+        rolledBack: false
+      };
+
       if (hadExistingFile) {
         await rename(backupPath, deployedPath);
       } else {
         await rm(deployedPath, { force: true });
+      }
+
+      rollback.rolledBack = true;
+
+      try {
+        rollback.validation = await validateApacheConfiguration();
+        rollback.reload = await reloadApacheService();
+      } catch (rollbackError) {
+        rollback.rollbackError =
+          rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
       }
 
       return createFailedResult(
@@ -450,7 +580,7 @@ async function executeProxyRenderJob(
         {
           stagedPath,
           deployedPath,
-          rolledBack: true
+          rollback
         }
       );
     }
@@ -477,6 +607,7 @@ async function executeDnsSyncJob(
       renderDnsZoneFile(payload)
     );
     const { createdZone } = await upsertPowerDnsRecords(payload, context);
+    const verification = await verifyPowerDnsZone(payload, context);
 
     return createCompletedResult(
       job,
@@ -488,9 +619,7 @@ async function executeDnsSyncJob(
         recordCount: payload.records.length,
         serial: payload.serial,
         nameservers: payload.nameservers,
-        validation: {
-          recordCount: payload.records.length
-        },
+        validation: verification,
         rollback: {
           strategy: "pdns-api-atomic-patch",
           createdZone

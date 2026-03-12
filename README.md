@@ -28,6 +28,7 @@ Useful commands:
 - `./scripts/bootstrap-apps-standby.sh`
 - `./scripts/bootstrap-workspace-repos.sh`
 - `./scripts/install-release.sh`
+- `./scripts/deploy-release.sh`
 - `./scripts/build-release-bundle.sh`
 - `./scripts/install-bundle.sh`
 - `./scripts/rollback-release.sh`
@@ -95,8 +96,8 @@ Current bootstrap implementation:
 
 Current real driver coverage:
 
-- `proxy.render`: writes staged and deployed Apache vhost files, validates Apache config, and rolls back on failure
-- `dns.sync`: stages a zone file, validates the payload, and reconciles it through the PowerDNS HTTP API
+- `proxy.render`: writes staged and deployed Apache vhost files, validates Apache config, reloads Apache when possible, and rolls back on failure
+- `dns.sync`: stages a zone file, validates the payload, reconciles it through the PowerDNS HTTP API, and reads the zone back to verify the published rrsets
 - `postgres.reconcile`: creates or updates PostgreSQL roles and databases through an admin URL, validates login, and rolls back newly created objects on failure
 - `mariadb.reconcile`: creates or updates MariaDB users and databases through an admin URL, validates login, and rolls back newly created objects on failure
 
