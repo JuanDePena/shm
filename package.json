@@ -1,6 +1,6 @@
 {
   "name": "simplehost-manager",
-  "version": "2603.12.03",
+  "version": "2603.12.06",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.32.1",
@@ -10,7 +10,10 @@
   },
   "scripts": {
     "bootstrap": "pnpm install",
-    "build": "pnpm -r --if-present build",
+    "build": "pnpm --filter @simplehost/manager-contracts build && pnpm --filter @simplehost/manager-control-plane-client build && pnpm --filter @simplehost/manager-node-config build && pnpm --filter @simplehost/manager-renderers build && pnpm --filter @simplehost/manager-testing build && pnpm --filter @simplehost/manager-drivers build && pnpm --filter @simplehost/manager-agent build && pnpm --filter @simplehost/manager-cli build",
+    "bundle:release": "./scripts/build-release-bundle.sh",
+    "install:bundle": "./scripts/install-bundle.sh",
+    "release:rollback": "./scripts/rollback-release.sh",
     "version:set": "node scripts/set-version.mjs",
     "version:today": "node scripts/set-version.mjs --today",
     "start:agent": "pnpm build && node apps/agent/dist/index.js",

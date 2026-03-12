@@ -1,5 +1,7 @@
-import { mkdir, rename, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { copyFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import mysql from "mysql2/promise";
 import { Pool } from "pg";
@@ -22,6 +24,8 @@ import {
   renderApacheVhost,
   renderDnsZoneFile
 } from "@simplehost/manager-renderers";
+
+const execFileAsync = promisify(execFile);
 
 export interface DriverExecutionContext {
   nodeId: string;
@@ -65,6 +69,98 @@ function createCompletedResult(
   };
 }
 
+function createFailedResult(
+  job: ShmJobEnvelope,
+  context: DriverExecutionContext,
+  summary: string,
+  details?: Record<string, unknown>
+): ShmJobResult {
+  return createCompletedResult(job, context, "failed", summary, details);
+}
+
+function assertSafeIdentifier(value: string, label: string): void {
+  if (!/^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(value)) {
+    throw new Error(`${label} ${value} is not a safe SQL identifier.`);
+  }
+}
+
+function assertSafeDnsLabel(value: string, label: string): void {
+  if (value === "@") {
+    return;
+  }
+
+  if (!/^[A-Za-z0-9*]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(value)) {
+    throw new Error(`${label} ${value} is not a safe DNS label.`);
+  }
+}
+
+async function pathExists(targetPath: string): Promise<boolean> {
+  try {
+    await readFile(targetPath, "utf8");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function runOptionalCommand(
+  command: string,
+  args: string[]
+): Promise<
+  | { ran: false }
+  | {
+      ran: true;
+      stdout: string;
+      stderr: string;
+    }
+> {
+  try {
+    const result = await execFileAsync(command, args, {
+      encoding: "utf8"
+    });
+
+    return {
+      ran: true,
+      stdout: result.stdout,
+      stderr: result.stderr
+    };
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: string }).code === "ENOENT"
+    ) {
+      return { ran: false };
+    }
+
+    throw error;
+  }
+}
+
+async function validateApacheConfiguration(): Promise<{
+  command: string | null;
+  skipped: boolean;
+}> {
+  for (const command of ["apachectl", "httpd"]) {
+    const result = await runOptionalCommand(command, ["-t"]);
+
+    if (!result.ran) {
+      continue;
+    }
+
+    return {
+      command,
+      skipped: false
+    };
+  }
+
+  return {
+    command: null,
+    skipped: true
+  };
+}
+
 async function writeFileAtomic(targetPath: string, content: string): Promise<void> {
   const tempPath = `${targetPath}.tmp`;
 
@@ -101,10 +197,15 @@ function absoluteDnsName(zoneName: string, recordName: string): string {
   return `${recordName.replace(/\.$/, "")}.${normalizedZone}.`;
 }
 
-async function ensurePowerDnsZone(
+interface PowerDnsZoneSnapshot {
+  id: string;
+  rrsets?: Array<Record<string, unknown>>;
+}
+
+async function readPowerDnsZone(
   payload: DnsSyncPayload,
   context: DriverExecutionContext
-): Promise<void> {
+): Promise<{ exists: boolean; zone?: PowerDnsZoneSnapshot }> {
   const { apiUrl, apiKey, serverId } = context.services.pdns;
 
   if (!apiUrl || !apiKey) {
@@ -116,17 +217,48 @@ async function ensurePowerDnsZone(
     `/api/v1/servers/${encodeURIComponent(serverId)}/zones/${encodeURIComponent(zoneId)}`,
     apiUrl
   );
-  const createEndpoint = new URL(
-    `/api/v1/servers/${encodeURIComponent(serverId)}/zones`,
-    apiUrl
-  );
-  const zoneResponse = await fetch(zoneEndpoint, {
+  const response = await fetch(zoneEndpoint, {
     headers: {
       "x-api-key": apiKey
     }
   });
 
-  if (zoneResponse.status === 404) {
+  if (response.status === 404) {
+    return {
+      exists: false
+    };
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `PowerDNS zone lookup failed (${response.status}): ${await response.text()}`
+    );
+  }
+
+  return {
+    exists: true,
+    zone: (await response.json()) as PowerDnsZoneSnapshot
+  };
+}
+
+async function ensurePowerDnsZone(
+  payload: DnsSyncPayload,
+  context: DriverExecutionContext
+): Promise<{ created: boolean }> {
+  const { apiUrl, apiKey, serverId } = context.services.pdns;
+
+  if (!apiUrl || !apiKey) {
+    throw new Error("SHM_PDNS_API_URL and SHM_PDNS_API_KEY are required.");
+  }
+
+  const zoneId = `${payload.zoneName.replace(/\.$/, "")}.`;
+  const createEndpoint = new URL(
+    `/api/v1/servers/${encodeURIComponent(serverId)}/zones`,
+    apiUrl
+  );
+  const zoneState = await readPowerDnsZone(payload, context);
+
+  if (!zoneState.exists) {
     const createResponse = await fetch(createEndpoint, {
       method: "POST",
       headers: {
@@ -146,27 +278,27 @@ async function ensurePowerDnsZone(
       );
     }
 
-    return;
+    return {
+      created: true
+    };
   }
 
-  if (!zoneResponse.ok) {
-    throw new Error(
-      `PowerDNS zone lookup failed (${zoneResponse.status}): ${await zoneResponse.text()}`
-    );
-  }
+  return {
+    created: false
+  };
 }
 
 async function upsertPowerDnsRecords(
   payload: DnsSyncPayload,
   context: DriverExecutionContext
-): Promise<void> {
+): Promise<{ createdZone: boolean }> {
   const { apiUrl, apiKey, serverId } = context.services.pdns;
 
   if (!apiUrl || !apiKey) {
     throw new Error("SHM_PDNS_API_URL and SHM_PDNS_API_KEY are required.");
   }
 
-  await ensurePowerDnsZone(payload, context);
+  const zoneState = await ensurePowerDnsZone(payload, context);
 
   const zoneId = `${payload.zoneName.replace(/\.$/, "")}.`;
   const zoneEndpoint = new URL(
@@ -232,6 +364,34 @@ async function upsertPowerDnsRecords(
       `PowerDNS zone update failed (${patchResponse.status}): ${await patchResponse.text()}`
     );
   }
+
+  return {
+    createdZone: zoneState.created
+  };
+}
+
+function validateDnsPayload(payload: DnsSyncPayload): void {
+  if (!/^[A-Za-z0-9.-]+$/.test(payload.zoneName.replace(/\.$/, ""))) {
+    throw new Error(`Zone name ${payload.zoneName} is invalid.`);
+  }
+
+  if (payload.nameservers.length < 2) {
+    throw new Error(`Zone ${payload.zoneName} must declare at least two nameservers.`);
+  }
+
+  for (const nameserver of payload.nameservers) {
+    if (!/^[A-Za-z0-9.-]+$/.test(nameserver.replace(/\.$/, ""))) {
+      throw new Error(`Nameserver ${nameserver} is invalid.`);
+    }
+  }
+
+  for (const record of payload.records) {
+    assertSafeDnsLabel(record.name, `Record name for ${payload.zoneName}`);
+
+    if (record.ttl <= 0) {
+      throw new Error(`Record TTL for ${payload.zoneName} must be positive.`);
+    }
+  }
 }
 
 async function executeProxyRenderJob(
@@ -239,31 +399,68 @@ async function executeProxyRenderJob(
   context: DriverExecutionContext,
   payload: ProxyRenderPayload
 ): Promise<ShmJobResult> {
-  const fileName = `${payload.vhostName}.conf`;
-  const rendered = renderApacheVhost(payload);
-  const stagedPath = await writeRenderedFile(
-    context.services.httpd.stagingDir,
-    fileName,
-    rendered
-  );
-  const deployedPath = await writeRenderedFile(
-    context.services.httpd.sitesDir,
-    fileName,
-    rendered
-  );
+  try {
+    const fileName = `${payload.vhostName}.conf`;
+    const rendered = renderApacheVhost(payload);
+    const stagedPath = await writeRenderedFile(
+      context.services.httpd.stagingDir,
+      fileName,
+      rendered
+    );
+    const deployedPath = path.join(context.services.httpd.sitesDir, fileName);
+    const backupPath = `${deployedPath}.bak`;
+    const hadExistingFile = await pathExists(deployedPath);
 
-  return createCompletedResult(
-    job,
-    context,
-    "applied",
-    `Installed Apache vhost ${payload.serverName}.`,
-    {
-      stagedPath,
-      deployedPath,
-      serverName: payload.serverName,
-      aliases: payload.serverAliases ?? []
+    if (hadExistingFile) {
+      await copyFile(deployedPath, backupPath);
     }
-  );
+
+    try {
+      await writeFileAtomic(deployedPath, rendered);
+      const validation = await validateApacheConfiguration();
+
+      if (hadExistingFile) {
+        await rm(backupPath, { force: true });
+      }
+
+      return createCompletedResult(
+        job,
+        context,
+        "applied",
+        `Installed Apache vhost ${payload.serverName}.`,
+        {
+          stagedPath,
+          deployedPath,
+          serverName: payload.serverName,
+          aliases: payload.serverAliases ?? [],
+          validation
+        }
+      );
+    } catch (error) {
+      if (hadExistingFile) {
+        await rename(backupPath, deployedPath);
+      } else {
+        await rm(deployedPath, { force: true });
+      }
+
+      return createFailedResult(
+        job,
+        context,
+        error instanceof Error ? error.message : String(error),
+        {
+          stagedPath,
+          deployedPath,
+          rolledBack: true
+        }
+      );
+    }
+  } catch (error) {
+    return createFailedResult(
+      job,
+      context,
+      error instanceof Error ? error.message : String(error)
+    );
+  }
 }
 
 async function executeDnsSyncJob(
@@ -271,27 +468,42 @@ async function executeDnsSyncJob(
   context: DriverExecutionContext,
   payload: DnsSyncPayload
 ): Promise<ShmJobResult> {
-  const zoneFileName = `${payload.zoneName.replace(/[^a-zA-Z0-9.-]/g, "_")}.zone`;
-  const stagedPath = await writeRenderedFile(
-    context.services.pdns.stagingDir,
-    zoneFileName,
-    renderDnsZoneFile(payload)
-  );
+  try {
+    validateDnsPayload(payload);
+    const zoneFileName = `${payload.zoneName.replace(/[^a-zA-Z0-9.-]/g, "_")}.zone`;
+    const stagedPath = await writeRenderedFile(
+      context.services.pdns.stagingDir,
+      zoneFileName,
+      renderDnsZoneFile(payload)
+    );
+    const { createdZone } = await upsertPowerDnsRecords(payload, context);
 
-  await upsertPowerDnsRecords(payload, context);
-
-  return createCompletedResult(
-    job,
-    context,
-    "applied",
-    `Synchronized PowerDNS zone ${payload.zoneName}.`,
-    {
-      stagedPath,
-      recordCount: payload.records.length,
-      serial: payload.serial,
-      nameservers: payload.nameservers
-    }
-  );
+    return createCompletedResult(
+      job,
+      context,
+      "applied",
+      `Synchronized PowerDNS zone ${payload.zoneName}.`,
+      {
+        stagedPath,
+        recordCount: payload.records.length,
+        serial: payload.serial,
+        nameservers: payload.nameservers,
+        validation: {
+          recordCount: payload.records.length
+        },
+        rollback: {
+          strategy: "pdns-api-atomic-patch",
+          createdZone
+        }
+      }
+    );
+  } catch (error) {
+    return createFailedResult(
+      job,
+      context,
+      error instanceof Error ? error.message : String(error)
+    );
+  }
 }
 
 async function executePostgresReconcileJob(
@@ -314,6 +526,13 @@ async function executePostgresReconcileJob(
   });
 
   try {
+    assertSafeIdentifier(payload.roleName, "PostgreSQL role");
+    assertSafeIdentifier(payload.databaseName, "PostgreSQL database");
+
+    let createdRole = false;
+    let createdDatabase = false;
+
+    try {
     const roleExists = await pool.query<{ exists: number }>(
       `SELECT 1 AS exists
        FROM pg_roles
@@ -327,6 +546,7 @@ async function executePostgresReconcileJob(
           payload.roleName
         )} LOGIN PASSWORD ${quotePostgresLiteral(payload.password)}`
       );
+      createdRole = true;
     } else {
       await pool.query(
         `ALTER ROLE ${quotePostgresIdentifier(
@@ -344,6 +564,7 @@ async function executePostgresReconcileJob(
 
     if (databaseExists.rows.length === 0) {
       await pool.query(`CREATE DATABASE ${quotePostgresIdentifier(payload.databaseName)}`);
+      createdDatabase = true;
     }
 
     await pool.query(
@@ -378,17 +599,75 @@ async function executePostgresReconcileJob(
       await targetDatabasePool.end();
     }
 
-    return createCompletedResult(
-      job,
-      context,
-      "applied",
-      `Reconciled PostgreSQL database ${payload.databaseName}.`,
-      {
-        appSlug: payload.appSlug,
-        databaseName: payload.databaseName,
-        roleName: payload.roleName
+      targetDatabaseUrl.username = payload.roleName;
+      targetDatabaseUrl.password = payload.password;
+
+      const validationPool = new Pool({
+        connectionString: targetDatabaseUrl.toString(),
+        application_name: "simplehost-manager-postgres-driver-validation"
+      });
+
+      try {
+        await validationPool.query("SELECT current_database(), current_user");
+      } finally {
+        await validationPool.end();
       }
-    );
+
+      return createCompletedResult(
+        job,
+        context,
+        "applied",
+        `Reconciled PostgreSQL database ${payload.databaseName}.`,
+        {
+          appSlug: payload.appSlug,
+          databaseName: payload.databaseName,
+          roleName: payload.roleName,
+          validation: {
+            loginVerified: true
+          }
+        }
+      );
+    } catch (error) {
+      const rollback: Record<string, unknown> = {
+        createdRole,
+        createdDatabase,
+        rolledBack: false
+      };
+
+      try {
+        if (createdDatabase) {
+          await pool.query(
+            `SELECT pg_terminate_backend(pid)
+             FROM pg_stat_activity
+             WHERE datname = $1
+               AND pid <> pg_backend_pid()`,
+            [payload.databaseName]
+          );
+          await pool.query(`DROP DATABASE ${quotePostgresIdentifier(payload.databaseName)}`);
+        }
+
+        if (createdRole) {
+          await pool.query(`DROP ROLE ${quotePostgresIdentifier(payload.roleName)}`);
+        }
+
+        rollback.rolledBack = true;
+      } catch (rollbackError) {
+        rollback.rollbackError =
+          rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+      }
+
+      return createFailedResult(
+        job,
+        context,
+        error instanceof Error ? error.message : String(error),
+        {
+          appSlug: payload.appSlug,
+          databaseName: payload.databaseName,
+          roleName: payload.roleName,
+          rollback
+        }
+      );
+    }
   } finally {
     await pool.end();
   }
@@ -411,39 +690,112 @@ async function executeMariadbReconcileJob(
   const connection = await mysql.createConnection(context.services.mariadb.adminUrl);
 
   try {
+    assertSafeIdentifier(payload.userName, "MariaDB user");
+    assertSafeIdentifier(payload.databaseName, "MariaDB database");
+
     const databaseIdentifier = connection.escapeId(payload.databaseName);
     const userLiteral = connection.escape(payload.userName);
     const passwordLiteral = connection.escape(payload.password);
+    let createdDatabase = false;
+    let createdUser = false;
 
-    await connection.query(
-      `CREATE DATABASE IF NOT EXISTS ${databaseIdentifier}
-         CHARACTER SET utf8mb4
-         COLLATE utf8mb4_unicode_ci`
-    );
-    await connection.query(
-      `CREATE USER IF NOT EXISTS ${userLiteral}@'%'
-         IDENTIFIED BY ${passwordLiteral}`
-    );
-    await connection.query(
-      `ALTER USER ${userLiteral}@'%'
-         IDENTIFIED BY ${passwordLiteral}`
-    );
-    await connection.query(
-      `GRANT ALL PRIVILEGES ON ${databaseIdentifier}.* TO ${userLiteral}@'%'`
-    );
-    await connection.query("FLUSH PRIVILEGES");
+    try {
+      const [databaseRows] = (await connection.query(
+        `SELECT 1 AS existing
+         FROM INFORMATION_SCHEMA.SCHEMATA
+         WHERE SCHEMA_NAME = ?`,
+        [payload.databaseName]
+      )) as unknown as [Array<{ existing: number }>, unknown];
+      const [userRows] = (await connection.query(
+        `SELECT 1 AS existing
+         FROM mysql.user
+         WHERE user = ?
+           AND host = '%'`,
+        [payload.userName]
+      )) as unknown as [Array<{ existing: number }>, unknown];
 
-    return createCompletedResult(
-      job,
-      context,
-      "applied",
-      `Reconciled MariaDB database ${payload.databaseName}.`,
-      {
-        appSlug: payload.appSlug,
-        databaseName: payload.databaseName,
-        userName: payload.userName
+      createdDatabase = databaseRows.length === 0;
+      createdUser = userRows.length === 0;
+
+      await connection.query(
+        `CREATE DATABASE IF NOT EXISTS ${databaseIdentifier}
+           CHARACTER SET utf8mb4
+           COLLATE utf8mb4_unicode_ci`
+      );
+      await connection.query(
+        `CREATE USER IF NOT EXISTS ${userLiteral}@'%'
+           IDENTIFIED BY ${passwordLiteral}`
+      );
+      await connection.query(
+        `ALTER USER ${userLiteral}@'%'
+           IDENTIFIED BY ${passwordLiteral}`
+      );
+      await connection.query(
+        `GRANT ALL PRIVILEGES ON ${databaseIdentifier}.* TO ${userLiteral}@'%'`
+      );
+      await connection.query("FLUSH PRIVILEGES");
+
+      const validationUrl = new URL(context.services.mariadb.adminUrl);
+      validationUrl.username = payload.userName;
+      validationUrl.password = payload.password;
+      validationUrl.pathname = `/${payload.databaseName}`;
+      const validationConnection = await mysql.createConnection(validationUrl.toString());
+
+      try {
+        await validationConnection.query("SELECT current_user(), database()");
+      } finally {
+        await validationConnection.end();
       }
-    );
+
+      return createCompletedResult(
+        job,
+        context,
+        "applied",
+        `Reconciled MariaDB database ${payload.databaseName}.`,
+        {
+          appSlug: payload.appSlug,
+          databaseName: payload.databaseName,
+          userName: payload.userName,
+          validation: {
+            loginVerified: true
+          }
+        }
+      );
+    } catch (error) {
+      const rollback: Record<string, unknown> = {
+        createdDatabase,
+        createdUser,
+        rolledBack: false
+      };
+
+      try {
+        if (createdDatabase) {
+          await connection.query(`DROP DATABASE IF EXISTS ${databaseIdentifier}`);
+        }
+
+        if (createdUser) {
+          await connection.query(`DROP USER IF EXISTS ${userLiteral}@'%'`);
+          await connection.query("FLUSH PRIVILEGES");
+        }
+
+        rollback.rolledBack = true;
+      } catch (rollbackError) {
+        rollback.rollbackError =
+          rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+      }
+
+      return createFailedResult(
+        job,
+        context,
+        error instanceof Error ? error.message : String(error),
+        {
+          appSlug: payload.appSlug,
+          databaseName: payload.databaseName,
+          userName: payload.userName,
+          rollback
+        }
+      );
+    }
   } finally {
     await connection.end();
   }
