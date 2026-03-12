@@ -38,6 +38,7 @@ export interface ShmNodeSnapshot {
   stateDir: string;
   reportBufferDir: string;
   generatedAt: string;
+  nodeToken?: string;
 }
 
 export interface ShmNodeRegistrationRequest {
@@ -52,6 +53,7 @@ export interface ShmNodeRegistrationResponse {
   nodeId: string;
   acceptedAt: string;
   pollIntervalMs: number;
+  nodeToken?: string;
 }
 
 export interface ShmJobClaimRequest {
@@ -91,4 +93,69 @@ export interface ShmBufferedReport {
 
 export function isSupportedJobKind(value: string): value is ShmJobKind {
   return supportedJobKinds.includes(value as ShmJobKind);
+}
+
+export interface ProxyRenderPayload {
+  vhostName: string;
+  serverName: string;
+  serverAliases?: string[];
+  documentRoot: string;
+  tls?: boolean;
+}
+
+export interface DnsRecordPayload {
+  name: string;
+  type: "A" | "AAAA" | "CNAME" | "TXT";
+  value: string;
+  ttl: number;
+}
+
+export interface DnsSyncPayload {
+  zoneName: string;
+  serial: number;
+  records: DnsRecordPayload[];
+}
+
+export function isProxyRenderPayload(value: unknown): value is ProxyRenderPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Record<string, unknown>;
+  return (
+    typeof payload.vhostName === "string" &&
+    typeof payload.serverName === "string" &&
+    typeof payload.documentRoot === "string" &&
+    (payload.serverAliases === undefined ||
+      (Array.isArray(payload.serverAliases) &&
+        payload.serverAliases.every((item) => typeof item === "string"))) &&
+    (payload.tls === undefined || typeof payload.tls === "boolean")
+  );
+}
+
+export function isDnsSyncPayload(value: unknown): value is DnsSyncPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Record<string, unknown>;
+  return (
+    typeof payload.zoneName === "string" &&
+    typeof payload.serial === "number" &&
+    Array.isArray(payload.records) &&
+    payload.records.every((record) => {
+      if (!record || typeof record !== "object") {
+        return false;
+      }
+
+      const candidate = record as Record<string, unknown>;
+
+      return (
+        typeof candidate.name === "string" &&
+        typeof candidate.type === "string" &&
+        typeof candidate.value === "string" &&
+        typeof candidate.ttl === "number"
+      );
+    })
+  );
 }

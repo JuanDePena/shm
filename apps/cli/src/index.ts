@@ -72,10 +72,15 @@ async function main(): Promise<void> {
   }
 
   if (command === "register") {
+    if (!config.enrollmentToken) {
+      throw new Error("SHM_ENROLLMENT_TOKEN is required for register.");
+    }
+
     const snapshot = await createSnapshotForCli();
     const registration = await registerNode(
       config.controlPlaneUrl,
-      createRegistrationPayload(snapshot)
+      createRegistrationPayload(snapshot),
+      config.enrollmentToken
     );
 
     console.log(JSON.stringify(registration, null, 2));
@@ -83,15 +88,24 @@ async function main(): Promise<void> {
   }
 
   if (command === "claim") {
+    if (!config.enrollmentToken) {
+      throw new Error("SHM_ENROLLMENT_TOKEN is required for claim.");
+    }
+
     const snapshot = await createSnapshotForCli();
-    await registerNode(config.controlPlaneUrl, createRegistrationPayload(snapshot));
+    const registration = await registerNode(
+      config.controlPlaneUrl,
+      createRegistrationPayload(snapshot),
+      config.enrollmentToken
+    );
+    const nodeToken = registration.nodeToken ?? config.enrollmentToken;
 
     const claimed = await claimJobs(config.controlPlaneUrl, {
       nodeId: snapshot.nodeId,
       hostname: snapshot.hostname,
       version: config.version,
       maxJobs: 4
-    });
+    }, nodeToken);
 
     console.log(JSON.stringify(claimed, null, 2));
     return;
@@ -108,7 +122,8 @@ async function main(): Promise<void> {
 
     const result = await executeAllowlistedJob(createDemoJob(config.nodeId, kind), {
       nodeId: config.nodeId,
-      hostname: config.hostname
+      hostname: config.hostname,
+      stateDir: config.stateDir
     });
 
     console.log(renderJobResult(result));

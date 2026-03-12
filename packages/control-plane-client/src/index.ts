@@ -25,12 +25,14 @@ async function readJsonResponse<T>(response: Response): Promise<T> {
 async function postJson<TRequest, TResponse>(
   baseUrl: string,
   pathname: string,
-  payload: TRequest
+  payload: TRequest,
+  authToken?: string
 ): Promise<TResponse> {
   const response = await fetch(new URL(pathname, baseUrl), {
     method: "POST",
     headers: {
-      "content-type": "application/json; charset=utf-8"
+      "content-type": "application/json; charset=utf-8",
+      ...(authToken ? { authorization: `Bearer ${authToken}` } : {})
     },
     body: JSON.stringify(payload)
   });
@@ -40,21 +42,24 @@ async function postJson<TRequest, TResponse>(
 
 export function registerNode(
   baseUrl: string,
-  payload: ShmNodeRegistrationRequest
+  payload: ShmNodeRegistrationRequest,
+  authToken?: string
 ): Promise<ShmNodeRegistrationResponse> {
-  return postJson(baseUrl, "/v1/nodes/register", payload);
+  return postJson(baseUrl, "/v1/nodes/register", payload, authToken);
 }
 
 export function claimJobs(
   baseUrl: string,
-  payload: ShmJobClaimRequest
+  payload: ShmJobClaimRequest,
+  authToken?: string
 ): Promise<ShmJobClaimResponse> {
-  return postJson(baseUrl, "/v1/jobs/claim", payload);
+  return postJson(baseUrl, "/v1/jobs/claim", payload, authToken);
 }
 
 export function reportJob(
   baseUrl: string,
-  payload: ShmJobReportRequest
+  payload: ShmJobReportRequest,
+  authToken?: string
 ): Promise<{ accepted: true }> {
-  return postJson(baseUrl, "/v1/jobs/report", payload);
+  return postJson(baseUrl, "/v1/jobs/report", payload, authToken);
 }

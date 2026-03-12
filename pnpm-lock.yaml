@@ -64,6 +64,9 @@ importers:
       '@simplehost/manager-contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@simplehost/manager-renderers':
+        specifier: workspace:*
+        version: link:../renderers
 
   packages/node-config: {}
 

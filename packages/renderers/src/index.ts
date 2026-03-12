@@ -1,4 +1,9 @@
-import type { ShmJobResult, ShmNodeSnapshot } from "@simplehost/manager-contracts";
+import type {
+  DnsSyncPayload,
+  ProxyRenderPayload,
+  ShmJobResult,
+  ShmNodeSnapshot
+} from "@simplehost/manager-contracts";
 
 export function renderNodeSnapshot(snapshot: ShmNodeSnapshot): string {
   return [
@@ -19,5 +24,41 @@ export function renderJobResult(result: ShmJobResult): string {
     `Status: ${result.status}`,
     `Summary: ${result.summary}`,
     `Completed at: ${result.completedAt}`
+  ].join("\n");
+}
+
+export function renderApacheVhost(payload: ProxyRenderPayload): string {
+  const aliases = payload.serverAliases ?? [];
+
+  return [
+    "<VirtualHost *:80>",
+    `  ServerName ${payload.serverName}`,
+    ...aliases.map((alias) => `  ServerAlias ${alias}`),
+    `  DocumentRoot ${payload.documentRoot}`,
+    "  <Directory " + payload.documentRoot + ">",
+    "    AllowOverride All",
+    "    Require all granted",
+    "  </Directory>",
+    payload.tls ? "  # TLS is expected to be terminated upstream." : "  # Plain HTTP bootstrap vhost.",
+    "</VirtualHost>"
+  ].join("\n");
+}
+
+export function renderDnsZoneFile(payload: DnsSyncPayload): string {
+  return [
+    `$ORIGIN ${payload.zoneName}.`,
+    `$TTL 300`,
+    `@ IN SOA ns1.${payload.zoneName}. hostmaster.${payload.zoneName}. (`,
+    `  ${payload.serial}`,
+    "  300",
+    "  300",
+    "  1209600",
+    "  300",
+    ")",
+    `@ IN NS ns1.${payload.zoneName}.`,
+    `@ IN NS ns2.${payload.zoneName}.`,
+    ...payload.records.map(
+      (record) => `${record.name} ${record.ttl} IN ${record.type} ${record.value}`
+    )
   ].join("\n");
 }

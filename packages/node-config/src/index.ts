@@ -6,6 +6,7 @@ export interface ShmRuntimeConfig {
   nodeId: string;
   hostname: string;
   controlPlaneUrl: string;
+  enrollmentToken: string | null;
   configPath: string;
   stateDir: string;
   logDir: string;
@@ -34,6 +35,10 @@ function readPositiveInt(value: string | undefined, fallback: number): number {
   return parsed;
 }
 
+function readOptionalString(value: string | undefined): string | null {
+  return value && value.trim().length > 0 ? value.trim() : null;
+}
+
 export function createShmRuntimeConfig(
   env: NodeJS.ProcessEnv = process.env
 ): ShmRuntimeConfig {
@@ -46,6 +51,7 @@ export function createShmRuntimeConfig(
       env.SHM_CONTROL_PLANE_URL,
       "https://shp.internal.example"
     ),
+    enrollmentToken: readOptionalString(env.SHM_ENROLLMENT_TOKEN),
     configPath: readString(env.SHM_CONFIG_PATH, "/etc/shm/config.yaml"),
     stateDir: readString(env.SHM_STATE_DIR, "/var/lib/shm"),
     logDir: readString(env.SHM_LOG_DIR, "/var/log/shm"),

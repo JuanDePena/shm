@@ -45,6 +45,12 @@ Recommended control channel:
 
 Keep `SHM` non-public.
 
+Current bootstrap auth model:
+
+- `SHM_ENROLLMENT_TOKEN` is used only until `SHP` issues a node bearer token
+- the issued node bearer token is then persisted under `/var/lib/shm/node-identity.json`
+- job claim and report requests use the issued node bearer token, not the bootstrap token
+
 ## Execution model
 
 Recommended lifecycle:
@@ -60,7 +66,7 @@ Supported operation types should remain explicit and driver-based. Do not design
 Current bootstrap implementation:
 
 1. the agent writes node identity and local execution state under `/var/lib/shm`
-2. the agent registers itself with `SHP`
+2. the agent registers itself with `SHP` using an enrollment token until `SHP` issues a node token
 3. the agent flushes buffered reports from previous runs
 4. the agent claims allowlisted jobs from `SHP`
 5. the agent executes them locally and reports the results back
@@ -95,6 +101,7 @@ Current bootstrap file semantics:
 Allowed local persisted state:
 
 - node identity and enrollment metadata
+- issued node bearer token for control-plane authentication
 - last applied desired-state revision or hashes
 - local job execution checkpoints
 - retry and backoff metadata

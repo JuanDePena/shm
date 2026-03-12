@@ -42,11 +42,31 @@ async function writeLastAppliedState(
   });
 }
 
+async function readStoredNodeToken(): Promise<string | undefined> {
+  const config = createShmRuntimeConfig();
+  const statePaths = getShmStatePaths(config);
+  const existingIdentity = await readJsonFile<{
+    schemaVersion: 1;
+    nodeToken?: string;
+  }>(statePaths.nodeIdentityFile);
+
+  return existingIdentity?.nodeToken;
+}
+
 export async function createNodeSnapshot(): Promise<ShmNodeSnapshot> {
   const config = createShmRuntimeConfig();
   const statePaths = getShmStatePaths(config);
 
   await ensureShmStateDirectories(config);
+  const existingIdentity = await readJsonFile<{
+    schemaVersion: 1;
+    nodeId: string;
+    hostname: string;
+    controlPlaneUrl: string;
+    configPath: string;
+    generatedAt: string;
+    nodeToken?: string;
+  }>(statePaths.nodeIdentityFile);
 
   const snapshot: ShmNodeSnapshot = {
     nodeId: config.nodeId,
@@ -54,7 +74,8 @@ export async function createNodeSnapshot(): Promise<ShmNodeSnapshot> {
     status: "ready",
     stateDir: config.stateDir,
     reportBufferDir: statePaths.reportBufferDir,
-    generatedAt: new Date().toISOString()
+    generatedAt: new Date().toISOString(),
+    nodeToken: existingIdentity?.nodeToken
   };
 
   await writeJsonFileAtomic(statePaths.nodeIdentityFile, {
@@ -63,7 +84,8 @@ export async function createNodeSnapshot(): Promise<ShmNodeSnapshot> {
     hostname: config.hostname,
     controlPlaneUrl: config.controlPlaneUrl,
     configPath: config.configPath,
-    generatedAt: snapshot.generatedAt
+    generatedAt: snapshot.generatedAt,
+    nodeToken: existingIdentity?.nodeToken
   });
 
   await writeLastAppliedState("bootstrap");
@@ -87,7 +109,8 @@ function createRegistrationRequest(
 
 async function deliverBufferedReport(
   reportFile: string,
-  reportPayload: ShmBufferedReport
+  reportPayload: ShmBufferedReport,
+  nodeToken: string
 ): Promise<boolean> {
   const config = createShmRuntimeConfig();
   const request: ShmJobReportRequest = {
@@ -96,7 +119,7 @@ async function deliverBufferedReport(
   };
 
   try {
-    await reportJob(config.controlPlaneUrl, request);
+    await reportJob(config.controlPlaneUrl, request, nodeToken);
     await removeFileIfExists(reportFile);
     return true;
   } catch (error) {
@@ -113,6 +136,11 @@ async function flushBufferedReports(): Promise<number> {
   const config = createShmRuntimeConfig();
   const reportFiles = await listJsonFiles(getShmStatePaths(config).reportBufferDir);
   let delivered = 0;
+  const nodeToken = await readStoredNodeToken();
+
+  if (!nodeToken) {
+    return delivered;
+  }
 
   for (const reportFile of reportFiles) {
     const payload = await readJsonFile<ShmBufferedReport>(reportFile);
@@ -122,7 +150,7 @@ async function flushBufferedReports(): Promise<number> {
       continue;
     }
 
-    if (await deliverBufferedReport(reportFile, payload)) {
+    if (await deliverBufferedReport(reportFile, payload, nodeToken)) {
       delivered += 1;
     }
   }
@@ -136,6 +164,7 @@ async function executeClaimedJob(job: ShmJobEnvelope): Promise<void> {
   const claimedAt = new Date().toISOString();
   const spoolPath = `${statePaths.jobSpoolDir}/${job.id}.json`;
   const reportPath = `${statePaths.reportBufferDir}/${job.id}.json`;
+  const nodeToken = await readStoredNodeToken();
 
   await writeJsonFileAtomic(spoolPath, {
     schemaVersion: 1,
@@ -146,7 +175,8 @@ async function executeClaimedJob(job: ShmJobEnvelope): Promise<void> {
 
   const result = await executeAllowlistedJob(job, {
     nodeId: config.nodeId,
-    hostname: config.hostname
+    hostname: config.hostname,
+    stateDir: config.stateDir
   });
   const bufferedAt = new Date().toISOString();
 
@@ -169,12 +199,19 @@ async function executeClaimedJob(job: ShmJobEnvelope): Promise<void> {
   await writeLastAppliedState(job.desiredStateVersion, job.id);
   console.log(renderJobResult(result));
 
-  if (await deliverBufferedReport(reportPath, {
-    schemaVersion: 1,
-    result,
-    bufferedAt,
-    deliveryAttempts: 0
-  })) {
+  if (
+    nodeToken &&
+    (await deliverBufferedReport(
+      reportPath,
+      {
+        schemaVersion: 1,
+        result,
+        bufferedAt,
+        deliveryAttempts: 0
+      },
+      nodeToken
+    ))
+  ) {
     await removeFileIfExists(spoolPath);
   }
 }
@@ -182,10 +219,34 @@ async function executeClaimedJob(job: ShmJobEnvelope): Promise<void> {
 export async function runManagerAgentCycle(): Promise<void> {
   const config = createShmRuntimeConfig();
   const snapshot = await createNodeSnapshot();
+  const registrationToken = snapshot.nodeToken ?? config.enrollmentToken;
+
+  if (!registrationToken) {
+    throw new Error(
+      "SHM_ENROLLMENT_TOKEN is required until SHP issues a node bearer token."
+    );
+  }
+
   const registration = await registerNode(
     config.controlPlaneUrl,
-    createRegistrationRequest(snapshot)
+    createRegistrationRequest(snapshot),
+    registrationToken
   );
+  const nodeToken = registration.nodeToken ?? snapshot.nodeToken;
+
+  if (!nodeToken) {
+    throw new Error(`SHP did not issue a node token for ${config.nodeId}.`);
+  }
+
+  await writeJsonFileAtomic(getShmStatePaths(config).nodeIdentityFile, {
+    schemaVersion: 1,
+    nodeId: config.nodeId,
+    hostname: config.hostname,
+    controlPlaneUrl: config.controlPlaneUrl,
+    configPath: config.configPath,
+    generatedAt: snapshot.generatedAt,
+    nodeToken
+  });
 
   console.log(renderNodeSnapshot(snapshot));
   console.log(
@@ -203,7 +264,7 @@ export async function runManagerAgentCycle(): Promise<void> {
     hostname: config.hostname,
     version: config.version,
     maxJobs: 4
-  });
+  }, nodeToken);
 
   if (claimed.jobs.length === 0) {
     console.log("No jobs available.");
