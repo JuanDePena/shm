@@ -425,6 +425,10 @@ async function executeMariadbReconcileJob(
          IDENTIFIED BY ${passwordLiteral}`
     );
     await connection.query(
+      `ALTER USER ${userLiteral}@'%'
+         IDENTIFIED BY ${passwordLiteral}`
+    );
+    await connection.query(
       `GRANT ALL PRIVILEGES ON ${databaseIdentifier}.* TO ${userLiteral}@'%'`
     );
     await connection.query("FLUSH PRIVILEGES");
