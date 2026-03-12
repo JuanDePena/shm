@@ -68,7 +68,7 @@ export function createShmRuntimeConfig(
     hostname,
     controlPlaneUrl: readString(
       env.SHM_CONTROL_PLANE_URL,
-      "https://shp.internal.example"
+      "http://127.0.0.1:3100"
     ),
     enrollmentToken: readOptionalString(env.SHM_ENROLLMENT_TOKEN),
     configPath: readString(env.SHM_CONFIG_PATH, "/etc/shm/config.yaml"),
