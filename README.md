@@ -67,6 +67,7 @@ Current bootstrap auth model:
 - `SHM_ENROLLMENT_TOKEN` is used only until `SHP` issues a node bearer token
 - the issued node bearer token is then persisted under `/var/lib/shm/node-identity.json`
 - job claim and report requests use the issued node bearer token, not the bootstrap token
+- `SHM_NODE_ID` must match the node IDs used by `SHP` inventory, for example `primary` and `secondary`
 
 ## Execution model
 

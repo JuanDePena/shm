@@ -48,10 +48,15 @@ async function readStoredNodeToken(): Promise<string | undefined> {
   const statePaths = getShmStatePaths(config);
   const existingIdentity = await readJsonFile<{
     schemaVersion: 1;
+    nodeId: string;
     nodeToken?: string;
   }>(statePaths.nodeIdentityFile);
 
-  return existingIdentity?.nodeToken;
+  if (!existingIdentity || existingIdentity.nodeId !== config.nodeId) {
+    return undefined;
+  }
+
+  return existingIdentity.nodeToken;
 }
 
 export async function createNodeSnapshot(): Promise<ShmNodeSnapshot> {
@@ -68,6 +73,8 @@ export async function createNodeSnapshot(): Promise<ShmNodeSnapshot> {
     generatedAt: string;
     nodeToken?: string;
   }>(statePaths.nodeIdentityFile);
+  const existingNodeToken =
+    existingIdentity?.nodeId === config.nodeId ? existingIdentity.nodeToken : undefined;
 
   const snapshot: ShmNodeSnapshot = {
     nodeId: config.nodeId,
@@ -76,7 +83,7 @@ export async function createNodeSnapshot(): Promise<ShmNodeSnapshot> {
     stateDir: config.stateDir,
     reportBufferDir: statePaths.reportBufferDir,
     generatedAt: new Date().toISOString(),
-    nodeToken: existingIdentity?.nodeToken
+    nodeToken: existingNodeToken
   };
 
   await writeJsonFileAtomic(statePaths.nodeIdentityFile, {
@@ -86,7 +93,7 @@ export async function createNodeSnapshot(): Promise<ShmNodeSnapshot> {
     controlPlaneUrl: config.controlPlaneUrl,
     configPath: config.configPath,
     generatedAt: snapshot.generatedAt,
-    nodeToken: existingIdentity?.nodeToken
+    nodeToken: existingNodeToken
   });
 
   await writeLastAppliedState("bootstrap");
