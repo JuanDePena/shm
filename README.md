@@ -34,6 +34,13 @@ Useful commands:
 - `node apps/cli/dist/index.js register`
 - `node apps/cli/dist/index.js claim`
 
+Node-local platform artifacts owned by this repository:
+
+- `platform/wireguard/`
+- `platform/pdns/`
+- `platform/postgresql/apps/`
+- `platform/mariadb/`
+
 ## Communication model
 
 Recommended control channel:
@@ -174,6 +181,7 @@ Current scaffold:
 
 - `apps/agent`: long-running node agent service
 - `apps/cli`: local maintenance and break-glass CLI
+- `platform`: node-local service templates and bootstrap material for `WireGuard`, `PowerDNS`, `postgresql-apps`, and `MariaDB`
 - `packages/contracts`: shared job and status schemas
 - `packages/drivers`: service adapters for DNS, Apache, databases, backups, and mail
 - `packages/node-config`: node identity, TLS, and config loading

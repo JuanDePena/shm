@@ -1,0 +1,21 @@
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '__APP_ROLE__') THEN
+        EXECUTE format(
+            'CREATE ROLE %I LOGIN PASSWORD %L',
+            '__APP_ROLE__',
+            '__APP_PASSWORD__'
+        );
+    END IF;
+END
+$$;
+
+SELECT format('CREATE DATABASE %I OWNER %I', '__APP_DATABASE__', '__APP_ROLE__')
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM pg_database
+    WHERE datname = '__APP_DATABASE__'
+)
+\gexec
+
+REVOKE ALL ON DATABASE __APP_DATABASE__ FROM PUBLIC;
