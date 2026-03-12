@@ -18,7 +18,23 @@ if [[ ! -d "${release_dir}" ]]; then
   "${repo_root}/scripts/install-release.sh" "${version}"
 fi
 
+ensure_env_version() {
+  local target_path="$1"
+  local example_path="$2"
+
+  if [[ ! -f "${target_path}" ]]; then
+    install -m 0640 "${example_path}" "${target_path}"
+  fi
+
+  if grep -q '^SHM_VERSION=' "${target_path}"; then
+    sed -i "s/^SHM_VERSION=.*/SHM_VERSION=${version}/" "${target_path}"
+  else
+    printf '\nSHM_VERSION=%s\n' "${version}" >>"${target_path}"
+  fi
+}
+
 activate_local() {
+  ensure_env_version /etc/shm/agent.env "${release_dir}/packaging/env/shm-agent.env.example"
   systemctl daemon-reload
 
   if [[ "${mode}" == "disabled" ]]; then
@@ -44,6 +60,8 @@ activate_remote() {
      ln -sfn '${remote_release_dir}' '${runtime_root}/current' && \
      install -m 0644 '${remote_release_dir}/packaging/systemd/shm-agent.service' /etc/systemd/system/shm-agent.service && \
      install -m 0644 '${remote_release_dir}/packaging/env/shm-agent.env.example' /etc/shm/agent.env.example && \
+     if [ ! -f /etc/shm/agent.env ]; then install -m 0640 '${remote_release_dir}/packaging/env/shm-agent.env.example' /etc/shm/agent.env; fi && \
+     if grep -q '^SHM_VERSION=' /etc/shm/agent.env; then sed -i 's/^SHM_VERSION=.*/SHM_VERSION=${version}/' /etc/shm/agent.env; else printf '\nSHM_VERSION=${version}\n' >> /etc/shm/agent.env; fi && \
      systemctl daemon-reload"
 
   if [[ "${mode}" == "disabled" ]]; then
