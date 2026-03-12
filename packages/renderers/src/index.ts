@@ -48,15 +48,14 @@ export function renderDnsZoneFile(payload: DnsSyncPayload): string {
   return [
     `$ORIGIN ${payload.zoneName}.`,
     `$TTL 300`,
-    `@ IN SOA ns1.${payload.zoneName}. hostmaster.${payload.zoneName}. (`,
+    `@ IN SOA ${payload.nameservers[0]}. hostmaster.${payload.zoneName}. (`,
     `  ${payload.serial}`,
     "  300",
     "  300",
     "  1209600",
     "  300",
     ")",
-    `@ IN NS ns1.${payload.zoneName}.`,
-    `@ IN NS ns2.${payload.zoneName}.`,
+    ...payload.nameservers.map((nameserver) => `@ IN NS ${nameserver}.`),
     ...payload.records.map(
       (record) => `${record.name} ${record.ttl} IN ${record.type} ${record.value}`
     )

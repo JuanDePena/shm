@@ -113,7 +113,22 @@ export interface DnsRecordPayload {
 export interface DnsSyncPayload {
   zoneName: string;
   serial: number;
+  nameservers: string[];
   records: DnsRecordPayload[];
+}
+
+export interface PostgresReconcilePayload {
+  appSlug: string;
+  databaseName: string;
+  roleName: string;
+  password: string;
+}
+
+export interface MariadbReconcilePayload {
+  appSlug: string;
+  databaseName: string;
+  userName: string;
+  password: string;
 }
 
 export function isProxyRenderPayload(value: unknown): value is ProxyRenderPayload {
@@ -156,6 +171,40 @@ export function isDnsSyncPayload(value: unknown): value is DnsSyncPayload {
         typeof candidate.value === "string" &&
         typeof candidate.ttl === "number"
       );
-    })
+    }) &&
+    Array.isArray(payload.nameservers) &&
+    payload.nameservers.every((item) => typeof item === "string")
+  );
+}
+
+export function isPostgresReconcilePayload(
+  value: unknown
+): value is PostgresReconcilePayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Record<string, unknown>;
+  return (
+    typeof payload.appSlug === "string" &&
+    typeof payload.databaseName === "string" &&
+    typeof payload.roleName === "string" &&
+    typeof payload.password === "string"
+  );
+}
+
+export function isMariadbReconcilePayload(
+  value: unknown
+): value is MariadbReconcilePayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Record<string, unknown>;
+  return (
+    typeof payload.appSlug === "string" &&
+    typeof payload.databaseName === "string" &&
+    typeof payload.userName === "string" &&
+    typeof payload.password === "string"
   );
 }

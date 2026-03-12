@@ -123,7 +123,8 @@ async function main(): Promise<void> {
     const result = await executeAllowlistedJob(createDemoJob(config.nodeId, kind), {
       nodeId: config.nodeId,
       hostname: config.hostname,
-      stateDir: config.stateDir
+      stateDir: config.stateDir,
+      services: config.services
     });
 
     console.log(renderJobResult(result));

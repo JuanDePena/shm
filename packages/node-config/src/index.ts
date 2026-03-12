@@ -12,6 +12,24 @@ export interface ShmRuntimeConfig {
   logDir: string;
   heartbeatMs: number;
   version: string;
+  services: {
+    httpd: {
+      sitesDir: string;
+      stagingDir: string;
+    };
+    pdns: {
+      apiUrl: string | null;
+      apiKey: string | null;
+      serverId: string;
+      stagingDir: string;
+    };
+    postgresql: {
+      adminUrl: string | null;
+    };
+    mariadb: {
+      adminUrl: string | null;
+    };
+  };
 }
 
 export interface ShmStatePaths {
@@ -43,6 +61,7 @@ export function createShmRuntimeConfig(
   env: NodeJS.ProcessEnv = process.env
 ): ShmRuntimeConfig {
   const hostname = readString(env.SHM_HOSTNAME, os.hostname());
+  const stateDir = readString(env.SHM_STATE_DIR, "/var/lib/shm");
 
   return {
     nodeId: readString(env.SHM_NODE_ID, hostname),
@@ -53,10 +72,34 @@ export function createShmRuntimeConfig(
     ),
     enrollmentToken: readOptionalString(env.SHM_ENROLLMENT_TOKEN),
     configPath: readString(env.SHM_CONFIG_PATH, "/etc/shm/config.yaml"),
-    stateDir: readString(env.SHM_STATE_DIR, "/var/lib/shm"),
+    stateDir,
     logDir: readString(env.SHM_LOG_DIR, "/var/log/shm"),
     heartbeatMs: readPositiveInt(env.SHM_HEARTBEAT_MS, 10000),
-    version: readString(env.SHM_VERSION, "0.1.0")
+    version: readString(env.SHM_VERSION, "0.1.0"),
+    services: {
+      httpd: {
+        sitesDir: readString(env.SHM_HTTPD_SITES_DIR, "/etc/httpd/conf.d"),
+        stagingDir: readString(
+          env.SHM_HTTPD_STAGING_DIR,
+          path.join(stateDir, "staging", "httpd")
+        )
+      },
+      pdns: {
+        apiUrl: readOptionalString(env.SHM_PDNS_API_URL),
+        apiKey: readOptionalString(env.SHM_PDNS_API_KEY),
+        serverId: readString(env.SHM_PDNS_SERVER_ID, "localhost"),
+        stagingDir: readString(
+          env.SHM_PDNS_STAGING_DIR,
+          path.join(stateDir, "staging", "pdns")
+        )
+      },
+      postgresql: {
+        adminUrl: readOptionalString(env.SHM_POSTGRES_ADMIN_URL)
+      },
+      mariadb: {
+        adminUrl: readOptionalString(env.SHM_MARIADB_ADMIN_URL)
+      }
+    }
   };
 }
 

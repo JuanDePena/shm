@@ -27,6 +27,7 @@ Useful commands:
 - `./scripts/bootstrap.sh`
 - `./scripts/bootstrap-apps-standby.sh`
 - `./scripts/bootstrap-workspace-repos.sh`
+- `./scripts/install-release.sh`
 - `pnpm build`
 - `pnpm typecheck`
 - `pnpm start:agent`
@@ -36,6 +37,8 @@ Useful commands:
 
 Node-local platform artifacts owned by this repository:
 
+- `packaging/env/`
+- `packaging/systemd/`
 - `platform/wireguard/`
 - `platform/pdns/`
 - `platform/postgresql/apps/`
@@ -77,6 +80,13 @@ Current bootstrap implementation:
 3. the agent flushes buffered reports from previous runs
 4. the agent claims allowlisted jobs from `SHP`
 5. the agent executes them locally and reports the results back
+
+Current real driver coverage:
+
+- `proxy.render`: writes staged and deployed Apache vhost files
+- `dns.sync`: stages a zone file and reconciles it through the PowerDNS HTTP API
+- `postgres.reconcile`: creates or updates PostgreSQL roles and databases through an admin URL
+- `mariadb.reconcile`: creates or updates MariaDB users and databases through an admin URL
 
 ## Local persistence
 
@@ -181,6 +191,7 @@ Current scaffold:
 
 - `apps/agent`: long-running node agent service
 - `apps/cli`: local maintenance and break-glass CLI
+- `packaging`: product-owned install artifacts for packaged `SHM` installs
 - `platform`: node-local service templates and bootstrap material for `WireGuard`, `PowerDNS`, `postgresql-apps`, and `MariaDB`
 - `packages/contracts`: shared job and status schemas
 - `packages/drivers`: service adapters for DNS, Apache, databases, backups, and mail

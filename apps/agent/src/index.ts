@@ -173,11 +173,28 @@ async function executeClaimedJob(job: ShmJobEnvelope): Promise<void> {
     claimedAt
   } satisfies ShmSpoolEntry);
 
-  const result = await executeAllowlistedJob(job, {
-    nodeId: config.nodeId,
-    hostname: config.hostname,
-    stateDir: config.stateDir
-  });
+  const result = await (async () => {
+    try {
+      return await executeAllowlistedJob(job, {
+        nodeId: config.nodeId,
+        hostname: config.hostname,
+        stateDir: config.stateDir,
+        services: config.services
+      });
+    } catch (error) {
+      return {
+        jobId: job.id,
+        kind: job.kind,
+        nodeId: config.nodeId,
+        status: "failed" as const,
+        summary: error instanceof Error ? error.message : String(error),
+        details: {
+          thrown: true
+        },
+        completedAt: new Date().toISOString()
+      };
+    }
+  })();
   const bufferedAt = new Date().toISOString();
 
   await writeJsonFileAtomic(reportPath, {
