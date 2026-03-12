@@ -1,6 +1,6 @@
 {
   "name": "simplehost-manager",
-  "version": "0.1.0",
+  "version": "2603.12.00",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.32.1",
@@ -11,6 +11,8 @@
   "scripts": {
     "bootstrap": "pnpm install",
     "build": "pnpm -r --if-present build",
+    "version:set": "node scripts/set-version.mjs",
+    "version:today": "node scripts/set-version.mjs --today",
     "start:agent": "pnpm build && node apps/agent/dist/index.js",
     "start:cli": "pnpm build && node apps/cli/dist/index.js",
     "install:deps": "./scripts/install-system-deps-almalinux.sh",

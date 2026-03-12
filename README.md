@@ -28,12 +28,19 @@ Useful commands:
 - `./scripts/bootstrap-apps-standby.sh`
 - `./scripts/bootstrap-workspace-repos.sh`
 - `./scripts/install-release.sh`
+- `pnpm version:set -- 2603.12.00`
+- `pnpm version:today`
 - `pnpm build`
 - `pnpm typecheck`
 - `pnpm start:agent`
 - `pnpm start:cli`
 - `node apps/cli/dist/index.js register`
 - `node apps/cli/dist/index.js claim`
+
+Release version format:
+
+- `YYMM.DD.NN`
+- first stamped release: `2603.12.00`
 
 Node-local platform artifacts owned by this repository:
 
