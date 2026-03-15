@@ -1,6 +1,10 @@
+import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { realpathSync } from "node:fs";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 import {
   claimJobs,
@@ -9,10 +13,12 @@ import {
 } from "@simplehost/manager-control-plane-client";
 import {
   supportedJobKinds,
+  type CodeServerServiceSnapshot,
   type ShmBufferedReport,
   type ShmJobEnvelope,
   type ShmJobReportRequest,
   type ShmNodeRegistrationRequest,
+  type ShmNodeRuntimeSnapshot,
   type ShmNodeSnapshot,
   type ShmSpoolEntry
 } from "@simplehost/manager-contracts";
@@ -27,6 +33,8 @@ import {
   writeJsonFileAtomic
 } from "@simplehost/manager-node-config";
 import { renderJobResult, renderNodeSnapshot } from "@simplehost/manager-renderers";
+
+const execFileAsync = promisify(execFile);
 
 async function writeLastAppliedState(
   desiredStateVersion: string,
@@ -102,7 +110,8 @@ export async function createNodeSnapshot(): Promise<ShmNodeSnapshot> {
 }
 
 function createRegistrationRequest(
-  snapshot: ShmNodeSnapshot
+  snapshot: ShmNodeSnapshot,
+  runtimeSnapshot?: ShmNodeRuntimeSnapshot
 ): ShmNodeRegistrationRequest {
   const config = createShmRuntimeConfig();
 
@@ -111,7 +120,78 @@ function createRegistrationRequest(
     hostname: snapshot.hostname,
     version: config.version,
     supportedJobKinds: [...supportedJobKinds],
-    generatedAt: snapshot.generatedAt
+    generatedAt: snapshot.generatedAt,
+    runtimeSnapshot
+  };
+}
+
+async function commandOutput(
+  command: string,
+  args: string[]
+): Promise<string | undefined> {
+  try {
+    const result = await execFileAsync(command, args, {
+      encoding: "utf8"
+    });
+    return result.stdout.trim();
+  } catch {
+    return undefined;
+  }
+}
+
+function extractCodeServerVersion(value?: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const match = value.match(/\b\d+\.\d+\.\d+\b/);
+  return match?.[0];
+}
+
+async function inspectCodeServer(): Promise<CodeServerServiceSnapshot> {
+  const config = createShmRuntimeConfig();
+  const checkedAt = new Date().toISOString();
+  const serviceName = config.services.codeServer.serviceName;
+  const enabledState = await commandOutput("systemctl", ["is-enabled", serviceName]);
+  const activeState = await commandOutput("systemctl", ["is-active", serviceName]);
+  const rpmVersionOutput = await commandOutput("rpm", [
+    "-q",
+    "code-server",
+    "--qf",
+    "%{VERSION}-%{RELEASE}\n"
+  ]);
+  const versionOutput = await commandOutput("code-server", ["--version"]);
+
+  const configContent = await readFile(config.services.codeServer.configPath, "utf8").catch(
+    () => ""
+  );
+  const settingsContent = await readFile(
+    config.services.codeServer.settingsPath,
+    "utf8"
+  ).catch(() => "");
+
+  const bindAddress = /^bind-addr:\s*(.+)$/m.exec(configContent)?.[1]?.trim();
+  const authMode = /^auth:\s*(.+)$/m.exec(configContent)?.[1]?.trim();
+
+  return {
+    serviceName,
+    enabled: enabledState !== undefined && enabledState !== "disabled",
+    active: activeState === "active",
+    version:
+      extractCodeServerVersion(rpmVersionOutput) ??
+      extractCodeServerVersion(versionOutput),
+    bindAddress,
+    authMode,
+    settingsProfileHash: settingsContent
+      ? createHash("sha256").update(settingsContent).digest("hex").slice(0, 12)
+      : undefined,
+    checkedAt
+  };
+}
+
+async function collectRuntimeSnapshot(): Promise<ShmNodeRuntimeSnapshot> {
+  return {
+    codeServer: await inspectCodeServer()
   };
 }
 
@@ -244,6 +324,7 @@ async function executeClaimedJob(job: ShmJobEnvelope): Promise<void> {
 export async function runManagerAgentCycle(): Promise<void> {
   const config = createShmRuntimeConfig();
   const snapshot = await createNodeSnapshot();
+  const runtimeSnapshot = await collectRuntimeSnapshot();
   const registrationToken = snapshot.nodeToken ?? config.enrollmentToken;
 
   if (!registrationToken) {
@@ -254,7 +335,7 @@ export async function runManagerAgentCycle(): Promise<void> {
 
   const registration = await registerNode(
     config.controlPlaneUrl,
-    createRegistrationRequest(snapshot),
+    createRegistrationRequest(snapshot, runtimeSnapshot),
     registrationToken
   );
   const nodeToken = registration.nodeToken ?? snapshot.nodeToken;
@@ -288,7 +369,8 @@ export async function runManagerAgentCycle(): Promise<void> {
     nodeId: config.nodeId,
     hostname: config.hostname,
     version: config.version,
-    maxJobs: 4
+    maxJobs: 4,
+    runtimeSnapshot
   }, nodeToken);
 
   if (claimed.jobs.length === 0) {

@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { copyFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -7,11 +8,14 @@ import mysql from "mysql2/promise";
 import { Pool } from "pg";
 
 import {
+  isCodeServerUpdatePayload,
   isDnsSyncPayload,
   isMariadbReconcilePayload,
   isPostgresReconcilePayload,
   isProxyRenderPayload,
   isSupportedJobKind,
+  type CodeServerServiceSnapshot,
+  type CodeServerUpdatePayload,
   type DnsSyncPayload,
   type MariadbReconcilePayload,
   type PostgresReconcilePayload,
@@ -47,6 +51,12 @@ export interface DriverExecutionContext {
     };
     mariadb: {
       adminUrl: string | null;
+    };
+    codeServer: {
+      serviceName: string;
+      configPath: string;
+      settingsPath: string;
+      stagingDir: string;
     };
   };
 }
@@ -206,6 +216,72 @@ async function writeRenderedFile(
   const targetPath = path.join(directoryPath, fileName);
   await writeFileAtomic(targetPath, content);
   return targetPath;
+}
+
+async function readOptionalTextFile(targetPath: string): Promise<string | undefined> {
+  try {
+    return await readFile(targetPath, "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+function extractCodeServerVersion(value?: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const match = value.match(/\b\d+\.\d+\.\d+\b/);
+  return match?.[0];
+}
+
+async function inspectCodeServerService(
+  context: DriverExecutionContext
+): Promise<CodeServerServiceSnapshot> {
+  const checkedAt = new Date().toISOString();
+  const serviceName = context.services.codeServer.serviceName;
+  const enabledState = await runOptionalCommand("systemctl", ["is-enabled", serviceName]);
+  const activeState = await runOptionalCommand("systemctl", ["is-active", serviceName]);
+  const rpmVersionOutput = await runOptionalCommand("rpm", [
+    "-q",
+    "code-server",
+    "--qf",
+    "%{VERSION}-%{RELEASE}\n"
+  ]);
+  const versionOutput = await runOptionalCommand("code-server", ["--version"]);
+  const configContent = await readOptionalTextFile(context.services.codeServer.configPath);
+  const settingsContent = await readOptionalTextFile(context.services.codeServer.settingsPath);
+
+  return {
+    serviceName,
+    enabled: enabledState.ran && enabledState.stdout.trim() !== "disabled",
+    active: activeState.ran && activeState.stdout.trim() === "active",
+    version:
+      extractCodeServerVersion(rpmVersionOutput.ran ? rpmVersionOutput.stdout.trim() : undefined) ??
+      extractCodeServerVersion(versionOutput.ran ? versionOutput.stdout.trim() : undefined),
+    bindAddress: /^bind-addr:\s*(.+)$/m.exec(configContent ?? "")?.[1]?.trim(),
+    authMode: /^auth:\s*(.+)$/m.exec(configContent ?? "")?.[1]?.trim(),
+    settingsProfileHash: settingsContent
+      ? createHash("sha256").update(settingsContent).digest("hex").slice(0, 12)
+      : undefined,
+    checkedAt
+  };
+}
+
+function assertSafeRpmUrl(value: string): URL {
+  let parsed: URL;
+
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`Invalid RPM URL: ${value}`);
+  }
+
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    throw new Error(`Unsupported RPM URL protocol: ${parsed.protocol}`);
+  }
+
+  return parsed;
 }
 
 function quotePostgresIdentifier(value: string): string {
@@ -930,6 +1006,73 @@ async function executeMariadbReconcileJob(
   }
 }
 
+async function executeCodeServerUpdateJob(
+  job: ShmJobEnvelope,
+  context: DriverExecutionContext,
+  payload: CodeServerUpdatePayload
+): Promise<ShmJobResult> {
+  const rpmUrl = assertSafeRpmUrl(payload.rpmUrl).toString();
+  const fileName =
+    path.basename(new URL(rpmUrl).pathname) || `code-server-${Date.now()}.rpm`;
+  const stagingPath = path.join(context.services.codeServer.stagingDir, fileName);
+  const before = await inspectCodeServerService(context);
+
+  try {
+    await mkdir(context.services.codeServer.stagingDir, { recursive: true });
+    await execFileAsync("curl", ["-L", "--fail", "-o", stagingPath, rpmUrl], {
+      encoding: "utf8"
+    });
+
+    const shaOutput = await execFileAsync("sha256sum", [stagingPath], {
+      encoding: "utf8"
+    });
+    const sha256 = shaOutput.stdout.trim().split(/\s+/)[0] ?? "";
+
+    if (payload.expectedSha256 && sha256 !== payload.expectedSha256) {
+      throw new Error(
+        `Downloaded RPM digest ${sha256} does not match expected ${payload.expectedSha256}.`
+      );
+    }
+
+    await execFileAsync("dnf", ["install", "-y", stagingPath], {
+      encoding: "utf8"
+    });
+    await execFileAsync("systemctl", ["enable", context.services.codeServer.serviceName], {
+      encoding: "utf8"
+    });
+    await execFileAsync("systemctl", ["restart", context.services.codeServer.serviceName], {
+      encoding: "utf8"
+    });
+
+    const after = await inspectCodeServerService(context);
+
+    return createCompletedResult(
+      job,
+      context,
+      "applied",
+      `Updated code-server on ${context.nodeId} to ${after.version ?? "unknown"}.`,
+      {
+        rpmUrl,
+        sha256,
+        artifactPath: stagingPath,
+        before,
+        after
+      }
+    );
+  } catch (error) {
+    return createFailedResult(
+      job,
+      context,
+      error instanceof Error ? error.message : String(error),
+      {
+        rpmUrl,
+        artifactPath: stagingPath,
+        before
+      }
+    );
+  }
+}
+
 export async function executeAllowlistedJob(
   job: ShmJobEnvelope,
   context: DriverExecutionContext
@@ -993,6 +1136,19 @@ export async function executeAllowlistedJob(
     }
 
     return executeMariadbReconcileJob(job, context, job.payload);
+  }
+
+  if (job.kind === "code-server.update") {
+    if (!isCodeServerUpdatePayload(job.payload)) {
+      return createCompletedResult(
+        job,
+        context,
+        "failed",
+        "code-server.update payload is invalid."
+      );
+    }
+
+    return executeCodeServerUpdateJob(job, context, job.payload);
   }
 
   return createCompletedResult(

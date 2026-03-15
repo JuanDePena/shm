@@ -5,6 +5,7 @@ export const supportedJobKinds = [
   "container.reconcile",
   "postgres.reconcile",
   "mariadb.reconcile",
+  "code-server.update",
   "backup.trigger",
   "mail.sync"
 ] as const;
@@ -47,6 +48,7 @@ export interface ShmNodeRegistrationRequest {
   version: string;
   supportedJobKinds: ShmJobKind[];
   generatedAt: string;
+  runtimeSnapshot?: ShmNodeRuntimeSnapshot;
 }
 
 export interface ShmNodeRegistrationResponse {
@@ -61,6 +63,7 @@ export interface ShmJobClaimRequest {
   hostname: string;
   version: string;
   maxJobs: number;
+  runtimeSnapshot?: ShmNodeRuntimeSnapshot;
 }
 
 export interface ShmJobClaimResponse {
@@ -129,6 +132,26 @@ export interface MariadbReconcilePayload {
   databaseName: string;
   userName: string;
   password: string;
+}
+
+export interface CodeServerUpdatePayload {
+  rpmUrl: string;
+  expectedSha256?: string;
+}
+
+export interface CodeServerServiceSnapshot {
+  serviceName: string;
+  enabled: boolean;
+  active: boolean;
+  version?: string;
+  bindAddress?: string;
+  authMode?: string;
+  settingsProfileHash?: string;
+  checkedAt: string;
+}
+
+export interface ShmNodeRuntimeSnapshot {
+  codeServer?: CodeServerServiceSnapshot;
 }
 
 export function isProxyRenderPayload(value: unknown): value is ProxyRenderPayload {
@@ -206,5 +229,19 @@ export function isMariadbReconcilePayload(
     typeof payload.databaseName === "string" &&
     typeof payload.userName === "string" &&
     typeof payload.password === "string"
+  );
+}
+
+export function isCodeServerUpdatePayload(
+  value: unknown
+): value is CodeServerUpdatePayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Record<string, unknown>;
+  return (
+    typeof payload.rpmUrl === "string" &&
+    (payload.expectedSha256 === undefined || typeof payload.expectedSha256 === "string")
   );
 }

@@ -29,6 +29,12 @@ export interface ShmRuntimeConfig {
     mariadb: {
       adminUrl: string | null;
     };
+    codeServer: {
+      serviceName: string;
+      configPath: string;
+      settingsPath: string;
+      stagingDir: string;
+    };
   };
 }
 
@@ -98,6 +104,24 @@ export function createShmRuntimeConfig(
       },
       mariadb: {
         adminUrl: readOptionalString(env.SHM_MARIADB_ADMIN_URL)
+      },
+      codeServer: {
+        serviceName: readString(
+          env.SHM_CODE_SERVER_SERVICE_NAME,
+          "code-server@root.service"
+        ),
+        configPath: readString(
+          env.SHM_CODE_SERVER_CONFIG_PATH,
+          "/root/.config/code-server/config.yaml"
+        ),
+        settingsPath: readString(
+          env.SHM_CODE_SERVER_SETTINGS_PATH,
+          "/root/.local/share/code-server/User/settings.json"
+        ),
+        stagingDir: readString(
+          env.SHM_CODE_SERVER_STAGING_DIR,
+          path.join(stateDir, "staging", "code-server")
+        )
       }
     }
   };
