@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<zone>
+  <short>WireGuard</short>
+  <description>Private inter-node zone on wg0 for replication and restricted control-plane traffic.</description>
+  <interface name="wg0"/>
+  <port protocol="tcp" port="5432"/>
+  <port protocol="tcp" port="5433"/>
+  <port protocol="tcp" port="3306"/>
+  <port protocol="tcp" port="3100"/>
+  <port protocol="tcp" port="8081"/>
+</zone>

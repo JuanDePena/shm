@@ -51,6 +51,9 @@ Node-local platform artifacts owned by this repository:
 - `packaging/env/`
 - `packaging/systemd/`
 - `packaging/rpm/`
+- `platform/containers/`
+- `platform/host/`
+- `platform/httpd/`
 - `platform/wireguard/`
 - `platform/pdns/`
 - `platform/postgresql/apps/`
@@ -205,7 +208,7 @@ Current scaffold:
 - `apps/agent`: long-running node agent service
 - `apps/cli`: local maintenance and break-glass CLI
 - `packaging`: product-owned install artifacts for packaged `SHM` installs
-- `platform`: node-local service templates and bootstrap material for `WireGuard`, `PowerDNS`, `postgresql-apps`, and `MariaDB`
+- `platform`: node-local service templates and bootstrap material for host hardening, `WireGuard`, `PowerDNS`, `Apache`, app workload containers, `postgresql-apps`, and `MariaDB`
 - `packages/contracts`: shared job and status schemas
 - `packages/drivers`: service adapters for DNS, Apache, databases, backups, and mail
 - `packages/node-config`: node identity, TLS, and config loading
@@ -215,7 +218,7 @@ Current scaffold:
 
 ## References
 
-- [`/opt/simplehost/AGENTS.md`](/opt/simplehost/AGENTS.md)
+- [`/opt/simplehost/repos/simplehost-platform-config/docs/AGENTS.md`](/opt/simplehost/repos/simplehost-platform-config/docs/AGENTS.md)
 - [`/opt/simplehost/repos/simplehost-panel/README.md`](/opt/simplehost/repos/simplehost-panel/README.md)
 - [`/opt/simplehost/repos/simplehost-platform-config/docs/ARQUITECTURE.md`](/opt/simplehost/repos/simplehost-platform-config/docs/ARQUITECTURE.md)
 - [`/opt/simplehost/repos/simplehost-platform-config/docs/CONTAINERS.md`](/opt/simplehost/repos/simplehost-platform-config/docs/CONTAINERS.md)

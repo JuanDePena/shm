@@ -1,0 +1,20 @@
+[Unit]
+Description=Application container for __APP_SLUG__
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+ContainerName=app-__APP_SLUG__
+Image=__APP_IMAGE__
+PublishPort=127.0.0.1:__BACKEND_PORT__:8080
+EnvironmentFile=/etc/containers/systemd/env/app-__APP_SLUG__.env
+Volume=/srv/containers/apps/__APP_SLUG__/app:/var/www/html:Z
+Volume=/srv/containers/apps/__APP_SLUG__/uploads:/var/www/html/public/uploads:Z
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target

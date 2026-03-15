@@ -1,0 +1,21 @@
+[Unit]
+Description=MariaDB replica container
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+ContainerName=mariadb-replica
+Image=docker.io/library/mariadb:11.8.6
+PublishPort=127.0.0.1:3306:3306
+PublishPort=10.89.0.2:3306:3306
+EnvironmentFile=/etc/containers/systemd/env/mariadb-replica.env
+Volume=/srv/containers/mariadb/data:/var/lib/mysql:Z
+Volume=/srv/containers/mariadb/conf/replica.cnf:/etc/mysql/conf.d/platform.cnf:ro,Z
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target

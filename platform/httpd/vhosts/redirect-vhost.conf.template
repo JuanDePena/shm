@@ -1,0 +1,19 @@
+<VirtualHost *:80>
+    ServerName __SOURCE_SERVER_NAME__
+    ServerAlias __SOURCE_SERVER_ALIASES__
+
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^/(.*)$ https://__TARGET_SERVER_NAME__/$1 [R=301,L]
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName __SOURCE_SERVER_NAME__
+    ServerAlias __SOURCE_SERVER_ALIASES__
+
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/__SOURCE_CERT_NAME__/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/__SOURCE_CERT_NAME__/privkey.pem
+
+    Redirect permanent / https://__TARGET_SERVER_NAME__/
+</VirtualHost>

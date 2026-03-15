@@ -1,0 +1,28 @@
+<VirtualHost *:80>
+    ServerName __SERVER_NAME__
+    ServerAlias __SERVER_ALIASES__
+
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^/(.*)$ https://__SERVER_NAME__/$1 [R=301,L]
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName __SERVER_NAME__
+    ServerAlias __SERVER_ALIASES__
+
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/__CERT_NAME__/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/__CERT_NAME__/privkey.pem
+
+    ErrorLog logs/__APP_SLUG___error.log
+    CustomLog logs/__APP_SLUG___access.log combined
+
+    ProxyPass / http://127.0.0.1:__BACKEND_PORT__/ retry=0 timeout=60
+    ProxyPassReverse / http://127.0.0.1:__BACKEND_PORT__/
+
+    <Location "/healthz">
+        ProxyPass http://127.0.0.1:__BACKEND_PORT__/healthz
+        ProxyPassReverse http://127.0.0.1:__BACKEND_PORT__/healthz
+    </Location>
+</VirtualHost>

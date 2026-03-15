@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<zone>
+  <short>Public</short>
+  <description>Minimal public zone for the VPS. Only SSH and DHCPv6 client traffic are allowed inbound.</description>
+  <interface name="eth0"/>
+  <service name="ssh"/>
+  <service name="dhcpv6-client"/>
+</zone>
