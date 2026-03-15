@@ -218,9 +218,9 @@ Current scaffold:
 
 ## References
 
-- [`/opt/simplehost/repos/simplehost-platform-config/docs/AGENTS.md`](/opt/simplehost/repos/simplehost-platform-config/docs/AGENTS.md)
+- [`/opt/simplehost/repos/simplehost-documentation/AGENTS.md`](/opt/simplehost/repos/simplehost-documentation/AGENTS.md)
 - [`/opt/simplehost/repos/simplehost-panel/README.md`](/opt/simplehost/repos/simplehost-panel/README.md)
-- [`/opt/simplehost/repos/simplehost-platform-config/docs/ARQUITECTURE.md`](/opt/simplehost/repos/simplehost-platform-config/docs/ARQUITECTURE.md)
-- [`/opt/simplehost/repos/simplehost-platform-config/docs/CONTAINERS.md`](/opt/simplehost/repos/simplehost-platform-config/docs/CONTAINERS.md)
-- [`/opt/simplehost/repos/simplehost-platform-config/docs/DATABASES.md`](/opt/simplehost/repos/simplehost-platform-config/docs/DATABASES.md)
-- [`/opt/simplehost/repos/simplehost-platform-config/docs/PROXY.md`](/opt/simplehost/repos/simplehost-platform-config/docs/PROXY.md)
+- [`/opt/simplehost/repos/simplehost-documentation/ARQUITECTURE.md`](/opt/simplehost/repos/simplehost-documentation/ARQUITECTURE.md)
+- [`/opt/simplehost/repos/simplehost-documentation/CONTAINERS.md`](/opt/simplehost/repos/simplehost-documentation/CONTAINERS.md)
+- [`/opt/simplehost/repos/simplehost-documentation/DATABASES.md`](/opt/simplehost/repos/simplehost-documentation/DATABASES.md)
+- [`/opt/simplehost/repos/simplehost-documentation/PROXY.md`](/opt/simplehost/repos/simplehost-documentation/PROXY.md)
