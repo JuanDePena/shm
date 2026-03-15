@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <zone>
   <short>Public</short>
-  <description>Minimal public zone for the VPS. Only SSH and DHCPv6 client traffic are allowed inbound.</description>
+  <description>Public operator-facing zone for Apache TLS ingress, code-server proxy access, and WireGuard.</description>
   <interface name="eth0"/>
   <service name="ssh"/>
+  <service name="http"/>
+  <service name="https"/>
   <service name="dhcpv6-client"/>
+  <port protocol="udp" port="51820"/>
+  <port protocol="tcp" port="3200"/>
+  <port protocol="tcp" port="8080"/>
 </zone>
