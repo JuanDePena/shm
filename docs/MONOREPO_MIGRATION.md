@@ -26,14 +26,15 @@ Current checkpoint on 2026-04-14:
 - `/opt/simplehostman/src` is now a working pnpm workspace and the canonical source tree
 - `bootstrap`, `platform`, `packaging`, `scripts`, and `docs/MIGRATIONS` are imported under `src`
 - `worker`, `agent`, and `cli` are imported under `src/apps/*`
-- `apps/control` now owns the transitional `control-api` and `control-web` source trees
+- `apps/control` now owns the transitional `control-shared`, `control-api`, `control-web`, and combined-entrypoint source trees
 - root and app READMEs now live inside `src` and replace the old repo-level README references for architecture work
 - imported release scripts now resolve the unified source root correctly from `src/scripts/*`
 - imported panel and manager service templates now point at `/opt/simplehostman/release/current` and the current app paths under `apps/control`, `apps/worker`, and `apps/agent`
 - canonical README files now exist for `apps/*`, `packages`, `platform`, `bootstrap`, `packaging`, and `scripts` inside `src`
-- `apps/control/tsconfig.json` now acts as the composite source boundary for the transitional `control-api` and `control-web` entrypoints
+- `apps/control/tsconfig.json` now acts as the composite source boundary for the transitional `control-shared`, `control-api`, `control-web`, and combined entrypoint candidate
 - root workspace build slices now exist for `panel-runtime` and `manager-runtime` through `tsconfig.panel.json`, `tsconfig.manager.json`, and matching root scripts
 - imported panel and manager release scripts now share a canonical path helper in `src/scripts/lib/workspace-paths.sh`
+- `apps/control/src/index.ts` now exists as a transitory one-process candidate that starts both control-plane entrypoints without changing the current runtime model
 - `pnpm audit:legacy-roots` now guards against reintroducing functional references to legacy repo roots or retired package names outside docs/build output
 - clean-room validation passed from the unified tree: `pnpm install --frozen-lockfile`, `pnpm build:clean-room`, `pnpm typecheck`, `pnpm build:panel-runtime`, `pnpm build:manager-runtime`, `pnpm typecheck:panel-runtime`, `pnpm typecheck:manager-runtime`, and `git diff --check`
 
@@ -202,7 +203,7 @@ Unify `web` and `api` into one source tree before unifying them into one process
 Work:
 - move `repos/simplehost-panel/apps/web` into `src/apps/control`
 - move `repos/simplehost-panel/apps/api` into `src/apps/control`
-- keep temporary internal separation such as `src/apps/control/src/web/*` and `src/apps/control/src/api/*`
+- keep temporary internal separation such as `src/apps/control/shared/*`, `src/apps/control/web/*`, and `src/apps/control/api/*`
 - share route wiring, auth context, config loading, and contracts where appropriate
 - keep `/v1/*` compatibility intact
 

@@ -58,6 +58,9 @@ importers:
 
   apps/control/api:
     dependencies:
+      '@simplehost/control-shared':
+        specifier: workspace:*
+        version: link:../shared
       '@simplehost/panel-config':
         specifier: workspace:*
         version: link:../../../packages/panel-config
@@ -68,8 +71,13 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/panel-database
 
+  apps/control/shared: {}
+
   apps/control/web:
     dependencies:
+      '@simplehost/control-shared':
+        specifier: workspace:*
+        version: link:../shared
       '@simplehost/panel-config':
         specifier: workspace:*
         version: link:../../../packages/panel-config

@@ -8,15 +8,19 @@ Current root:
 
 ## Transitional layout
 
-The source tree still keeps two internal entrypoints while ownership is unified:
+The source tree still keeps internal subtrees while ownership is unified:
 
+- `shared/`: common runtime and process helpers for the control-plane boundary
 - `api/`: transitional `control-api` entrypoint
 - `web/`: transitional `control-web` entrypoint
+- `src/`: transitional combined entrypoint candidate for future runtime unification
 
-Sub-entrypoint docs:
+Subtree docs:
 
+- `/opt/simplehostman/src/apps/control/shared/README.md`
 - `/opt/simplehostman/src/apps/control/api/README.md`
 - `/opt/simplehostman/src/apps/control/web/README.md`
+- `/opt/simplehostman/src/apps/control/src/README.md`
 
 The composite build boundary is:
 
@@ -38,6 +42,7 @@ From `/opt/simplehostman/src`:
 
 - `pnpm build:control`
 - `pnpm typecheck:control`
+- `pnpm start:control`
 - `pnpm start:control:api`
 - `pnpm start:control:web`
 
@@ -45,15 +50,20 @@ From this directory:
 
 - `pnpm build`
 - `pnpm typecheck:local`
+- `pnpm start:combined`
 - `pnpm start:api`
 - `pnpm start:web`
+- `pnpm build:shared`
 - `pnpm build:api`
 - `pnpm build:web`
+- `pnpm build:entrypoint`
+- `pnpm typecheck:shared`
 - `pnpm typecheck:api`
 - `pnpm typecheck:web`
+- `pnpm typecheck:entrypoint`
 
 ## Migration notes
 
 - `apps/control` is already the canonical source location for control-plane UI and API code.
-- `apps/control/tsconfig.json` is the current ownership boundary for both transitional sub-entrypoints.
+- `apps/control/tsconfig.json` is the current ownership boundary for the transitional `control-shared`, `control-api`, `control-web`, and combined entrypoint candidate.
 - The remaining work is runtime unification and release normalization, not source ownership.

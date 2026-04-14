@@ -65,7 +65,7 @@ Canonical source layout:
 
 Ownership:
 
-- `apps/control`: unified source boundary for UI and API
+- `apps/control`: unified source boundary for UI and API, with transitional `shared/`, `web/`, `api/`, and combined-entrypoint subtrees
 - `apps/worker`: background control-plane work
 - `apps/agent`: node-local execution agent
 - `apps/cli`: break-glass and operator CLI
@@ -122,6 +122,8 @@ Read these when working on source ownership boundaries:
 - `/opt/simplehostman/src/apps/control/README.md`
 - `/opt/simplehostman/src/apps/control/api/README.md`
 - `/opt/simplehostman/src/apps/control/web/README.md`
+- `/opt/simplehostman/src/apps/control/shared/README.md`
+- `/opt/simplehostman/src/apps/control/src/README.md`
 - `/opt/simplehostman/src/apps/worker/README.md`
 - `/opt/simplehostman/src/apps/agent/README.md`
 - `/opt/simplehostman/src/apps/cli/README.md`

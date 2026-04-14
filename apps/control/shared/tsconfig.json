@@ -9,16 +9,7 @@
   ],
   "references": [
     {
-      "path": "../shared"
-    },
-    {
       "path": "../../../packages/panel-config"
-    },
-    {
-      "path": "../../../packages/panel-contracts"
-    },
-    {
-      "path": "../../../packages/panel-ui"
     }
   ]
 }

@@ -30,7 +30,12 @@
     "build:control:web": "pnpm --dir apps/control build:web",
     "typecheck:control:api": "pnpm --dir apps/control typecheck:api",
     "typecheck:control:web": "pnpm --dir apps/control typecheck:web",
-    "audit:legacy-roots": "node scripts/audit-legacy-roots.mjs"
+    "audit:legacy-roots": "node scripts/audit-legacy-roots.mjs",
+    "build:control:shared": "pnpm --dir apps/control build:shared",
+    "typecheck:control:shared": "pnpm --dir apps/control typecheck:shared",
+    "start:control": "pnpm --dir apps/control start:combined",
+    "build:control:entrypoint": "pnpm --dir apps/control build:entrypoint",
+    "typecheck:control:entrypoint": "pnpm --dir apps/control typecheck:entrypoint"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",

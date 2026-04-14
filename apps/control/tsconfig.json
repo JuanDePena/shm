@@ -1,7 +1,17 @@
 {
   "files": [],
   "references": [
-    { "path": "./api" },
-    { "path": "./web" }
+    {
+      "path": "./shared"
+    },
+    {
+      "path": "./api"
+    },
+    {
+      "path": "./web"
+    },
+    {
+      "path": "./tsconfig.entrypoint.json"
+    }
   ]
 }

@@ -40,6 +40,9 @@
       ],
       "@simplehost/panel-ui": [
         "packages/panel-ui/src/index.ts"
+      ],
+      "@simplehost/control-shared": [
+        "apps/control/shared/src/index.ts"
       ]
     },
     "types": [

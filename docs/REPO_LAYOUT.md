@@ -89,7 +89,7 @@ Path:
 Responsibility:
 
 - unified source ownership for UI and API
-- transitional internal separation between `web/` and `api/`
+- transitional internal separation between `shared/`, `web/`, `api/`, and a combined entrypoint candidate under `src/`
 - eventual target is one control-plane runtime and one port
 
 ### `apps/worker`
@@ -272,6 +272,8 @@ The current source-phase priorities are:
 - `/opt/simplehostman/src/apps/control/README.md`
 - `/opt/simplehostman/src/apps/control/api/README.md`
 - `/opt/simplehostman/src/apps/control/web/README.md`
+- `/opt/simplehostman/src/apps/control/shared/README.md`
+- `/opt/simplehostman/src/apps/control/src/README.md`
 - `/opt/simplehostman/src/apps/worker/README.md`
 - `/opt/simplehostman/src/apps/agent/README.md`
 - `/opt/simplehostman/src/apps/cli/README.md`

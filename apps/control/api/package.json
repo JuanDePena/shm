@@ -15,6 +15,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@simplehost/control-shared": "workspace:*",
     "@simplehost/panel-config": "workspace:*",
     "@simplehost/panel-contracts": "workspace:*",
     "@simplehost/panel-database": "workspace:*"

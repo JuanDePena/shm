@@ -4,17 +4,29 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:shared": "pnpm --dir shared build",
     "build:api": "pnpm --dir api build",
     "build:web": "pnpm --dir web build",
+    "build:entrypoint": "tsc -b tsconfig.entrypoint.json",
     "build": "tsc -b tsconfig.json",
+    "clean:shared": "pnpm --dir shared clean",
     "clean:api": "pnpm --dir api clean",
     "clean:web": "pnpm --dir web clean",
-    "clean": "pnpm clean:api && pnpm clean:web",
+    "clean:entrypoint": "rm -rf dist",
+    "clean": "pnpm clean:shared && pnpm clean:api && pnpm clean:web && pnpm clean:entrypoint",
     "start:api": "pnpm --dir api start",
     "start:web": "pnpm --dir web start",
+    "start:combined": "node dist/index.js",
+    "typecheck:shared": "pnpm --dir shared typecheck",
     "typecheck:api": "pnpm --dir api typecheck",
     "typecheck:web": "pnpm --dir web typecheck",
-    "typecheck:local": "pnpm typecheck:api && pnpm typecheck:web"
+    "typecheck:entrypoint": "tsc -p tsconfig.entrypoint.json --noEmit",
+    "typecheck:local": "pnpm typecheck:shared && pnpm typecheck:api && pnpm typecheck:web && pnpm typecheck:entrypoint"
   },
-  "description": "Unified control-plane source boundary with transitional API and web entrypoints"
+  "description": "Unified control-plane source boundary with transitional API and web entrypoints",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ]
 }

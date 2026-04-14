@@ -28,7 +28,7 @@ At this stage, source code, packaging material, scripts, bootstrap inventory, an
 
 ## App ownership
 
-- `apps/control`: control-plane UI and API source, currently with transitional `web/` and `api/` entrypoints
+- `apps/control`: control-plane UI and API source, currently with transitional `shared/`, `web/`, `api/`, and a combined entrypoint candidate under `src/`
 - `apps/worker`: background and asynchronous control-plane work
 - `apps/agent`: node-local execution agent
 - `apps/cli`: break-glass and operator CLI
@@ -52,6 +52,7 @@ Useful commands:
 - `pnpm typecheck:control`
 - `pnpm audit:legacy-roots`
 - `pnpm test`
+- `pnpm start:control`
 - `pnpm start:control:api`
 - `pnpm start:control:web`
 - `pnpm start:worker`
@@ -72,6 +73,8 @@ Useful commands:
 - [`/opt/simplehostman/src/apps/control/README.md`](/opt/simplehostman/src/apps/control/README.md)
 - [`/opt/simplehostman/src/apps/control/api/README.md`](/opt/simplehostman/src/apps/control/api/README.md)
 - [`/opt/simplehostman/src/apps/control/web/README.md`](/opt/simplehostman/src/apps/control/web/README.md)
+- [`/opt/simplehostman/src/apps/control/shared/README.md`](/opt/simplehostman/src/apps/control/shared/README.md)
+- [`/opt/simplehostman/src/apps/control/src/README.md`](/opt/simplehostman/src/apps/control/src/README.md)
 - [`/opt/simplehostman/src/apps/worker/README.md`](/opt/simplehostman/src/apps/worker/README.md)
 - [`/opt/simplehostman/src/apps/agent/README.md`](/opt/simplehostman/src/apps/agent/README.md)
 - [`/opt/simplehostman/src/apps/cli/README.md`](/opt/simplehostman/src/apps/cli/README.md)

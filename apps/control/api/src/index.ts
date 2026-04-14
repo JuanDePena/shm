@@ -1,8 +1,12 @@
-import { realpathSync } from "node:fs";
 import { createServer } from "node:http";
-import { fileURLToPath } from "node:url";
 
-import { createPanelRuntimeConfig } from "@simplehost/panel-config";
+import {
+  closeHttpServer,
+  createControlProcessContext,
+  isMainModule,
+  registerGracefulShutdown,
+  type ControlProcessContext
+} from "@simplehost/control-shared";
 import {
   createPostgresControlPlaneStore,
   NodeAuthorizationError,
@@ -12,29 +16,28 @@ import {
 import { writeJson } from "./api-http.js";
 import { createApiRequestHandler } from "./api-routes.js";
 
-const startedAt = Date.now();
-const config = createPanelRuntimeConfig();
-
-export async function createPanelApiRuntime(): Promise<{
+export async function createPanelApiRuntime(
+  context: ControlProcessContext = createControlProcessContext()
+): Promise<{
   server: ReturnType<typeof createServer>;
   close: () => Promise<void>;
 }> {
   const controlPlaneStore = await createPostgresControlPlaneStore(
-    config.database.url,
+    context.config.database.url,
     {
-      pollIntervalMs: config.worker.pollIntervalMs,
-      bootstrapEnrollmentToken: config.auth.bootstrapEnrollmentToken,
-      sessionTtlSeconds: config.auth.sessionTtlSeconds,
-      bootstrapAdminEmail: config.auth.bootstrapAdminEmail,
-      bootstrapAdminPassword: config.auth.bootstrapAdminPassword,
-      bootstrapAdminName: config.auth.bootstrapAdminName,
-      defaultInventoryImportPath: config.inventory.importPath,
-      jobPayloadSecret: config.jobs.payloadSecret
+      pollIntervalMs: context.config.worker.pollIntervalMs,
+      bootstrapEnrollmentToken: context.config.auth.bootstrapEnrollmentToken,
+      sessionTtlSeconds: context.config.auth.sessionTtlSeconds,
+      bootstrapAdminEmail: context.config.auth.bootstrapAdminEmail,
+      bootstrapAdminPassword: context.config.auth.bootstrapAdminPassword,
+      bootstrapAdminName: context.config.auth.bootstrapAdminName,
+      defaultInventoryImportPath: context.config.inventory.importPath,
+      jobPayloadSecret: context.config.jobs.payloadSecret
     }
   );
   const requestHandler = createApiRequestHandler({
-    config,
-    startedAt,
+    config: context.config,
+    startedAt: context.startedAt,
     controlPlaneStore
   });
   const server = createServer((request, response) => {
@@ -66,53 +69,39 @@ export async function createPanelApiRuntime(): Promise<{
     });
   });
 
-  server.listen(config.api.port, config.api.host, () => {
-    console.log(`SHP API listening on http://${config.api.host}:${config.api.port}`);
+  server.listen(context.config.api.port, context.config.api.host, () => {
+    console.log(`SHP API listening on http://${context.config.api.host}:${context.config.api.port}`);
   });
 
   return {
     server,
     close: async () => {
-      await new Promise<void>((resolve) => {
-        server.close(() => {
-          resolve();
-        });
-      });
+      await closeHttpServer(server);
       await controlPlaneStore.close();
     }
   };
 }
 
-export async function startPanelApi(): Promise<ReturnType<typeof createServer>> {
-  const runtime = await createPanelApiRuntime();
+export async function startPanelApi(
+  context: ControlProcessContext = createControlProcessContext()
+): Promise<ReturnType<typeof createServer>> {
+  const runtime = await createPanelApiRuntime(context);
   return runtime.server;
 }
 
-function isMainModule(): boolean {
-  if (process.argv[1] === undefined) {
-    return false;
-  }
-
-  try {
-    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-  } catch {
-    return fileURLToPath(import.meta.url) === process.argv[1];
-  }
-}
-
-if (isMainModule()) {
+if (isMainModule(import.meta.url)) {
   createPanelApiRuntime()
     .then(({ close, server }) => {
-      for (const signal of ["SIGINT", "SIGTERM"] as const) {
-        process.on(signal, () => {
-          void close().finally(() => {
-            if (server.listening) {
-              server.unref();
-            }
-            process.exit(0);
-          });
-        });
-      }
+      registerGracefulShutdown(close, {
+        onBeforeExit: () => {
+          if (server.listening) {
+            server.unref();
+          }
+        },
+        onShutdownError: (error) => {
+          console.error(error);
+        }
+      });
     })
     .catch((error: unknown) => {
       console.error(error);
