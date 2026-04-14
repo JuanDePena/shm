@@ -17,6 +17,8 @@ import {
 import { writeJson } from "./api-http.js";
 import { createApiRequestHandler } from "./api-routes.js";
 
+export { writeJson } from "./api-http.js";
+
 export interface PanelApiSurface {
   controlPlaneStore: PanelControlPlaneStore;
   requestHandler: ReturnType<typeof createApiRequestHandler>;

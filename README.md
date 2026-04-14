@@ -57,6 +57,7 @@ Useful commands:
 - `pnpm start:control:split`
 - `pnpm start:control:api`
 - `pnpm start:control:web`
+- `pnpm test:control`
 - `pnpm start:worker`
 - `pnpm start:agent`
 - `pnpm start:cli`

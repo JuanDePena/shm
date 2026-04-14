@@ -19,6 +19,8 @@
     "start:split": "pnpm start:api & pnpm start:web",
     "start:split:foreground": "pnpm start:api && pnpm start:web",
     "start:combined": "node dist/index.js",
+    "test:entrypoint": "pnpm build:entrypoint && node --test dist/**/*.test.js",
+    "test": "pnpm test:entrypoint",
     "typecheck:shared": "pnpm --dir shared typecheck",
     "typecheck:api": "pnpm --dir api typecheck",
     "typecheck:web": "pnpm --dir web typecheck",
@@ -26,6 +28,12 @@
     "typecheck:local": "pnpm typecheck:shared && pnpm typecheck:api && pnpm typecheck:web && pnpm typecheck:entrypoint"
   },
   "description": "Unified control-plane source boundary with transitional API and web entrypoints",
+  "dependencies": {
+    "@simplehost/control-api": "workspace:*",
+    "@simplehost/control-shared": "workspace:*"
+    ,
+    "@simplehost/control-web": "workspace:*"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [

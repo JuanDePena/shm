@@ -54,7 +54,17 @@ importers:
         specifier: workspace:*
         version: link:../../packages/manager-renderers
 
-  apps/control: {}
+  apps/control:
+    dependencies:
+      '@simplehost/control-api':
+        specifier: workspace:*
+        version: link:api
+      '@simplehost/control-shared':
+        specifier: workspace:*
+        version: link:shared
+      '@simplehost/control-web':
+        specifier: workspace:*
+        version: link:web
 
   apps/control/api:
     dependencies:
@@ -71,7 +81,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/panel-database
 
-  apps/control/shared: {}
+  apps/control/shared:
+    dependencies:
+      '@simplehost/panel-config':
+        specifier: workspace:*
+        version: link:../../../packages/panel-config
 
   apps/control/web:
     dependencies:

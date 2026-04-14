@@ -4,13 +4,12 @@ import {
   invokeRequestHandler,
   type InvokedHttpResponse
 } from "@simplehost/control-shared";
-
 import {
   createPanelWebApiFromRequest,
   type PanelWebApi,
   type PanelWebApiRequestOptions,
   WebApiError
-} from "../web/src/api-client.js";
+} from "@simplehost/control-web";
 
 function parseWebApiError(response: InvokedHttpResponse): never {
   let message = response.bodyText || `Request failed with status ${response.statusCode}`;

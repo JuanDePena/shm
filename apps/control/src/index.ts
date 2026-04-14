@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 
+import { createPanelApiRuntime } from "@simplehost/control-api";
 import {
   closeHttpServer,
   createControlProcessContext,
@@ -7,9 +8,17 @@ import {
   registerGracefulShutdown,
   type ControlProcessContext
 } from "../shared/src/index.js";
-import { createPanelApiRuntime } from "../api/src/index.js";
 import { createCombinedControlSurface } from "./request-handler.js";
-import { createPanelWebRuntime } from "../web/src/index.js";
+import { createCombinedControlRequestHandler } from "./router.js";
+import { createPanelWebRuntime } from "@simplehost/control-web";
+
+export type ControlRuntimeMode = "combined" | "split";
+
+export function resolveControlRuntimeMode(
+  env: NodeJS.ProcessEnv = process.env
+): ControlRuntimeMode {
+  return env.SIMPLEHOST_CONTROL_RUNTIME_MODE === "split" ? "split" : "combined";
+}
 
 export async function createSplitControlRuntime(
   context: ControlProcessContext = createControlProcessContext()
@@ -34,7 +43,13 @@ export async function createCombinedControlRuntime(
   context: ControlProcessContext = createControlProcessContext()
 ) {
   const surface = await createCombinedControlSurface(context);
-  const server = createServer(surface.requestHandler);
+  const server = createServer(
+    createCombinedControlRequestHandler({
+      context,
+      apiRequestHandler: surface.apiRequestHandler,
+      webRequestHandler: surface.webRequestHandler
+    })
+  );
 
   server.listen(context.config.web.port, context.config.web.host, () => {
     console.log(`SHP Control listening on http://${context.config.web.host}:${context.config.web.port}`);
@@ -52,13 +67,28 @@ export async function createCombinedControlRuntime(
 
 export const createUnifiedControlRuntime = createCombinedControlRuntime;
 
+export async function startMainControlRuntime(
+  context: ControlProcessContext = createControlProcessContext(),
+  mode: ControlRuntimeMode = resolveControlRuntimeMode()
+) {
+  return mode === "split"
+    ? createSplitControlRuntime(context)
+    : createCombinedControlRuntime(context);
+}
+
 if (isMainModule(import.meta.url)) {
-  createCombinedControlRuntime()
+  startMainControlRuntime()
     .then((runtime) => {
       registerGracefulShutdown(runtime.close, {
         onBeforeExit: () => {
-          if (runtime.server.listening) {
+          if ("server" in runtime && runtime.server.listening) {
             runtime.server.unref();
+          }
+          if ("apiRuntime" in runtime && runtime.apiRuntime.server.listening) {
+            runtime.apiRuntime.server.unref();
+          }
+          if ("webRuntime" in runtime && runtime.webRuntime.server.listening) {
+            runtime.webRuntime.server.unref();
           }
         },
         onShutdownError: (error) => {

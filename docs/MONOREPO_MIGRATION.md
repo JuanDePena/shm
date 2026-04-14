@@ -36,6 +36,7 @@ Current checkpoint on 2026-04-14:
 - imported panel and manager release scripts now share a canonical path helper in `src/scripts/lib/workspace-paths.sh`
 - `apps/control/src/index.ts` now exists as a transitory one-process candidate that can serve UI routes and `/v1/*` from one combined request surface without changing the current runtime model
 - the web layer now depends on an injected `PanelWebApi` interface instead of a hard-wired module-global HTTP client, and the combined candidate already uses an in-process implementation backed by the API request handler
+- the combined control candidate now has a pure router layer, source-level routing tests, and explicit `combined|split` mode selection through `SIMPLEHOST_CONTROL_RUNTIME_MODE`
 - `pnpm audit:legacy-roots` now guards against reintroducing functional references to legacy repo roots or retired package names outside docs/build output
 - clean-room validation passed from the unified tree: `pnpm install --frozen-lockfile`, `pnpm build:clean-room`, `pnpm typecheck`, `pnpm build:panel-runtime`, `pnpm build:manager-runtime`, `pnpm typecheck:panel-runtime`, `pnpm typecheck:manager-runtime`, and `git diff --check`
 

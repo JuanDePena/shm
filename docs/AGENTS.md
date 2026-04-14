@@ -65,7 +65,7 @@ Canonical source layout:
 
 Ownership:
 
-- `apps/control`: unified source boundary for UI and API, with transitional `shared/`, `web/`, `api/`, and combined-entrypoint subtrees; the source-level combined candidate already supports one-process routing for UI and `/v1/*`
+- `apps/control`: unified source boundary for UI and API, with transitional `shared/`, `web/`, `api/`, and combined-entrypoint subtrees; the source-level combined candidate already supports one-process routing for UI and `/v1/*`, explicit `combined|split` mode selection, and source-level routing tests
 - `apps/worker`: background control-plane work
 - `apps/agent`: node-local execution agent
 - `apps/cli`: break-glass and operator CLI

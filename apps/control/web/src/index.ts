@@ -11,6 +11,15 @@ import { renderLoginPage } from "./auth-pages.js";
 import { createDashboardHandler } from "./dashboard-page-routes.js";
 import { createServerRequestListener, startPanelWebServer } from "./web-routes.js";
 
+export {
+  createPanelWebApiFromRequest,
+  createHttpPanelWebApi,
+  type PanelWebApi,
+  type PanelWebApiRequestOptions,
+  type PanelWebApiRequest,
+  WebApiError
+} from "./api-client.js";
+
 export function createPanelWebRequestListener(
   context: ControlProcessContext = createControlProcessContext(),
   api: PanelWebApi = createHttpPanelWebApi(context.config)

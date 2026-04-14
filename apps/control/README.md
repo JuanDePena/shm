@@ -47,6 +47,7 @@ From `/opt/simplehostman/src`:
 - `pnpm start:control:split`
 - `pnpm start:control:api`
 - `pnpm start:control:web`
+- `pnpm test:control`
 
 From this directory:
 
@@ -65,11 +66,14 @@ From this directory:
 - `pnpm typecheck:entrypoint`
 - `pnpm start:split`
 - `pnpm start:split:foreground`
+- `pnpm test`
 
 ## Migration notes
 
 - `apps/control` is already the canonical source location for control-plane UI and API code.
 - `apps/control/tsconfig.json` is the current ownership boundary for the transitional `control-shared`, `control-api`, `control-web`, and combined entrypoint candidate.
 - `apps/control/src/index.ts` now represents a real one-process candidate that can serve UI and `/v1/*` on one request surface without changing the live runtime.
+- `apps/control/src/index.ts` also supports explicit runtime mode selection through `SIMPLEHOST_CONTROL_RUNTIME_MODE=combined|split`.
 - the web layer can now consume the API boundary either through HTTP or through an in-process `PanelWebApi` implementation.
+- `apps/control/src/router.test.ts` now locks in the combined routing split between control health, `/v1/*`, and UI routes.
 - The remaining work is runtime unification and release normalization, not source ownership.

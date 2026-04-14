@@ -41,6 +41,12 @@
       "@simplehost/panel-ui": [
         "packages/panel-ui/src/index.ts"
       ],
+      "@simplehost/control-api": [
+        "apps/control/api/src/index.ts"
+      ],
+      "@simplehost/control-web": [
+        "apps/control/web/src/index.ts"
+      ],
       "@simplehost/control-shared": [
         "apps/control/shared/src/index.ts"
       ]

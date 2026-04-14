@@ -36,6 +36,7 @@
     "build:control:shared": "pnpm --dir apps/control build:shared",
     "typecheck:control:shared": "pnpm --dir apps/control typecheck:shared",
     "start:control": "pnpm --dir apps/control start:combined",
+    "test:control": "pnpm --dir apps/control test:entrypoint",
     "build:control:entrypoint": "pnpm --dir apps/control build:entrypoint",
     "typecheck:control:entrypoint": "pnpm --dir apps/control typecheck:entrypoint"
   },

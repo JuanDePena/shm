@@ -1,17 +1,17 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import {
+  createPanelApiHttpHandler,
+  createPanelApiSurface
+} from "@simplehost/control-api";
+import {
   createControlProcessContext,
   type ControlProcessContext
 } from "@simplehost/control-shared";
+import { createPanelWebRequestListener } from "@simplehost/control-web";
 
-import { writeJson } from "../api/src/api-http.js";
-import {
-  createPanelApiHttpHandler,
-  createPanelApiSurface
-} from "../api/src/index.js";
 import { createInProcessPanelWebApi } from "./in-process-web-api.js";
-import { createPanelWebRequestListener } from "../web/src/index.js";
+import { createCombinedControlRequestHandler } from "./router.js";
 
 export interface CombinedControlSurface {
   apiRequestHandler: (request: IncomingMessage, response: ServerResponse) => Promise<void>;
@@ -31,29 +31,11 @@ export async function createCombinedControlSurface(
   return {
     apiRequestHandler,
     close: apiSurface.close,
-    requestHandler: async (request, response) => {
-      const url = new URL(request.url ?? "/", "http://127.0.0.1");
-
-      if (request.method === "GET" && url.pathname === "/healthz") {
-        writeJson(response, 200, {
-          service: "control",
-          status: "ok",
-          version: context.config.version,
-          environment: context.config.env,
-          timestamp: new Date().toISOString(),
-          uptimeSeconds: Math.round((Date.now() - context.startedAt) / 1000),
-          mode: "combined-candidate"
-        });
-        return;
-      }
-
-      if (url.pathname === "/v1" || url.pathname.startsWith("/v1/")) {
-        await apiRequestHandler(request, response);
-        return;
-      }
-
-      await webRequestHandler(request, response);
-    },
+    requestHandler: createCombinedControlRequestHandler({
+      context,
+      apiRequestHandler,
+      webRequestHandler
+    }),
     webRequestHandler
   };
 }
