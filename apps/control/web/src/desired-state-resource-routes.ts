@@ -1,6 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import {
+  type PanelWebApi,
+  noticeLocation
+} from "./api-client.js";
+import {
   parseAppForm,
   parseBackupPolicyForm,
   parseDatabaseForm,
@@ -10,11 +14,11 @@ import {
   removeByKey,
   upsertByKey
 } from "./desired-state.js";
-import { mutateDesiredState, noticeLocation } from "./api-client.js";
 import { readFormBody, redirect } from "./request.js";
 import { requireSessionToken } from "./route-helpers.js";
 
 export async function handleDesiredStateResourceRoute(
+  api: PanelWebApi,
   request: IncomingMessage,
   response: ServerResponse,
   url: URL
@@ -23,7 +27,7 @@ export async function handleDesiredStateResourceRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const next = parseTenantForm(form);
-    await mutateDesiredState(token, `web.tenant.upsert:${next.slug}`, (spec) => ({
+    await api.mutateDesiredState(token, `web.tenant.upsert:${next.slug}`, (spec) => ({
       ...spec,
       tenants: upsertByKey(spec.tenants, next, (item) => item.slug, form.get("originalSlug") ?? undefined)
     }));
@@ -35,7 +39,7 @@ export async function handleDesiredStateResourceRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const slug = form.get("originalSlug")?.trim() ?? form.get("slug")?.trim() ?? "";
-    await mutateDesiredState(token, `web.tenant.delete:${slug}`, (spec) => ({
+    await api.mutateDesiredState(token, `web.tenant.delete:${slug}`, (spec) => ({
       ...spec,
       tenants: removeByKey(spec.tenants, slug, (item) => item.slug)
     }));
@@ -47,7 +51,7 @@ export async function handleDesiredStateResourceRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const next = parseNodeForm(form);
-    await mutateDesiredState(token, `web.node.upsert:${next.nodeId}`, (spec) => ({
+    await api.mutateDesiredState(token, `web.node.upsert:${next.nodeId}`, (spec) => ({
       ...spec,
       nodes: upsertByKey(
         spec.nodes,
@@ -64,7 +68,7 @@ export async function handleDesiredStateResourceRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const nodeId = form.get("originalNodeId")?.trim() ?? form.get("nodeId")?.trim() ?? "";
-    await mutateDesiredState(token, `web.node.delete:${nodeId}`, (spec) => ({
+    await api.mutateDesiredState(token, `web.node.delete:${nodeId}`, (spec) => ({
       ...spec,
       nodes: removeByKey(spec.nodes, nodeId, (item) => item.nodeId)
     }));
@@ -76,7 +80,7 @@ export async function handleDesiredStateResourceRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const next = parseZoneForm(form);
-    await mutateDesiredState(token, `web.zone.upsert:${next.zoneName}`, (spec) => ({
+    await api.mutateDesiredState(token, `web.zone.upsert:${next.zoneName}`, (spec) => ({
       ...spec,
       zones: upsertByKey(
         spec.zones,
@@ -94,7 +98,7 @@ export async function handleDesiredStateResourceRoute(
     const form = await readFormBody(request);
     const zoneName =
       form.get("originalZoneName")?.trim() ?? form.get("zoneName")?.trim() ?? "";
-    await mutateDesiredState(token, `web.zone.delete:${zoneName}`, (spec) => ({
+    await api.mutateDesiredState(token, `web.zone.delete:${zoneName}`, (spec) => ({
       ...spec,
       zones: removeByKey(spec.zones, zoneName, (item) => item.zoneName)
     }));
@@ -106,7 +110,7 @@ export async function handleDesiredStateResourceRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const next = parseAppForm(form);
-    await mutateDesiredState(token, `web.app.upsert:${next.slug}`, (spec) => ({
+    await api.mutateDesiredState(token, `web.app.upsert:${next.slug}`, (spec) => ({
       ...spec,
       apps: upsertByKey(spec.apps, next, (item) => item.slug, form.get("originalSlug") ?? undefined)
     }));
@@ -118,7 +122,7 @@ export async function handleDesiredStateResourceRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const slug = form.get("originalSlug")?.trim() ?? form.get("slug")?.trim() ?? "";
-    await mutateDesiredState(token, `web.app.delete:${slug}`, (spec) => ({
+    await api.mutateDesiredState(token, `web.app.delete:${slug}`, (spec) => ({
       ...spec,
       apps: removeByKey(spec.apps, slug, (item) => item.slug)
     }));
@@ -130,7 +134,7 @@ export async function handleDesiredStateResourceRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const next = parseDatabaseForm(form);
-    await mutateDesiredState(token, `web.database.upsert:${next.appSlug}`, (spec) => ({
+    await api.mutateDesiredState(token, `web.database.upsert:${next.appSlug}`, (spec) => ({
       ...spec,
       databases: upsertByKey(
         spec.databases,
@@ -148,7 +152,7 @@ export async function handleDesiredStateResourceRoute(
     const form = await readFormBody(request);
     const appSlug =
       form.get("originalAppSlug")?.trim() ?? form.get("appSlug")?.trim() ?? "";
-    await mutateDesiredState(token, `web.database.delete:${appSlug}`, (spec) => ({
+    await api.mutateDesiredState(token, `web.database.delete:${appSlug}`, (spec) => ({
       ...spec,
       databases: removeByKey(spec.databases, appSlug, (item) => item.appSlug)
     }));
@@ -160,7 +164,7 @@ export async function handleDesiredStateResourceRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const next = parseBackupPolicyForm(form);
-    await mutateDesiredState(token, `web.backup-policy.upsert:${next.policySlug}`, (spec) => ({
+    await api.mutateDesiredState(token, `web.backup-policy.upsert:${next.policySlug}`, (spec) => ({
       ...spec,
       backupPolicies: upsertByKey(
         spec.backupPolicies,
@@ -178,7 +182,7 @@ export async function handleDesiredStateResourceRoute(
     const form = await readFormBody(request);
     const policySlug =
       form.get("originalPolicySlug")?.trim() ?? form.get("policySlug")?.trim() ?? "";
-    await mutateDesiredState(token, `web.backup-policy.delete:${policySlug}`, (spec) => ({
+    await api.mutateDesiredState(token, `web.backup-policy.delete:${policySlug}`, (spec) => ({
       ...spec,
       backupPolicies: removeByKey(spec.backupPolicies, policySlug, (item) => item.policySlug)
     }));

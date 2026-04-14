@@ -15,11 +15,10 @@ import {
 import { type PanelNotice } from "@simplehost/panel-ui";
 
 import {
-  apiRequest,
   getNoticeFromUrl,
-  loadRustDeskPublicConnection,
   noticeLocation,
   noticeReturnTo,
+  type PanelWebApi,
   WebApiError
 } from "./api-client.js";
 import { handleDesiredStateResourceRoute } from "./desired-state-resource-routes.js";
@@ -60,6 +59,7 @@ export interface PanelWebRuntimeConfig {
 }
 
 export interface StartPanelWebServerArgs {
+  api: PanelWebApi;
   config: PanelWebRuntimeConfig;
   handleDashboard: (
     request: IncomingMessage,
@@ -100,7 +100,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
       writeHtml(
         response,
         200,
-        renderRustDeskConnectPage(locale, await loadRustDeskPublicConnection(), {
+        renderRustDeskConnectPage(locale, await args.api.loadRustDeskPublicConnection(), {
           hasSession: Boolean(readSessionToken(request)),
           notice: getNoticeFromUrl(url)
         })
@@ -111,7 +111,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
     if (request.method === "GET" && url.pathname === "/proxy-vhost") {
       const token = await requireSessionToken(request);
       const slug = url.searchParams.get("slug")?.trim() ?? "";
-      const payload = await apiRequest<ProxyRenderPayload>(
+      const payload = await args.api.request<ProxyRenderPayload>(
         `/v1/apps/${encodeURIComponent(slug)}/proxy-preview`,
         { token }
       );
@@ -150,7 +150,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
       const form = await readFormBody(request);
 
       try {
-        const login = await apiRequest<AuthLoginResponse>("/v1/auth/login", {
+        const login = await args.api.request<AuthLoginResponse>("/v1/auth/login", {
           method: "POST",
           body: {
             email: form.get("email")?.trim() ?? "",
@@ -182,7 +182,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
 
       if (token) {
         try {
-          await apiRequest("/v1/auth/logout", {
+          await args.api.request("/v1/auth/logout", {
             method: "POST",
             token
           });
@@ -197,7 +197,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
 
     if (request.method === "GET" && url.pathname === "/inventory/export") {
       const token = await requireSessionToken(request);
-      const yaml = await apiRequest<string>("/v1/inventory/export", {
+      const yaml = await args.api.request<string>("/v1/inventory/export", {
         token,
         responseType: "text"
       });
@@ -213,7 +213,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
       const token = await requireSessionToken(request);
       const form = await readFormBody(request);
       const pathValue = form.get("path")?.trim() || args.config.inventory.importPath;
-      const result = await apiRequest<InventoryImportSummary>("/v1/inventory/import", {
+      const result = await args.api.request<InventoryImportSummary>("/v1/inventory/import", {
         method: "POST",
         token,
         body: {
@@ -232,7 +232,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
 
     if (request.method === "POST" && url.pathname === "/actions/reconcile-run") {
       const token = await requireSessionToken(request);
-      const result = await apiRequest<{ generatedJobCount: number; skippedJobCount: number }>(
+      const result = await args.api.request<{ generatedJobCount: number; skippedJobCount: number }>(
         "/v1/reconcile/run",
         {
           method: "POST",
@@ -253,7 +253,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
       const token = await requireSessionToken(request);
       const form = await readFormBody(request);
       const zoneName = form.get("zoneName")?.trim() ?? "";
-      const result = await apiRequest<JobDispatchResponse>(
+      const result = await args.api.request<JobDispatchResponse>(
         `/v1/zones/${encodeURIComponent(zoneName)}/sync`,
         {
           method: "POST",
@@ -277,7 +277,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
         includeProxy: true,
         includeStandbyProxy: true
       };
-      const result = await apiRequest<JobDispatchResponse>(
+      const result = await args.api.request<JobDispatchResponse>(
         `/v1/apps/${encodeURIComponent(slug)}/reconcile`,
         {
           method: "POST",
@@ -296,7 +296,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
       const token = await requireSessionToken(request);
       const form = await readFormBody(request);
       const slug = form.get("slug")?.trim() ?? "";
-      const result = await apiRequest<JobDispatchResponse>(
+      const result = await args.api.request<JobDispatchResponse>(
         `/v1/apps/${encodeURIComponent(slug)}/render-proxy`,
         {
           method: "POST",
@@ -321,7 +321,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
         requestBody.password = password;
       }
 
-      const result = await apiRequest<JobDispatchResponse>(
+      const result = await args.api.request<JobDispatchResponse>(
         `/v1/databases/${encodeURIComponent(appSlug)}/reconcile`,
         {
           method: "POST",
@@ -355,7 +355,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
         requestBody.nodeIds = [targetScope];
       }
 
-      const result = await apiRequest<JobDispatchResponse>("/v1/code-server/update", {
+      const result = await args.api.request<JobDispatchResponse>("/v1/code-server/update", {
         method: "POST",
         token,
         body: requestBody
@@ -381,7 +381,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
         nodeIds: nodeIds.length > 0 ? nodeIds : undefined
       };
 
-      const result = await apiRequest<JobDispatchResponse>("/v1/packages/refresh", {
+      const result = await args.api.request<JobDispatchResponse>("/v1/packages/refresh", {
         method: "POST",
         token,
         body: requestBody
@@ -418,7 +418,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
         allowReinstall
       };
 
-      const result = await apiRequest<JobDispatchResponse>("/v1/packages/install", {
+      const result = await args.api.request<JobDispatchResponse>("/v1/packages/install", {
         method: "POST",
         token,
         body: requestBody
@@ -435,11 +435,11 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
       return;
     }
 
-    if (await handleDesiredStateResourceRoute(request, response, url)) {
+    if (await handleDesiredStateResourceRoute(args.api, request, response, url)) {
       return;
     }
 
-    if (await handleMailRoute(request, response, url)) {
+    if (await handleMailRoute(args.api, request, response, url)) {
       return;
     }
 

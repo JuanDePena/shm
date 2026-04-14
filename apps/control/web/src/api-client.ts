@@ -1,4 +1,4 @@
-import { createPanelRuntimeConfig } from "@simplehost/panel-config";
+import { createPanelRuntimeConfig, type PanelRuntimeConfig } from "@simplehost/panel-config";
 import {
   type AuditEventSummary,
   type AuthenticatedUserSummary,
@@ -6,6 +6,7 @@ import {
   type DesiredStateApplyRequest,
   type DesiredStateExportResponse,
   type DesiredStateSpec,
+  type InventoryStateSnapshot,
   type JobHistoryEntry,
   type MailOverview,
   type NodeHealthSnapshot,
@@ -13,14 +14,11 @@ import {
   type PackageInventorySnapshot,
   type ResourceDriftSummary,
   type RustDeskOverview,
-  type RustDeskPublicConnectionInfo,
-  type InventoryStateSnapshot
+  type RustDeskPublicConnectionInfo
 } from "@simplehost/panel-contracts";
 import { type PanelNotice } from "@simplehost/panel-ui";
 
 import { sanitizeReturnTo } from "./request.js";
-
-const config = createPanelRuntimeConfig();
 
 export interface DashboardData {
   currentUser: AuthenticatedUserSummary;
@@ -47,11 +45,33 @@ export class WebApiError extends Error {
   }
 }
 
-function createApiBaseUrl(): string {
+export interface PanelWebApi {
+  request<T>(
+    pathname: string,
+    options?: {
+      method?: string;
+      token?: string | null;
+      body?: unknown;
+      responseType?: "json" | "text";
+    }
+  ): Promise<T>;
+  loadDashboardData(token: string): Promise<DashboardData>;
+  loadRustDeskPublicConnection(): Promise<RustDeskPublicConnectionInfo>;
+  loadDesiredStateSpec(token: string): Promise<DesiredStateSpec>;
+  applyDesiredStateSpec(token: string, spec: DesiredStateSpec, reason: string): Promise<void>;
+  mutateDesiredState(
+    token: string,
+    reason: string,
+    action: (spec: DesiredStateSpec) => DesiredStateSpec
+  ): Promise<void>;
+}
+
+function createApiBaseUrl(config: Pick<PanelRuntimeConfig, "api">): string {
   return `http://${config.api.host}:${config.api.port}`;
 }
 
-export async function apiRequest<T>(
+async function requestWithBaseUrl<T>(
+  baseUrl: string,
   pathname: string,
   options: {
     method?: string;
@@ -60,7 +80,7 @@ export async function apiRequest<T>(
     responseType?: "json" | "text";
   } = {}
 ): Promise<T> {
-  const response = await fetch(new URL(pathname, createApiBaseUrl()), {
+  const response = await fetch(new URL(pathname, baseUrl), {
     method: options.method ?? "GET",
     headers: {
       ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
@@ -97,53 +117,141 @@ export async function apiRequest<T>(
   return (responseText ? JSON.parse(responseText) : null) as T;
 }
 
-export async function loadDashboardData(token: string): Promise<DashboardData> {
-  const [
-    currentUser,
-    overview,
-    inventory,
-    desiredState,
-    drift,
-    nodeHealth,
-    jobHistory,
-    auditEvents,
-    backups,
-    rustdesk,
-    mail,
-    packages
-  ] = await Promise.all([
-    apiRequest<AuthenticatedUserSummary>("/v1/auth/me", { token }),
-    apiRequest<OperationsOverview>("/v1/operations/overview", { token }),
-    apiRequest<InventoryStateSnapshot>("/v1/inventory/summary", { token }),
-    apiRequest<DesiredStateExportResponse>("/v1/resources/spec", { token }),
-    apiRequest<ResourceDriftSummary[]>("/v1/resources/drift", { token }),
-    apiRequest<NodeHealthSnapshot[]>("/v1/nodes/health", { token }),
-    apiRequest<JobHistoryEntry[]>("/v1/jobs/history?limit=30", { token }),
-    apiRequest<AuditEventSummary[]>("/v1/audit/events?limit=30", { token }),
-    apiRequest<BackupsOverview>("/v1/backups/summary", { token }),
-    apiRequest<RustDeskOverview>("/v1/platform/rustdesk", { token }),
-    apiRequest<MailOverview>("/v1/mail/overview", { token }),
-    apiRequest<PackageInventorySnapshot>("/v1/packages/summary", { token })
-  ]);
+export function createHttpPanelWebApi(
+  config: Pick<PanelRuntimeConfig, "api"> = createPanelRuntimeConfig()
+): PanelWebApi {
+  const baseUrl = createApiBaseUrl(config);
+
+  const request = <T>(
+    pathname: string,
+    options: {
+      method?: string;
+      token?: string | null;
+      body?: unknown;
+      responseType?: "json" | "text";
+    } = {}
+  ) => requestWithBaseUrl<T>(baseUrl, pathname, options);
 
   return {
-    currentUser,
-    overview,
-    inventory,
-    desiredState,
-    drift,
-    nodeHealth,
-    jobHistory,
-    auditEvents,
-    backups,
-    rustdesk,
-    mail,
-    packages
+    request,
+    async loadDashboardData(token: string): Promise<DashboardData> {
+      const [
+        currentUser,
+        overview,
+        inventory,
+        desiredState,
+        drift,
+        nodeHealth,
+        jobHistory,
+        auditEvents,
+        backups,
+        rustdesk,
+        mail,
+        packages
+      ] = await Promise.all([
+        request<AuthenticatedUserSummary>("/v1/auth/me", { token }),
+        request<OperationsOverview>("/v1/operations/overview", { token }),
+        request<InventoryStateSnapshot>("/v1/inventory/summary", { token }),
+        request<DesiredStateExportResponse>("/v1/resources/spec", { token }),
+        request<ResourceDriftSummary[]>("/v1/resources/drift", { token }),
+        request<NodeHealthSnapshot[]>("/v1/nodes/health", { token }),
+        request<JobHistoryEntry[]>("/v1/jobs/history?limit=30", { token }),
+        request<AuditEventSummary[]>("/v1/audit/events?limit=30", { token }),
+        request<BackupsOverview>("/v1/backups/summary", { token }),
+        request<RustDeskOverview>("/v1/platform/rustdesk", { token }),
+        request<MailOverview>("/v1/mail/overview", { token }),
+        request<PackageInventorySnapshot>("/v1/packages/summary", { token })
+      ]);
+
+      return {
+        currentUser,
+        overview,
+        inventory,
+        desiredState,
+        drift,
+        nodeHealth,
+        jobHistory,
+        auditEvents,
+        backups,
+        rustdesk,
+        mail,
+        packages
+      };
+    },
+    loadRustDeskPublicConnection(): Promise<RustDeskPublicConnectionInfo> {
+      return request<RustDeskPublicConnectionInfo>("/v1/public/rustdesk");
+    },
+    async loadDesiredStateSpec(token: string): Promise<DesiredStateSpec> {
+      const exported = await request<DesiredStateExportResponse>("/v1/resources/spec", {
+        token
+      });
+      return exported.spec;
+    },
+    async applyDesiredStateSpec(
+      token: string,
+      spec: DesiredStateSpec,
+      reason: string
+    ): Promise<void> {
+      await request<unknown>("/v1/resources/spec", {
+        method: "PUT",
+        token,
+        body: {
+          spec,
+          reason
+        } satisfies DesiredStateApplyRequest
+      });
+    },
+    async mutateDesiredState(
+      token: string,
+      reason: string,
+      action: (spec: DesiredStateSpec) => DesiredStateSpec
+    ): Promise<void> {
+      const spec = await this.loadDesiredStateSpec(token);
+      await this.applyDesiredStateSpec(token, action(spec), reason);
+    }
   };
 }
 
-export async function loadRustDeskPublicConnection(): Promise<RustDeskPublicConnectionInfo> {
-  return apiRequest<RustDeskPublicConnectionInfo>("/v1/public/rustdesk");
+export const defaultPanelWebApi = createHttpPanelWebApi();
+
+export function apiRequest<T>(
+  pathname: string,
+  options: {
+    method?: string;
+    token?: string | null;
+    body?: unknown;
+    responseType?: "json" | "text";
+  } = {}
+): Promise<T> {
+  return defaultPanelWebApi.request(pathname, options);
+}
+
+export function loadDashboardData(token: string): Promise<DashboardData> {
+  return defaultPanelWebApi.loadDashboardData(token);
+}
+
+export function loadRustDeskPublicConnection(): Promise<RustDeskPublicConnectionInfo> {
+  return defaultPanelWebApi.loadRustDeskPublicConnection();
+}
+
+export function loadDesiredStateSpec(token: string): Promise<DesiredStateSpec> {
+  return defaultPanelWebApi.loadDesiredStateSpec(token);
+}
+
+export function applyDesiredStateSpec(
+  token: string,
+  spec: DesiredStateSpec,
+  reason: string
+): Promise<void> {
+  return defaultPanelWebApi.applyDesiredStateSpec(token, spec, reason);
+}
+
+export function mutateDesiredState(
+  token: string,
+  reason: string,
+  action: (spec: DesiredStateSpec) => DesiredStateSpec
+): Promise<void> {
+  return defaultPanelWebApi.mutateDesiredState(token, reason, action);
 }
 
 export function getNoticeFromUrl(url: URL): PanelNotice | undefined {
@@ -182,35 +290,4 @@ export function noticeReturnTo(
   url.searchParams.set("notice", message);
   url.searchParams.set("kind", kind);
   return `${url.pathname}${url.search}`;
-}
-
-export async function loadDesiredStateSpec(token: string): Promise<DesiredStateSpec> {
-  const exported = await apiRequest<DesiredStateExportResponse>("/v1/resources/spec", {
-    token
-  });
-  return exported.spec;
-}
-
-export async function applyDesiredStateSpec(
-  token: string,
-  spec: DesiredStateSpec,
-  reason: string
-): Promise<void> {
-  await apiRequest<unknown>("/v1/resources/spec", {
-    method: "PUT",
-    token,
-    body: {
-      spec,
-      reason
-    } satisfies DesiredStateApplyRequest
-  });
-}
-
-export async function mutateDesiredState(
-  token: string,
-  reason: string,
-  action: (spec: DesiredStateSpec) => DesiredStateSpec
-): Promise<void> {
-  const spec = await loadDesiredStateSpec(token);
-  await applyDesiredStateSpec(token, action(spec), reason);
 }

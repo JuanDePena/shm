@@ -1,17 +1,21 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import {
+  type PanelWebApi,
+  noticeReturnTo
+} from "./api-client.js";
+import {
   parseMailAliasForm,
   parseMailboxForm,
   parseMailboxQuotaForm,
   parseMailDomainForm
 } from "./desired-state.js";
-import { apiRequest, noticeReturnTo } from "./api-client.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
 import { readFormBody, redirect } from "./request.js";
 import { requireSessionToken } from "./route-helpers.js";
 
 export async function handleMailRoute(
+  api: PanelWebApi,
   request: IncomingMessage,
   response: ServerResponse,
   url: URL
@@ -20,7 +24,7 @@ export async function handleMailRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const next = parseMailDomainForm(form);
-    await apiRequest("/v1/mail/domains", {
+    await api.request("/v1/mail/domains", {
       method: "POST",
       token,
       body: next
@@ -40,7 +44,7 @@ export async function handleMailRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const domainName = form.get("domainName")?.trim() ?? "";
-    await apiRequest(`/v1/mail/domains/${encodeURIComponent(domainName)}`, {
+    await api.request(`/v1/mail/domains/${encodeURIComponent(domainName)}`, {
       method: "DELETE",
       token
     });
@@ -59,7 +63,7 @@ export async function handleMailRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const next = parseMailboxForm(form);
-    await apiRequest("/v1/mail/mailboxes", {
+    await api.request("/v1/mail/mailboxes", {
       method: "POST",
       token,
       body: next
@@ -79,7 +83,7 @@ export async function handleMailRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const address = form.get("address")?.trim() ?? "";
-    await apiRequest(`/v1/mail/mailboxes/${encodeURIComponent(address)}`, {
+    await api.request(`/v1/mail/mailboxes/${encodeURIComponent(address)}`, {
       method: "DELETE",
       token
     });
@@ -98,7 +102,7 @@ export async function handleMailRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const next = parseMailAliasForm(form);
-    await apiRequest("/v1/mail/aliases", {
+    await api.request("/v1/mail/aliases", {
       method: "POST",
       token,
       body: next
@@ -118,7 +122,7 @@ export async function handleMailRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const address = form.get("address")?.trim() ?? "";
-    await apiRequest(`/v1/mail/aliases/${encodeURIComponent(address)}`, {
+    await api.request(`/v1/mail/aliases/${encodeURIComponent(address)}`, {
       method: "DELETE",
       token
     });
@@ -137,7 +141,7 @@ export async function handleMailRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const next = parseMailboxQuotaForm(form);
-    await apiRequest("/v1/mail/quotas", {
+    await api.request("/v1/mail/quotas", {
       method: "POST",
       token,
       body: next
@@ -157,7 +161,7 @@ export async function handleMailRoute(
     const token = await requireSessionToken(request);
     const form = await readFormBody(request);
     const mailboxAddress = form.get("mailboxAddress")?.trim() ?? "";
-    await apiRequest(`/v1/mail/quotas/${encodeURIComponent(mailboxAddress)}`, {
+    await api.request(`/v1/mail/quotas/${encodeURIComponent(mailboxAddress)}`, {
       method: "DELETE",
       token
     });

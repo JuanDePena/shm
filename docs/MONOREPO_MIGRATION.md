@@ -35,6 +35,7 @@ Current checkpoint on 2026-04-14:
 - root workspace build slices now exist for `panel-runtime` and `manager-runtime` through `tsconfig.panel.json`, `tsconfig.manager.json`, and matching root scripts
 - imported panel and manager release scripts now share a canonical path helper in `src/scripts/lib/workspace-paths.sh`
 - `apps/control/src/index.ts` now exists as a transitory one-process candidate that starts both control-plane entrypoints without changing the current runtime model
+- the web layer now depends on an injected `PanelWebApi` interface instead of a hard-wired module-global HTTP client, which prepares a future move from local HTTP calls to in-process control routing
 - `pnpm audit:legacy-roots` now guards against reintroducing functional references to legacy repo roots or retired package names outside docs/build output
 - clean-room validation passed from the unified tree: `pnpm install --frozen-lockfile`, `pnpm build:clean-room`, `pnpm typecheck`, `pnpm build:panel-runtime`, `pnpm build:manager-runtime`, `pnpm typecheck:panel-runtime`, `pnpm typecheck:manager-runtime`, and `git diff --check`
 

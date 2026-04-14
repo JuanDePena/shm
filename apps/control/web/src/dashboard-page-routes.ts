@@ -4,7 +4,7 @@ import { type PanelNotice } from "@simplehost/panel-ui";
 
 import {
   getNoticeFromUrl,
-  loadDashboardData,
+  type PanelWebApi,
   WebApiError
 } from "./api-client.js";
 import {
@@ -26,6 +26,7 @@ import {
 } from "./request.js";
 
 export function createDashboardHandler(args: {
+  api: PanelWebApi;
   defaultImportPath: string;
   renderLoginPage: (locale: WebLocale, notice?: PanelNotice) => string;
   version: string;
@@ -67,7 +68,7 @@ export function createDashboardHandler(args: {
     }
 
     try {
-      const data = await loadDashboardData(token);
+      const data = await args.api.loadDashboardData(token);
       writeHtml(
         response,
         200,
