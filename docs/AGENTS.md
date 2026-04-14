@@ -123,6 +123,11 @@ Read these when working on source ownership boundaries:
 - `/opt/simplehostman/src/apps/worker/README.md`
 - `/opt/simplehostman/src/apps/agent/README.md`
 - `/opt/simplehostman/src/apps/cli/README.md`
+- `/opt/simplehostman/src/packages/README.md`
+- `/opt/simplehostman/src/platform/README.md`
+- `/opt/simplehostman/src/bootstrap/README.md`
+- `/opt/simplehostman/src/packaging/README.md`
+- `/opt/simplehostman/src/scripts/README.md`
 
 Read this when working on operator UI or shared visual primitives:
 

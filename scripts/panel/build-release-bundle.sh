@@ -25,7 +25,7 @@ rm -rf "${staging_dir}/.git" "${staging_dir}/node_modules" "${staging_dir}/dist"
 (
   cd "${staging_dir}"
   pnpm install --frozen-lockfile
-  pnpm build
+  pnpm build:panel-runtime
 )
 
 tar -C "${work_dir}" -czf "${bundle_path}" "simplehost-panel-${version}"

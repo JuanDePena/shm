@@ -20,7 +20,7 @@ rm -rf "${temp_dir}/.git" "${temp_dir}/node_modules"
 (
   cd "${temp_dir}"
   pnpm install --frozen-lockfile
-  pnpm build
+  pnpm build:panel-runtime
 )
 
 rm -rf "${release_dir}"

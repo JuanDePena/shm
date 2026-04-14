@@ -266,3 +266,15 @@ The current source-phase priorities are:
 2. remove residual source dependencies on legacy repos
 3. harden `apps/control` as the single control-plane source boundary
 4. postpone runtime/release convergence until the source workspace is stable
+
+## Ownership quick references
+
+- `/opt/simplehostman/src/apps/control/README.md`
+- `/opt/simplehostman/src/apps/worker/README.md`
+- `/opt/simplehostman/src/apps/agent/README.md`
+- `/opt/simplehostman/src/apps/cli/README.md`
+- `/opt/simplehostman/src/packages/README.md`
+- `/opt/simplehostman/src/platform/README.md`
+- `/opt/simplehostman/src/bootstrap/README.md`
+- `/opt/simplehostman/src/packaging/README.md`
+- `/opt/simplehostman/src/scripts/README.md`

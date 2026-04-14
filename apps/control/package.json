@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "pnpm --dir api build && pnpm --dir web build",
-    "typecheck": "pnpm --dir ../.. build && pnpm --dir api typecheck && pnpm --dir web typecheck",
     "clean": "pnpm --dir api clean && pnpm --dir web clean",
     "start:api": "pnpm --dir api start",
-    "start:web": "pnpm --dir web start"
+    "start:web": "pnpm --dir web start",
+    "typecheck:local": "pnpm --dir api typecheck && pnpm --dir web typecheck"
   }
 }

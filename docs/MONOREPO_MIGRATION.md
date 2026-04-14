@@ -30,7 +30,10 @@ Current checkpoint on 2026-04-14:
 - root and app READMEs now live inside `src` and replace the old repo-level README references for architecture work
 - imported release scripts now resolve the unified source root correctly from `src/scripts/*`
 - imported panel and manager service templates now point at `/opt/simplehostman/release/current` and the current app paths under `apps/control`, `apps/worker`, and `apps/agent`
-- clean-room validation passed from the unified tree: `pnpm install --frozen-lockfile`, `pnpm build:clean-room`, `pnpm typecheck`, and `git diff --check`
+- canonical README files now exist for `apps/*`, `packages`, `platform`, `bootstrap`, `packaging`, and `scripts` inside `src`
+- root workspace build slices now exist for `panel-runtime` and `manager-runtime` through `tsconfig.panel.json`, `tsconfig.manager.json`, and matching root scripts
+- imported panel and manager release scripts now build only their relevant runtime slice from the unified workspace
+- clean-room validation passed from the unified tree: `pnpm install --frozen-lockfile`, `pnpm build:clean-room`, `pnpm typecheck`, `pnpm build:panel-runtime`, `pnpm build:manager-runtime`, `pnpm typecheck:panel-runtime`, `pnpm typecheck:manager-runtime`, and `git diff --check`
 
 ## Remaining legacy surface after the current checkpoint
 

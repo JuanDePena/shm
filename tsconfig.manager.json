@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/manager-contracts" },
+    { "path": "./packages/manager-node-config" },
+    { "path": "./packages/manager-testing" },
+    { "path": "./packages/manager-control-plane-client" },
+    { "path": "./packages/manager-renderers" },
+    { "path": "./packages/manager-drivers" },
+    { "path": "./apps/agent" },
+    { "path": "./apps/cli" }
+  ]
+}

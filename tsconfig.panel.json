@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/panel-config" },
+    { "path": "./packages/panel-contracts" },
+    { "path": "./packages/panel-testing" },
+    { "path": "./packages/panel-ui" },
+    { "path": "./packages/panel-database" },
+    { "path": "./apps/control/api" },
+    { "path": "./apps/control/web" },
+    { "path": "./apps/worker" }
+  ]
+}

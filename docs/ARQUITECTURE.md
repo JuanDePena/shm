@@ -32,8 +32,10 @@ Detailed service docs:
 
 Product design references:
 
+- [`/opt/simplehostman/src/README.md`](/opt/simplehostman/src/README.md)
 - [`/opt/simplehostman/src/apps/control/README.md`](/opt/simplehostman/src/apps/control/README.md)
 - [`/opt/simplehostman/src/apps/agent/README.md`](/opt/simplehostman/src/apps/agent/README.md)
+- [`/opt/simplehostman/src/platform/README.md`](/opt/simplehostman/src/platform/README.md)
 
 ## Status on 2026-03-14
 
