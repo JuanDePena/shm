@@ -9,7 +9,12 @@ import {
 import { createHttpPanelWebApi, type PanelWebApi } from "./api-client.js";
 import { renderLoginPage } from "./auth-pages.js";
 import { createDashboardHandler } from "./dashboard-page-routes.js";
-import { createServerRequestListener, startPanelWebServer } from "./web-routes.js";
+import {
+  createRequestHandler,
+  createServerRequestListener,
+  startPanelWebServer,
+  type StartPanelWebServerArgs
+} from "./web-routes.js";
 
 export {
   createPanelWebApiFromRequest,
@@ -20,34 +25,22 @@ export {
   WebApiError
 } from "./api-client.js";
 
-export function createPanelWebRequestListener(
-  context: ControlProcessContext = createControlProcessContext(),
-  api: PanelWebApi = createHttpPanelWebApi(context.config)
-): ReturnType<typeof createServerRequestListener> {
-  const handleDashboard = createDashboardHandler({
-    api,
-    defaultImportPath: context.config.inventory.importPath,
-    renderLoginPage,
-    version: context.config.version
-  });
-
-  return createServerRequestListener({
-    api,
-    config: context.config,
-    handleDashboard,
-    renderLoginPage,
-    startedAt: context.startedAt
-  });
+export interface PanelWebProcessContext {
+  config: StartPanelWebServerArgs["config"];
+  startedAt: number;
 }
 
-export function createPanelWebRuntime(
-  context: ControlProcessContext = createControlProcessContext(),
+export interface PanelWebSurface extends StartPanelWebServerArgs {
+  context: PanelWebProcessContext;
+  requestHandler: ReturnType<typeof createRequestHandler>;
+  requestListener: ReturnType<typeof createServerRequestListener>;
+}
+
+export function createPanelWebSurface(
+  context: PanelWebProcessContext = createControlProcessContext(),
   api: PanelWebApi = createHttpPanelWebApi(context.config)
-): {
-  server: ReturnType<typeof startPanelWebServer>;
-  close: () => Promise<void>;
-} {
-  const server = startPanelWebServer({
+): PanelWebSurface {
+  const serverArgs: StartPanelWebServerArgs = {
     api,
     config: context.config,
     handleDashboard: createDashboardHandler({
@@ -58,7 +51,32 @@ export function createPanelWebRuntime(
     }),
     renderLoginPage,
     startedAt: context.startedAt
-  });
+  };
+
+  return {
+    context,
+    ...serverArgs,
+    requestHandler: createRequestHandler(serverArgs),
+    requestListener: createServerRequestListener(serverArgs)
+  };
+}
+
+export function createPanelWebRequestListener(
+  context: PanelWebProcessContext = createControlProcessContext(),
+  api: PanelWebApi = createHttpPanelWebApi(context.config)
+): ReturnType<typeof createServerRequestListener> {
+  return createPanelWebSurface(context, api).requestListener;
+}
+
+export function createPanelWebRuntime(
+  context: PanelWebProcessContext = createControlProcessContext(),
+  api: PanelWebApi = createHttpPanelWebApi(context.config)
+): {
+  server: ReturnType<typeof startPanelWebServer>;
+  close: () => Promise<void>;
+} {
+  const surface = createPanelWebSurface(context, api);
+  const server = startPanelWebServer(surface);
 
   return {
     server,

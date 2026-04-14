@@ -4,7 +4,8 @@ import test from "node:test";
 import { invokeRequestHandler } from "@simplehost/control-shared";
 
 import type { PanelWebApi } from "./api-client.js";
-import { createRequestHandler, type PanelWebRuntimeConfig } from "./web-routes.js";
+import { createPanelWebSurface } from "./index.js";
+import { type PanelWebRuntimeConfig } from "./web-routes.js";
 
 function createStubApi(): PanelWebApi {
   return {
@@ -40,15 +41,13 @@ function createConfig(): PanelWebRuntimeConfig {
 }
 
 test("web healthz reports web runtime metadata", async () => {
-  const handler = createRequestHandler({
-    api: createStubApi(),
-    config: createConfig(),
-    handleDashboard: async () => {
-      throw new Error("Unexpected dashboard handler call");
+  const handler = createPanelWebSurface(
+    {
+      config: createConfig(),
+      startedAt: Date.now() - 12_000
     },
-    renderLoginPage: () => "<html></html>",
-    startedAt: Date.now() - 12_000
-  });
+    createStubApi()
+  ).requestListener;
 
   const response = await invokeRequestHandler(handler, {
     method: "GET",
@@ -67,15 +66,13 @@ test("web healthz reports web runtime metadata", async () => {
 });
 
 test("locale preferences route redirects and sets locale cookie", async () => {
-  const handler = createRequestHandler({
-    api: createStubApi(),
-    config: createConfig(),
-    handleDashboard: async () => {
-      throw new Error("Unexpected dashboard handler call");
+  const handler = createPanelWebSurface(
+    {
+      config: createConfig(),
+      startedAt: Date.now()
     },
-    renderLoginPage: () => "<html></html>",
-    startedAt: Date.now()
-  });
+    createStubApi()
+  ).requestListener;
 
   const response = await invokeRequestHandler(handler, {
     method: "POST",
@@ -92,15 +89,13 @@ test("locale preferences route redirects and sets locale cookie", async () => {
 });
 
 test("unknown routes still return a structured 404 payload", async () => {
-  const handler = createRequestHandler({
-    api: createStubApi(),
-    config: createConfig(),
-    handleDashboard: async () => {
-      throw new Error("Unexpected dashboard handler call");
+  const handler = createPanelWebSurface(
+    {
+      config: createConfig(),
+      startedAt: Date.now()
     },
-    renderLoginPage: () => "<html></html>",
-    startedAt: Date.now()
-  });
+    createStubApi()
+  ).requestListener;
 
   const response = await invokeRequestHandler(handler, {
     method: "GET",

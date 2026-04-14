@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { type PanelRuntimeConfig } from "@simplehost/panel-config";
+import { createRuntimeHealthSnapshot } from "@simplehost/control-shared";
 import { createPanelApiMetadata } from "@simplehost/panel-contracts";
 import {
   createPanelDatabaseHealthSummary,
@@ -62,20 +63,6 @@ const rootEndpoints = [
   "POST /v1/jobs/report"
 ];
 
-function createHealthSnapshot(
-  config: PanelRuntimeConfig,
-  startedAt: number
-) {
-  return {
-    service: "api",
-    status: "ok" as const,
-    version: config.version,
-    environment: config.env,
-    timestamp: new Date().toISOString(),
-    uptimeSeconds: Math.round((Date.now() - startedAt) / 1000)
-  };
-}
-
 interface CreateApiRequestHandlerOptions {
   config: PanelRuntimeConfig;
   startedAt: number;
@@ -103,7 +90,15 @@ export function createApiRequestHandler({
     };
 
     if (request.method === "GET" && url.pathname === "/healthz") {
-      writeJson(response, 200, createHealthSnapshot(config, startedAt));
+      writeJson(
+        response,
+        200,
+        createRuntimeHealthSnapshot({
+          config,
+          service: "api",
+          startedAt
+        })
+      );
       return;
     }
 

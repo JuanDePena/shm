@@ -8,7 +8,7 @@ import {
   createControlProcessContext,
   type ControlProcessContext
 } from "@simplehost/control-shared";
-import { createPanelWebRequestListener } from "@simplehost/control-web";
+import { createPanelWebSurface } from "@simplehost/control-web";
 
 import { createInProcessPanelWebApi } from "./in-process-web-api.js";
 import { createCombinedControlRequestHandler } from "./router.js";
@@ -26,7 +26,8 @@ export async function createCombinedControlSurface(
   const apiSurface = await createPanelApiSurface(context);
   const apiRequestHandler = createPanelApiHttpHandler(apiSurface.requestHandler);
   const api = createInProcessPanelWebApi(apiRequestHandler);
-  const webRequestHandler = createPanelWebRequestListener(context, api);
+  const webSurface = createPanelWebSurface(context, api);
+  const webRequestHandler = webSurface.requestListener;
 
   return {
     apiRequestHandler,

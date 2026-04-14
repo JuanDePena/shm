@@ -77,4 +77,5 @@ From this directory:
 - the web layer can now consume the API boundary either through HTTP or through an in-process `PanelWebApi` implementation.
 - `apps/control/src/router.test.ts` now locks in the combined routing split between control health, `/v1/*`, and UI routes.
 - `control-web` now mirrors the API boundary pattern with `WebRouteContext` plus route slices for core pages, session routes, and action routes.
+- `control-web` now also exposes `createPanelWebSurface`, which plays the same role for UI routing that `PanelApiSurface` already plays for the API boundary.
 - The remaining work is runtime unification and release normalization, not source ownership.

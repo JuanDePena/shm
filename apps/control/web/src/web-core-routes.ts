@@ -1,4 +1,5 @@
 import type { ProxyRenderPayload } from "@simplehost/panel-contracts";
+import { createRuntimeHealthSnapshot } from "@simplehost/control-shared";
 
 import { getNoticeFromUrl } from "./api-client.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
@@ -19,15 +20,18 @@ export const handleCoreWebRoutes: WebRouteHandler = async ({
   handleDashboard
 }) => {
   if (request.method === "GET" && url.pathname === "/healthz") {
-    writeJson(response, 200, {
-      service: "web",
-      status: "ok",
-      version: config.version,
-      environment: config.env,
-      timestamp: new Date().toISOString(),
-      uptimeSeconds: Math.round((Date.now() - startedAt) / 1000),
-      upstreamApi: `${config.api.host}:${config.api.port}`
-    });
+    writeJson(
+      response,
+      200,
+      createRuntimeHealthSnapshot({
+        config,
+        service: "web",
+        startedAt,
+        extra: {
+          upstreamApi: `${config.api.host}:${config.api.port}`
+        }
+      })
+    );
     return true;
   }
 

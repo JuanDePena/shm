@@ -1,7 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { writeJson } from "@simplehost/control-api";
-import { type ControlProcessContext } from "@simplehost/control-shared";
+import {
+  createRuntimeHealthSnapshot,
+  type ControlProcessContext
+} from "@simplehost/control-shared";
 
 export interface CombinedControlRouterArgs {
   context: ControlProcessContext;
@@ -21,15 +24,18 @@ export function createCombinedControlRequestHandler({
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
 
     if (request.method === "GET" && url.pathname === "/healthz") {
-      writeJson(response, 200, {
-        service: "control",
-        status: "ok",
-        version: context.config.version,
-        environment: context.config.env,
-        timestamp: new Date().toISOString(),
-        uptimeSeconds: Math.round((Date.now() - context.startedAt) / 1000),
-        mode: "combined-candidate"
-      });
+      writeJson(
+        response,
+        200,
+        createRuntimeHealthSnapshot({
+          config: context.config,
+          service: "control",
+          startedAt: context.startedAt,
+          extra: {
+            mode: "combined-candidate"
+          }
+        })
+      );
       return;
     }
 
