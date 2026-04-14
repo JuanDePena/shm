@@ -90,7 +90,7 @@ Derived object names:
 
 Keep a source-controlled inventory for applications and domains in:
 
-- [`/opt/simplehostman/repos/simplehost-panel/bootstrap/apps.bootstrap.yaml`](/opt/simplehostman/repos/simplehost-panel/bootstrap/apps.bootstrap.yaml)
+- [`/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml`](/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml)
 
 That file defines:
 
@@ -260,10 +260,10 @@ WordPress-specific rules:
 
 The source-controlled artifacts that implement this model are stored under:
 
-- [`/opt/simplehostman/repos/simplehost-panel/bootstrap/apps.bootstrap.yaml`](/opt/simplehostman/repos/simplehost-panel/bootstrap/apps.bootstrap.yaml)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/httpd/vhosts/app-vhost.conf.template`](/opt/simplehostman/repos/simplehost-manager/platform/httpd/vhosts/app-vhost.conf.template)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/httpd/vhosts/redirect-vhost.conf.template`](/opt/simplehostman/repos/simplehost-manager/platform/httpd/vhosts/redirect-vhost.conf.template)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/app-template.container`](/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/app-template.container)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/containers/env/app-template.env.example`](/opt/simplehostman/repos/simplehost-manager/platform/containers/env/app-template.env.example)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/postgresql/apps/sql/create-app-database.sql.template`](/opt/simplehostman/repos/simplehost-manager/platform/postgresql/apps/sql/create-app-database.sql.template)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/mariadb/sql/create-app-database.sql.template`](/opt/simplehostman/repos/simplehost-manager/platform/mariadb/sql/create-app-database.sql.template)
+- [`/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml`](/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml)
+- [`/opt/simplehostman/src/platform/httpd/vhosts/app-vhost.conf.template`](/opt/simplehostman/src/platform/httpd/vhosts/app-vhost.conf.template)
+- [`/opt/simplehostman/src/platform/httpd/vhosts/redirect-vhost.conf.template`](/opt/simplehostman/src/platform/httpd/vhosts/redirect-vhost.conf.template)
+- [`/opt/simplehostman/src/platform/containers/quadlet/app-template.container`](/opt/simplehostman/src/platform/containers/quadlet/app-template.container)
+- [`/opt/simplehostman/src/platform/containers/env/app-template.env.example`](/opt/simplehostman/src/platform/containers/env/app-template.env.example)
+- [`/opt/simplehostman/src/platform/postgresql/apps/sql/create-app-database.sql.template`](/opt/simplehostman/src/platform/postgresql/apps/sql/create-app-database.sql.template)
+- [`/opt/simplehostman/src/platform/mariadb/sql/create-app-database.sql.template`](/opt/simplehostman/src/platform/mariadb/sql/create-app-database.sql.template)

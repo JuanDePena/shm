@@ -6,10 +6,48 @@
     ],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "baseUrl": ".",
+    "paths": {
+      "@simplehost/manager-contracts": [
+        "packages/manager-contracts/src/index.ts"
+      ],
+      "@simplehost/manager-control-plane-client": [
+        "packages/manager-control-plane-client/src/index.ts"
+      ],
+      "@simplehost/manager-drivers": [
+        "packages/manager-drivers/src/index.ts"
+      ],
+      "@simplehost/manager-node-config": [
+        "packages/manager-node-config/src/index.ts"
+      ],
+      "@simplehost/manager-renderers": [
+        "packages/manager-renderers/src/index.ts"
+      ],
+      "@simplehost/manager-testing": [
+        "packages/manager-testing/src/index.ts"
+      ],
+      "@simplehost/panel-config": [
+        "packages/panel-config/src/index.ts"
+      ],
+      "@simplehost/panel-contracts": [
+        "packages/panel-contracts/src/index.ts"
+      ],
+      "@simplehost/panel-database": [
+        "packages/panel-database/src/index.ts"
+      ],
+      "@simplehost/panel-testing": [
+        "packages/panel-testing/src/index.ts"
+      ],
+      "@simplehost/panel-ui": [
+        "packages/panel-ui/src/index.ts"
+      ]
+    },
     "types": [
       "node"
     ],
     "strict": true,
+    "composite": true,
+    "incremental": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,

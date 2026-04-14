@@ -1,0 +1,21 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/manager-contracts" },
+    { "path": "./packages/manager-node-config" },
+    { "path": "./packages/manager-testing" },
+    { "path": "./packages/panel-config" },
+    { "path": "./packages/panel-contracts" },
+    { "path": "./packages/panel-testing" },
+    { "path": "./packages/panel-ui" },
+    { "path": "./packages/manager-control-plane-client" },
+    { "path": "./packages/manager-renderers" },
+    { "path": "./packages/panel-database" },
+    { "path": "./packages/manager-drivers" },
+    { "path": "./apps/control/api" },
+    { "path": "./apps/control/web" },
+    { "path": "./apps/worker" },
+    { "path": "./apps/agent" },
+    { "path": "./apps/cli" }
+  ]
+}

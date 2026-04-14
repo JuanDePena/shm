@@ -9,8 +9,10 @@ This document defines the exact repository and directory layout for the SimpleHo
 
 Current canonical paths:
 
+- source workspace root: `/opt/simplehostman/src`
+- source workspace root: `/opt/simplehostman/src`
 - shared docs root: `/opt/simplehostman/src/docs`
-- bootstrap inventory: `/opt/simplehostman/repos/simplehost-panel/bootstrap/apps.bootstrap.yaml`
+- bootstrap inventory: `/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml`
 - consolidated root: `/opt/simplehostman`
 
 ## Current state
@@ -22,11 +24,11 @@ The shared docs tree now lives directly at:
 Current transition note:
 
 - the phased unification plan for the source tree is documented in [`/opt/simplehostman/src/docs/MONOREPO_MIGRATION.md`](/opt/simplehostman/src/docs/MONOREPO_MIGRATION.md)
-
-- `simplehost-panel` already owns `SHP` packaging, public-web tooling, and `postgresql-shp` templates
-- `simplehost-panel` also owns the bootstrap inventory at `bootstrap/apps.bootstrap.yaml`
-- `simplehost-manager` already owns node-local `wireguard`, `pdns`, `mariadb`, `postgresql-apps`, app container, and app proxy artifacts
-- shared open documentation now lives in `/opt/simplehostman/src/docs`
+- `/opt/simplehostman/src` is now the canonical source workspace
+- `/opt/simplehostman/repos/*` remains transitional legacy source material during migration
+- `/opt/simplehostman/src` is now the canonical source workspace
+- legacy repos under `/opt/simplehostman/repos` remain transitional inputs and historical reference material only
+- shared open documentation lives in `/opt/simplehostman/src/docs`
 - remaining open cross-workspace work is tracked in [`/opt/simplehostman/src/docs/TODO.md`](/opt/simplehostman/src/docs/TODO.md)
 
 ## Top-level layout
@@ -271,7 +273,7 @@ Non-`/opt` runtime paths:
 - Keep installed runtime code under `/opt/simplehostman/spanel` and `/opt/simplehostman/shm`.
 - Keep mutable runtime state outside `/opt`.
 - Treat `/opt/simplehostman/src/docs` as the canonical shared docs tree.
-- Treat `/opt/simplehostman/repos/simplehost-panel/bootstrap/apps.bootstrap.yaml` as the canonical bootstrap inventory file.
+- Treat `/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml` as the canonical bootstrap inventory file.
 - Keep definitive `SHP` and `SHM` packaging artifacts in their owning repositories.
 
 ## Current transition direction

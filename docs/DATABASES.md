@@ -78,20 +78,20 @@ Rationale:
 
 Source-controlled database artifacts:
 
-- [`/opt/simplehostman/repos/simplehost-manager/platform/postgresql/apps/conf/postgresql.apps.primary.conf`](/opt/simplehostman/repos/simplehost-manager/platform/postgresql/apps/conf/postgresql.apps.primary.conf)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/postgresql/apps/conf/postgresql.apps.standby.conf`](/opt/simplehostman/repos/simplehost-manager/platform/postgresql/apps/conf/postgresql.apps.standby.conf)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/postgresql/apps/conf/pg_hba.apps.conf`](/opt/simplehostman/repos/simplehost-manager/platform/postgresql/apps/conf/pg_hba.apps.conf)
-- [`/opt/simplehostman/repos/simplehost-manager/scripts/bootstrap-apps-standby.sh`](/opt/simplehostman/repos/simplehost-manager/scripts/bootstrap-apps-standby.sh)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/postgresql/apps/sql/create-app-database.sql.template`](/opt/simplehostman/repos/simplehost-manager/platform/postgresql/apps/sql/create-app-database.sql.template)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/mariadb/conf/primary.cnf`](/opt/simplehostman/repos/simplehost-manager/platform/mariadb/conf/primary.cnf)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/mariadb/conf/replica.cnf`](/opt/simplehostman/repos/simplehost-manager/platform/mariadb/conf/replica.cnf)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/mariadb/sql/create-app-database.sql.template`](/opt/simplehostman/repos/simplehost-manager/platform/mariadb/sql/create-app-database.sql.template)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/mariadb/sql/configure-replica.sql.template`](/opt/simplehostman/repos/simplehost-manager/platform/mariadb/sql/configure-replica.sql.template)
-- [`/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/conf/postgresql.shp.primary.conf`](/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/conf/postgresql.shp.primary.conf)
-- [`/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/conf/postgresql.shp.standby.conf`](/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/conf/postgresql.shp.standby.conf)
-- [`/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/conf/pg_hba.shp.conf`](/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/conf/pg_hba.shp.conf)
-- [`/opt/simplehostman/repos/simplehost-panel/scripts/bootstrap-shp-standby.sh`](/opt/simplehostman/repos/simplehost-panel/scripts/bootstrap-shp-standby.sh)
-- [`/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/sql/create-shp-database.sql.template`](/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/sql/create-shp-database.sql.template)
+- [`/opt/simplehostman/src/platform/postgresql/apps/conf/postgresql.apps.primary.conf`](/opt/simplehostman/src/platform/postgresql/apps/conf/postgresql.apps.primary.conf)
+- [`/opt/simplehostman/src/platform/postgresql/apps/conf/postgresql.apps.standby.conf`](/opt/simplehostman/src/platform/postgresql/apps/conf/postgresql.apps.standby.conf)
+- [`/opt/simplehostman/src/platform/postgresql/apps/conf/pg_hba.apps.conf`](/opt/simplehostman/src/platform/postgresql/apps/conf/pg_hba.apps.conf)
+- [`/opt/simplehostman/src/scripts/manager/bootstrap-apps-standby.sh`](/opt/simplehostman/src/scripts/manager/bootstrap-apps-standby.sh)
+- [`/opt/simplehostman/src/platform/postgresql/apps/sql/create-app-database.sql.template`](/opt/simplehostman/src/platform/postgresql/apps/sql/create-app-database.sql.template)
+- [`/opt/simplehostman/src/platform/mariadb/conf/primary.cnf`](/opt/simplehostman/src/platform/mariadb/conf/primary.cnf)
+- [`/opt/simplehostman/src/platform/mariadb/conf/replica.cnf`](/opt/simplehostman/src/platform/mariadb/conf/replica.cnf)
+- [`/opt/simplehostman/src/platform/mariadb/sql/create-app-database.sql.template`](/opt/simplehostman/src/platform/mariadb/sql/create-app-database.sql.template)
+- [`/opt/simplehostman/src/platform/mariadb/sql/configure-replica.sql.template`](/opt/simplehostman/src/platform/mariadb/sql/configure-replica.sql.template)
+- [`/opt/simplehostman/src/packaging/panel/postgresql/shp/conf/postgresql.shp.primary.conf`](/opt/simplehostman/src/packaging/panel/postgresql/shp/conf/postgresql.shp.primary.conf)
+- [`/opt/simplehostman/src/packaging/panel/postgresql/shp/conf/postgresql.shp.standby.conf`](/opt/simplehostman/src/packaging/panel/postgresql/shp/conf/postgresql.shp.standby.conf)
+- [`/opt/simplehostman/src/packaging/panel/postgresql/shp/conf/pg_hba.shp.conf`](/opt/simplehostman/src/packaging/panel/postgresql/shp/conf/pg_hba.shp.conf)
+- [`/opt/simplehostman/src/scripts/panel/bootstrap-shp-standby.sh`](/opt/simplehostman/src/scripts/panel/bootstrap-shp-standby.sh)
+- [`/opt/simplehostman/src/packaging/panel/postgresql/shp/sql/create-shp-database.sql.template`](/opt/simplehostman/src/packaging/panel/postgresql/shp/sql/create-shp-database.sql.template)
 
 ## PostgreSQL applications design
 
@@ -235,14 +235,14 @@ Primary node bootstrap:
 3. Initialize the cluster:
    - `postgresql-setup --initdb --unit postgresql@shp --port 5433`
 4. Install these rendered artifacts into the cluster data directory:
-   - [`/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/conf/postgresql.shp.primary.conf`](/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/conf/postgresql.shp.primary.conf) as `postgresql.conf`
-   - [`/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/conf/pg_hba.shp.conf`](/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/conf/pg_hba.shp.conf) as `pg_hba.conf`
+   - [`/opt/simplehostman/src/packaging/panel/postgresql/shp/conf/postgresql.shp.primary.conf`](/opt/simplehostman/src/packaging/panel/postgresql/shp/conf/postgresql.shp.primary.conf) as `postgresql.conf`
+   - [`/opt/simplehostman/src/packaging/panel/postgresql/shp/conf/pg_hba.shp.conf`](/opt/simplehostman/src/packaging/panel/postgresql/shp/conf/pg_hba.shp.conf) as `pg_hba.conf`
 5. Ensure `5433/tcp` is labeled for PostgreSQL under SELinux:
    - `semanage port -a -t postgresql_port_t -p tcp 5433`
 6. Reload SELinux policy if needed and start the service:
    - `semodule -B`
    - `systemctl enable --now postgresql@shp`
-7. Create the `SHP` database and role from [`/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/sql/create-shp-database.sql.template`](/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/sql/create-shp-database.sql.template).
+7. Create the `SHP` database and role from [`/opt/simplehostman/src/packaging/panel/postgresql/shp/sql/create-shp-database.sql.template`](/opt/simplehostman/src/packaging/panel/postgresql/shp/sql/create-shp-database.sql.template).
 
 Secondary node bootstrap:
 
@@ -251,10 +251,10 @@ Secondary node bootstrap:
    - `/var/lib/pgsql/shp/wal-archive`
 2. Create the host-native cluster unit:
    - `postgresql-new-systemd-unit --unit postgresql@shp --datadir /var/lib/pgsql/shp/data`
-3. Bootstrap the standby data directory from the primary with [`/opt/simplehostman/repos/simplehost-panel/scripts/bootstrap-shp-standby.sh`](/opt/simplehostman/repos/simplehost-panel/scripts/bootstrap-shp-standby.sh).
+3. Bootstrap the standby data directory from the primary with [`/opt/simplehostman/src/scripts/panel/bootstrap-shp-standby.sh`](/opt/simplehostman/src/scripts/panel/bootstrap-shp-standby.sh).
 4. Install these rendered artifacts into the cluster data directory:
-   - [`/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/conf/postgresql.shp.standby.conf`](/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/conf/postgresql.shp.standby.conf) as `postgresql.conf`
-   - [`/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/conf/pg_hba.shp.conf`](/opt/simplehostman/repos/simplehost-panel/packaging/postgresql/shp/conf/pg_hba.shp.conf) as `pg_hba.conf`
+   - [`/opt/simplehostman/src/packaging/panel/postgresql/shp/conf/postgresql.shp.standby.conf`](/opt/simplehostman/src/packaging/panel/postgresql/shp/conf/postgresql.shp.standby.conf) as `postgresql.conf`
+   - [`/opt/simplehostman/src/packaging/panel/postgresql/shp/conf/pg_hba.shp.conf`](/opt/simplehostman/src/packaging/panel/postgresql/shp/conf/pg_hba.shp.conf) as `pg_hba.conf`
 5. Ensure `5433/tcp` is labeled for PostgreSQL under SELinux:
    - `semanage port -a -t postgresql_port_t -p tcp 5433`
 6. Reload SELinux policy if needed and start the standby service:

@@ -25,7 +25,7 @@ Closed work should stay in the docs as implemented state, not linger here.
 ## 4. Keep shrinking transitional bootstrap state
 
 - Continue reducing the daily operational role of YAML bootstrap/import paths.
-- The bootstrap inventory now lives in [`/opt/simplehostman/repos/simplehost-panel/bootstrap/apps.bootstrap.yaml`](/opt/simplehostman/repos/simplehost-panel/bootstrap/apps.bootstrap.yaml).
+- The bootstrap inventory now lives in [`/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml`](/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml).
 - Keep reducing its day-to-day operational role in favor of PostgreSQL desired state plus controlled import/export.
 
 ## 5. Implement the mail execution backend from the documented design

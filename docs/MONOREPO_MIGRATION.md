@@ -1,7 +1,7 @@
 # Unified Source Migration Plan
 
 Date drafted: 2026-04-14
-Status: planned
+Status: in progress
 Target root: `/opt/simplehostman/src`
 
 ## Purpose
@@ -20,6 +20,24 @@ This migration is intentionally separated into two tracks:
 2. runtime and release migration
 
 The source trees should be unified first. The runtime layout under `/opt/simplehostman/release` should only be finalized after the new workspace compiles and the product boundaries are stable.
+
+Current checkpoint on 2026-04-14:
+
+- `/opt/simplehostman/src` is now a working pnpm workspace
+- `bootstrap`, `platform`, `packaging`, `scripts`, and `docs/MIGRATIONS` are already imported
+- low-friction packages are imported under `src/packages/*`
+- `worker`, `agent`, and `cli` are imported under `src/apps/*`
+- `apps/control` now owns the transitional `api/` and `web/` source trees
+- the workspace now installs, builds, and typechecks from `src`
+
+Current checkpoint on 2026-04-14:
+
+- `/opt/simplehostman/src` is now a working pnpm workspace
+- `bootstrap`, `platform`, `packaging`, `scripts`, and `docs/MIGRATIONS` are already imported
+- low-friction packages are imported under `src/packages/*`
+- `worker`, `agent`, and `cli` are imported under `src/apps/*`
+- `apps/control` now owns the transitional `api/` and `web/` source trees
+- the workspace now installs and typechecks from `src`
 
 ## Target layout
 

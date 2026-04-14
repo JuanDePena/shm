@@ -30,7 +30,7 @@ Optional upstream ports:
 
 The SimpleHost baseline does not open those ports by default. Use the optional firewalld service artifact in:
 
-- [`/opt/simplehostman/repos/simplehost-manager/platform/host/firewalld/services/rustdesk-oss.xml`](/opt/simplehostman/repos/simplehost-manager/platform/host/firewalld/services/rustdesk-oss.xml)
+- [`/opt/simplehostman/src/platform/host/firewalld/services/rustdesk-oss.xml`](/opt/simplehostman/src/platform/host/firewalld/services/rustdesk-oss.xml)
 
 Verified upstream references on 2026-04-10:
 
@@ -113,8 +113,8 @@ Keep the first rollout active on the primary node only. The secondary should sta
 
 Matching source-controlled Quadlet examples live in:
 
-- [`/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/rustdesk-hbbs.container`](/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/rustdesk-hbbs.container)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/rustdesk-hbbr.container`](/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/rustdesk-hbbr.container)
+- [`/opt/simplehostman/src/platform/containers/quadlet/rustdesk-hbbs.container`](/opt/simplehostman/src/platform/containers/quadlet/rustdesk-hbbs.container)
+- [`/opt/simplehostman/src/platform/containers/quadlet/rustdesk-hbbr.container`](/opt/simplehostman/src/platform/containers/quadlet/rustdesk-hbbr.container)
 
 ## Firewall activation
 
@@ -124,7 +124,7 @@ Example:
 
 ```bash
 install -D -m 0644 \
-  /opt/simplehostman/repos/simplehost-manager/platform/host/firewalld/services/rustdesk-oss.xml \
+  /opt/simplehostman/src/platform/host/firewalld/services/rustdesk-oss.xml \
   /etc/firewalld/services/rustdesk-oss.xml
 firewall-cmd --permanent --zone=public --add-service=rustdesk-oss
 firewall-cmd --reload

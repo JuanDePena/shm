@@ -15,8 +15,10 @@ Use it as the default operational guide for work on:
 Current canonical paths:
 
 - workspace root: `/opt/simplehostman`
+- source workspace root: `/opt/simplehostman/src`
+- source workspace root: `/opt/simplehostman/src`
 - shared docs root: `/opt/simplehostman/src/docs`
-- bootstrap inventory: `/opt/simplehostman/repos/simplehost-panel/bootstrap/apps.bootstrap.yaml`
+- bootstrap inventory: `/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml`
 - `SHP` runtime root: `/opt/simplehostman/spanel`
 - `SHM` runtime root: `/opt/simplehostman/shm`
 
@@ -24,17 +26,11 @@ Do not reintroduce `/home/server` or `/opt/server`. That transition is already c
 
 ## Repository layout
 
-Tracked workspace trees under `/opt/simplehostman/repos`:
+Current source workspace:
 
-- `simplehost-panel`
-- `simplehost-manager`
-- `docs`
-
-Current meaning:
-
-- `simplehost-panel`: Node.js + TypeScript monorepo for `SHP`
-- `simplehost-manager`: Node.js + TypeScript monorepo for `SHM`
-- `docs`: shared architecture, platform, and operational documentation
+- `/opt/simplehostman/src` is the canonical source tree
+- `/opt/simplehostman/repos/*` remains transitional legacy source material during migration
+- `/opt/simplehostman/src/docs` is the canonical shared docs tree
 
 Packaging direction:
 
@@ -99,7 +95,7 @@ For `SHM` local persistence:
 Current operational state:
 
 - `SHP` PostgreSQL is already the operational control-plane source of truth
-- bootstrap inventory remains in `/opt/simplehostman/repos/simplehost-panel/bootstrap/apps.bootstrap.yaml`
+- bootstrap inventory remains in `/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml`
 - runtime bootstrap import normally reads `/etc/spanel/inventory.apps.yaml`
 - shared docs live in `/opt/simplehostman/src/docs`
 
@@ -107,7 +103,7 @@ Long-term target:
 
 - keep `SHP` as the control-plane source of truth
 - YAML import/export remains available for audit and disaster recovery
-- product runtime packaging moves into `simplehost-panel` and `simplehost-manager`
+- product runtime packaging is being normalized inside `/opt/simplehostman/src/packaging`
 - keep remaining open work tracked in `/opt/simplehostman/src/docs/TODO.md`
 
 ## Current implementation snapshot
@@ -208,6 +204,6 @@ Read these when working on service-specific behavior:
 
 ## Notes for future agents
 
-- If bootstrapping the codebase, start with `simplehost-panel` and `simplehost-manager`.
-- If changing bootstrap inventory, work in `simplehost-panel/bootstrap/apps.bootstrap.yaml`.
+- If bootstrapping the codebase, start with `/opt/simplehostman/src`.
+- If changing bootstrap inventory, work in `/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml`.
 - If a change affects both product design and platform layout, update the docs in the same turn.

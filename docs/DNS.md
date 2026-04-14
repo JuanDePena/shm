@@ -22,7 +22,7 @@ The goal is to replace legacy DNS hosted on an older cPanel VPS with a PowerDNS 
 ## Status on 2026-03-14
 
 - Public operator aliases for the nodes are `vps-prd.pyrosa.com.do` and `vps-des.pyrosa.com.do`; the underlying system hostnames remain the legacy OVH names.
-- PowerDNS ownership and templates now live in [`/opt/simplehostman/repos/simplehost-manager/platform/pdns`](/opt/simplehostman/repos/simplehost-manager/platform/pdns).
+- PowerDNS ownership and templates now live in [`/opt/simplehostman/src/platform/pdns`](/opt/simplehostman/src/platform/pdns).
 - `dns.sync` is already dispatched from `SHP` and executed by `SHM` against the local PowerDNS API.
 - Desired DNS state now lives in `SHP` PostgreSQL; `apps.yaml` is only the bootstrap/import-export path.
 
@@ -168,13 +168,13 @@ Recommended migration sequence:
 
 Current example inventory:
 
-- [`/opt/simplehostman/repos/simplehost-panel/bootstrap/apps.bootstrap.yaml`](/opt/simplehostman/repos/simplehost-panel/bootstrap/apps.bootstrap.yaml)
+- [`/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml`](/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml)
 
 Source-controlled DNS artifacts:
 
-- [`/opt/simplehostman/repos/simplehost-manager/platform/pdns/primary/pdns.conf`](/opt/simplehostman/repos/simplehost-manager/platform/pdns/primary/pdns.conf)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/pdns/secondary/pdns.conf`](/opt/simplehostman/repos/simplehost-manager/platform/pdns/secondary/pdns.conf)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/pdns/tsig/zone-transfer.key.example`](/opt/simplehostman/repos/simplehost-manager/platform/pdns/tsig/zone-transfer.key.example)
+- [`/opt/simplehostman/src/platform/pdns/primary/pdns.conf`](/opt/simplehostman/src/platform/pdns/primary/pdns.conf)
+- [`/opt/simplehostman/src/platform/pdns/secondary/pdns.conf`](/opt/simplehostman/src/platform/pdns/secondary/pdns.conf)
+- [`/opt/simplehostman/src/platform/pdns/tsig/zone-transfer.key.example`](/opt/simplehostman/src/platform/pdns/tsig/zone-transfer.key.example)
 
 ## Backup policy
 

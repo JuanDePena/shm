@@ -9,3 +9,7 @@ Current internal layout:
 
 The short-term goal is to keep separate entrypoints while consolidating source ownership under `apps/control`.
 The later goal is to collapse both into one runtime process and one port.
+
+This directory is now the canonical source location for control-plane UI and API code inside `/opt/simplehostman/src`.
+
+This directory is now the canonical source location for control-plane UI and API code inside `/opt/simplehostman/src`.

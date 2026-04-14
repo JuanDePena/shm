@@ -6,7 +6,7 @@ This document tracks the closure of the `adudoc` database migration inside `SHP`
 
 As of `2026-04-12`, the repository declares `adudoc` on `postgresql` and does not mark it as pending migration in bootstrap inventory:
 
-- [`bootstrap/apps.bootstrap.yaml`](/opt/simplehostman/repos/simplehost-panel/bootstrap/apps.bootstrap.yaml:78)
+- [`bootstrap/apps.bootstrap.yaml`](/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml:78)
 
 That means the repo currently reflects `adudoc` as already cut over in desired topology, but it does **not** yet prove the live platform finished every operational step.
 

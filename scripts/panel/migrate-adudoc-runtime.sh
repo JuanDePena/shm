@@ -20,7 +20,7 @@ TARGET_DB_PORT="${ADUDOC_TARGET_DB_PORT:-5432}"
 IMAGE_TAG="${ADUDOC_IMAGE_TAG:-registry.example.com/adudoc-app:stable}"
 BUILD_IMAGE="${ADUDOC_BUILD_IMAGE:-true}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MANAGER_REPO="$(cd "${SCRIPT_DIR}/../../simplehost-manager" && pwd)"
+SRC_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 require_command() {
   local command_name="$1"
@@ -37,7 +37,7 @@ require_command podman
 require_command psql
 
 if [[ "${BUILD_IMAGE}" == "true" ]]; then
-  "${MANAGER_REPO}/scripts/build-app-runtime-image.sh" "${IMAGE_TAG}"
+  "${SRC_ROOT}/scripts/manager/build-app-runtime-image.sh" "${IMAGE_TAG}"
 fi
 
 install -d \

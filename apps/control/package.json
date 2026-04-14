@@ -1,0 +1,10 @@
+{
+  "name": "@simplehost/control",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start:api": "pnpm --dir api start",
+    "start:web": "pnpm --dir web start"
+  }
+}

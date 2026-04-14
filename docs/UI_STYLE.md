@@ -19,23 +19,23 @@ It is intended to prevent future UI work from drifting back into:
 
 The current implementation lives primarily in:
 
-- `/opt/simplehostman/repos/simplehost-panel/packages/ui/src/base-styles.ts`
-- `/opt/simplehostman/repos/simplehost-panel/packages/ui/src/admin-shell-styles.ts`
-- `/opt/simplehostman/repos/simplehost-panel/packages/ui/src/client-behaviors.ts`
-- `/opt/simplehostman/repos/simplehost-panel/packages/ui/src/admin-shell.ts`
-- `/opt/simplehostman/repos/simplehost-panel/packages/ui/src/panel-shell.ts`
-- `/opt/simplehostman/repos/simplehost-panel/packages/ui/src/data-table.ts`
+- `/opt/simplehostman/src/packages/panel-ui/src/base-styles.ts`
+- `/opt/simplehostman/src/packages/panel-ui/src/admin-shell-styles.ts`
+- `/opt/simplehostman/src/packages/panel-ui/src/client-behaviors.ts`
+- `/opt/simplehostman/src/packages/panel-ui/src/admin-shell.ts`
+- `/opt/simplehostman/src/packages/panel-ui/src/panel-shell.ts`
+- `/opt/simplehostman/src/packages/panel-ui/src/data-table.ts`
 
 The most visible `SHP` workspace wiring currently lives in:
 
-- `/opt/simplehostman/repos/simplehost-panel/apps/web/src/dashboard-shell.ts`
-- `/opt/simplehostman/repos/simplehost-panel/apps/web/src/dashboard-page.ts`
-- `/opt/simplehostman/repos/simplehost-panel/apps/web/src/dashboard-packages.ts`
-- `/opt/simplehostman/repos/simplehost-panel/apps/web/src/desired-state-workspace.ts`
-- `/opt/simplehostman/repos/simplehost-panel/apps/web/src/desired-state-app-proxy.ts`
-- `/opt/simplehostman/repos/simplehost-panel/apps/web/src/desired-state-database.ts`
-- `/opt/simplehostman/repos/simplehost-panel/apps/web/src/desired-state-zone.ts`
-- `/opt/simplehostman/repos/simplehost-panel/apps/web/src/desired-state-tenant-node.ts`
+- `/opt/simplehostman/src/apps/control/web/src/dashboard-shell.ts`
+- `/opt/simplehostman/src/apps/control/web/src/dashboard-page.ts`
+- `/opt/simplehostman/src/apps/control/web/src/dashboard-packages.ts`
+- `/opt/simplehostman/src/apps/control/web/src/desired-state-workspace.ts`
+- `/opt/simplehostman/src/apps/control/web/src/desired-state-app-proxy.ts`
+- `/opt/simplehostman/src/apps/control/web/src/desired-state-database.ts`
+- `/opt/simplehostman/src/apps/control/web/src/desired-state-zone.ts`
+- `/opt/simplehostman/src/apps/control/web/src/desired-state-tenant-node.ts`
 
 ## Shells
 

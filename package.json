@@ -10,9 +10,15 @@
   },
   "scripts": {
     "bootstrap": "pnpm install",
-    "build": "pnpm -r --if-present build",
+    "build": "tsc -b tsconfig.json",
+    "build:clean-room": "pnpm clean && pnpm build",
     "typecheck": "pnpm -r --if-present typecheck",
-    "clean": "pnpm -r --if-present clean",
+    "clean": "pnpm -r --if-present clean && find . -name '*.tsbuildinfo' -delete",
+    "start:control:api": "pnpm --dir apps/control/api start",
+    "start:control:web": "pnpm --dir apps/control/web start",
+    "start:worker": "pnpm --filter @simplehost/panel-worker start",
+    "start:agent": "pnpm --filter @simplehost/manager-agent start",
+    "start:cli": "pnpm --filter @simplehost/manager-cli start",
     "test": "pnpm -r --if-present test"
   },
   "devDependencies": {

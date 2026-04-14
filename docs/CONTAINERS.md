@@ -82,13 +82,13 @@ The multi-domain inventory and naming rules are documented in:
 
 Source-controlled container artifacts:
 
-- [`/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/app-template.container`](/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/app-template.container)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/worker-template.container`](/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/worker-template.container)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/mariadb-primary.container`](/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/mariadb-primary.container)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/mariadb-replica.container`](/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/mariadb-replica.container)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/rustdesk-hbbs.container`](/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/rustdesk-hbbs.container)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/rustdesk-hbbr.container`](/opt/simplehostman/repos/simplehost-manager/platform/containers/quadlet/rustdesk-hbbr.container)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/host/firewalld/services/rustdesk-oss.xml`](/opt/simplehostman/repos/simplehost-manager/platform/host/firewalld/services/rustdesk-oss.xml)
+- [`/opt/simplehostman/src/platform/containers/quadlet/app-template.container`](/opt/simplehostman/src/platform/containers/quadlet/app-template.container)
+- [`/opt/simplehostman/src/platform/containers/quadlet/worker-template.container`](/opt/simplehostman/src/platform/containers/quadlet/worker-template.container)
+- [`/opt/simplehostman/src/platform/containers/quadlet/mariadb-primary.container`](/opt/simplehostman/src/platform/containers/quadlet/mariadb-primary.container)
+- [`/opt/simplehostman/src/platform/containers/quadlet/mariadb-replica.container`](/opt/simplehostman/src/platform/containers/quadlet/mariadb-replica.container)
+- [`/opt/simplehostman/src/platform/containers/quadlet/rustdesk-hbbs.container`](/opt/simplehostman/src/platform/containers/quadlet/rustdesk-hbbs.container)
+- [`/opt/simplehostman/src/platform/containers/quadlet/rustdesk-hbbr.container`](/opt/simplehostman/src/platform/containers/quadlet/rustdesk-hbbr.container)
+- [`/opt/simplehostman/src/platform/host/firewalld/services/rustdesk-oss.xml`](/opt/simplehostman/src/platform/host/firewalld/services/rustdesk-oss.xml)
 
 ## Network model
 

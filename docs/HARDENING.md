@@ -51,9 +51,9 @@ OpenSSH on this host uses the first value read for duplicated directives. Becaus
 
 Source-controlled copies:
 
-- [`/opt/simplehostman/repos/simplehost-manager/platform/host/ssh/50-cloud-init.conf`](/opt/simplehostman/repos/simplehost-manager/platform/host/ssh/50-cloud-init.conf)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/host/ssh/50-redhat.conf`](/opt/simplehostman/repos/simplehost-manager/platform/host/ssh/50-redhat.conf)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/host/ssh/99-hardening.conf`](/opt/simplehostman/repos/simplehost-manager/platform/host/ssh/99-hardening.conf)
+- [`/opt/simplehostman/src/platform/host/ssh/50-cloud-init.conf`](/opt/simplehostman/src/platform/host/ssh/50-cloud-init.conf)
+- [`/opt/simplehostman/src/platform/host/ssh/50-redhat.conf`](/opt/simplehostman/src/platform/host/ssh/50-redhat.conf)
+- [`/opt/simplehostman/src/platform/host/ssh/99-hardening.conf`](/opt/simplehostman/src/platform/host/ssh/99-hardening.conf)
 
 Deployed files:
 
@@ -99,8 +99,8 @@ Match User root
 
 Source-controlled copy:
 
-- [`/opt/simplehostman/repos/simplehost-manager/platform/host/firewalld/zones/public.xml`](/opt/simplehostman/repos/simplehost-manager/platform/host/firewalld/zones/public.xml)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/host/systemd/httpd-network-online.conf`](/opt/simplehostman/repos/simplehost-manager/platform/host/systemd/httpd-network-online.conf)
+- [`/opt/simplehostman/src/platform/host/firewalld/zones/public.xml`](/opt/simplehostman/src/platform/host/firewalld/zones/public.xml)
+- [`/opt/simplehostman/src/platform/host/systemd/httpd-network-online.conf`](/opt/simplehostman/src/platform/host/systemd/httpd-network-online.conf)
 
 Deployed file:
 
@@ -150,7 +150,7 @@ Result:
 
 Source-controlled copy:
 
-- [`/opt/simplehostman/repos/simplehost-manager/platform/host/fail2ban/jail.d/sshd.local`](/opt/simplehostman/repos/simplehost-manager/platform/host/fail2ban/jail.d/sshd.local)
+- [`/opt/simplehostman/src/platform/host/fail2ban/jail.d/sshd.local`](/opt/simplehostman/src/platform/host/fail2ban/jail.d/sshd.local)
 
 Deployed file:
 
@@ -184,9 +184,9 @@ Runtime state:
 
 Source-controlled copies:
 
-- [`/opt/simplehostman/repos/simplehost-manager/platform/host/observability/server-healthcheck.sh`](/opt/simplehostman/repos/simplehost-manager/platform/host/observability/server-healthcheck.sh)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/host/systemd/server-healthcheck.service`](/opt/simplehostman/repos/simplehost-manager/platform/host/systemd/server-healthcheck.service)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/host/systemd/server-healthcheck.timer`](/opt/simplehostman/repos/simplehost-manager/platform/host/systemd/server-healthcheck.timer)
+- [`/opt/simplehostman/src/platform/host/observability/server-healthcheck.sh`](/opt/simplehostman/src/platform/host/observability/server-healthcheck.sh)
+- [`/opt/simplehostman/src/platform/host/systemd/server-healthcheck.service`](/opt/simplehostman/src/platform/host/systemd/server-healthcheck.service)
+- [`/opt/simplehostman/src/platform/host/systemd/server-healthcheck.timer`](/opt/simplehostman/src/platform/host/systemd/server-healthcheck.timer)
 
 Deployed files:
 

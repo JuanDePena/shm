@@ -236,10 +236,10 @@ Database ports `5432`, `5433`, and `3306` remain private to WireGuard only and m
 
 Source-controlled network artifacts:
 
-- [`/opt/simplehostman/repos/simplehost-manager/platform/host/firewalld/zones/public.xml`](/opt/simplehostman/repos/simplehost-manager/platform/host/firewalld/zones/public.xml)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/host/firewalld/zones/wireguard.xml`](/opt/simplehostman/repos/simplehost-manager/platform/host/firewalld/zones/wireguard.xml)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/wireguard/wg0-primary.conf`](/opt/simplehostman/repos/simplehost-manager/platform/wireguard/wg0-primary.conf)
-- [`/opt/simplehostman/repos/simplehost-manager/platform/wireguard/wg0-secondary.conf`](/opt/simplehostman/repos/simplehost-manager/platform/wireguard/wg0-secondary.conf)
+- [`/opt/simplehostman/src/platform/host/firewalld/zones/public.xml`](/opt/simplehostman/src/platform/host/firewalld/zones/public.xml)
+- [`/opt/simplehostman/src/platform/host/firewalld/zones/wireguard.xml`](/opt/simplehostman/src/platform/host/firewalld/zones/wireguard.xml)
+- [`/opt/simplehostman/src/platform/wireguard/wg0-primary.conf`](/opt/simplehostman/src/platform/wireguard/wg0-primary.conf)
+- [`/opt/simplehostman/src/platform/wireguard/wg0-secondary.conf`](/opt/simplehostman/src/platform/wireguard/wg0-secondary.conf)
 
 ## Implementation order
 
