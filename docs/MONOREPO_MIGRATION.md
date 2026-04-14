@@ -26,7 +26,7 @@ Current checkpoint on 2026-04-14:
 - `/opt/simplehostman/src` is now a working pnpm workspace and the canonical source tree
 - `bootstrap`, `platform`, `packaging`, `scripts`, and `docs/MIGRATIONS` are imported under `src`
 - `worker`, `agent`, and `cli` are imported under `src/apps/*`
-- `apps/control` now owns the transitional `api/` and `web/` source trees
+- `apps/control` now owns the transitional `control-api` and `control-web` source trees
 - root and app READMEs now live inside `src` and replace the old repo-level README references for architecture work
 - imported release scripts now resolve the unified source root correctly from `src/scripts/*`
 - imported panel and manager service templates now point at `/opt/simplehostman/release/current` and the current app paths under `apps/control`, `apps/worker`, and `apps/agent`

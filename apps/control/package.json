@@ -4,10 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "pnpm --dir api build && pnpm --dir web build",
-    "clean": "pnpm --dir api clean && pnpm --dir web clean",
+    "build:api": "pnpm --dir api build",
+    "build:web": "pnpm --dir web build",
+    "build": "pnpm build:api && pnpm build:web",
+    "clean:api": "pnpm --dir api clean",
+    "clean:web": "pnpm --dir web clean",
+    "clean": "pnpm clean:api && pnpm clean:web",
     "start:api": "pnpm --dir api start",
     "start:web": "pnpm --dir web start",
-    "typecheck:local": "pnpm --dir api typecheck && pnpm --dir web typecheck"
-  }
+    "typecheck:api": "pnpm --dir api typecheck",
+    "typecheck:web": "pnpm --dir web typecheck",
+    "typecheck:local": "pnpm typecheck:api && pnpm typecheck:web"
+  },
+  "description": "Unified control-plane source boundary with transitional API and web entrypoints"
 }

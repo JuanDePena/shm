@@ -1,5 +1,5 @@
 {
-  "name": "@simplehost/panel-web",
+  "name": "@simplehost/control-web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -18,5 +18,6 @@
     "@simplehost/panel-config": "workspace:*",
     "@simplehost/panel-contracts": "workspace:*",
     "@simplehost/panel-ui": "workspace:*"
-  }
+  },
+  "description": "Transitional web entrypoint inside the unified control-plane app"
 }

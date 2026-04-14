@@ -270,6 +270,8 @@ The current source-phase priorities are:
 ## Ownership quick references
 
 - `/opt/simplehostman/src/apps/control/README.md`
+- `/opt/simplehostman/src/apps/control/api/README.md`
+- `/opt/simplehostman/src/apps/control/web/README.md`
 - `/opt/simplehostman/src/apps/worker/README.md`
 - `/opt/simplehostman/src/apps/agent/README.md`
 - `/opt/simplehostman/src/apps/cli/README.md`

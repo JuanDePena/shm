@@ -120,6 +120,8 @@ Read these before making architectural changes:
 Read these when working on source ownership boundaries:
 
 - `/opt/simplehostman/src/apps/control/README.md`
+- `/opt/simplehostman/src/apps/control/api/README.md`
+- `/opt/simplehostman/src/apps/control/web/README.md`
 - `/opt/simplehostman/src/apps/worker/README.md`
 - `/opt/simplehostman/src/apps/agent/README.md`
 - `/opt/simplehostman/src/apps/cli/README.md`

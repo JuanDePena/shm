@@ -34,6 +34,8 @@ Product design references:
 
 - [`/opt/simplehostman/src/README.md`](/opt/simplehostman/src/README.md)
 - [`/opt/simplehostman/src/apps/control/README.md`](/opt/simplehostman/src/apps/control/README.md)
+- [`/opt/simplehostman/src/apps/control/api/README.md`](/opt/simplehostman/src/apps/control/api/README.md)
+- [`/opt/simplehostman/src/apps/control/web/README.md`](/opt/simplehostman/src/apps/control/web/README.md)
 - [`/opt/simplehostman/src/apps/agent/README.md`](/opt/simplehostman/src/apps/agent/README.md)
 - [`/opt/simplehostman/src/platform/README.md`](/opt/simplehostman/src/platform/README.md)
 

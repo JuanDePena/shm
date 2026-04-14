@@ -21,11 +21,15 @@
     "start:cli": "pnpm --filter @simplehost/manager-cli start",
     "test": "pnpm -r --if-present test",
     "build:control": "pnpm --dir apps/control build",
-    "typecheck:control": "pnpm --dir apps/control/api typecheck && pnpm --dir apps/control/web typecheck",
+    "typecheck:control": "pnpm --dir apps/control typecheck:local",
     "build:panel-runtime": "tsc -b tsconfig.panel.json",
     "build:manager-runtime": "tsc -b tsconfig.manager.json",
-    "typecheck:panel-runtime": "pnpm --filter @simplehost/panel-config typecheck && pnpm --filter @simplehost/panel-contracts typecheck && pnpm --filter @simplehost/panel-testing typecheck && pnpm --filter @simplehost/panel-ui typecheck && pnpm --filter @simplehost/panel-database typecheck && pnpm --dir apps/control/api typecheck && pnpm --dir apps/control/web typecheck && pnpm --filter @simplehost/panel-worker typecheck",
-    "typecheck:manager-runtime": "pnpm --filter @simplehost/manager-contracts typecheck && pnpm --filter @simplehost/manager-node-config typecheck && pnpm --filter @simplehost/manager-testing typecheck && pnpm --filter @simplehost/manager-control-plane-client typecheck && pnpm --filter @simplehost/manager-renderers typecheck && pnpm --filter @simplehost/manager-drivers typecheck && pnpm --filter @simplehost/manager-agent typecheck && pnpm --filter @simplehost/manager-cli typecheck"
+    "typecheck:panel-runtime": "pnpm --filter @simplehost/panel-config typecheck && pnpm --filter @simplehost/panel-contracts typecheck && pnpm --filter @simplehost/panel-testing typecheck && pnpm --filter @simplehost/panel-ui typecheck && pnpm --filter @simplehost/panel-database typecheck && pnpm --dir apps/control typecheck:local && pnpm --filter @simplehost/panel-worker typecheck",
+    "typecheck:manager-runtime": "pnpm --filter @simplehost/manager-contracts typecheck && pnpm --filter @simplehost/manager-node-config typecheck && pnpm --filter @simplehost/manager-testing typecheck && pnpm --filter @simplehost/manager-control-plane-client typecheck && pnpm --filter @simplehost/manager-renderers typecheck && pnpm --filter @simplehost/manager-drivers typecheck && pnpm --filter @simplehost/manager-agent typecheck && pnpm --filter @simplehost/manager-cli typecheck",
+    "build:control:api": "pnpm --dir apps/control build:api",
+    "build:control:web": "pnpm --dir apps/control build:web",
+    "typecheck:control:api": "pnpm --dir apps/control typecheck:api",
+    "typecheck:control:web": "pnpm --dir apps/control typecheck:web"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",
