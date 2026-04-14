@@ -1,10 +1,10 @@
-import type { IncomingMessage } from "node:http";
-
 import { WebApiError } from "./api-client.js";
-import { readSessionToken } from "./request.js";
+import type { WebRouteContext } from "./web-route-context.js";
 
-export async function requireSessionToken(request: IncomingMessage): Promise<string> {
-  const token = readSessionToken(request);
+export function requireSessionToken(
+  context: Pick<WebRouteContext, "sessionToken">
+): string {
+  const token = context.sessionToken;
 
   if (!token) {
     throw new WebApiError(401, "Missing session.");

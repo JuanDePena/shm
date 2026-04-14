@@ -4,7 +4,7 @@ import { createRuntimeHealthSnapshot } from "@simplehost/control-shared";
 import { getNoticeFromUrl } from "./api-client.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
 import { buildProxyVhostPreview, renderProxyVhostPage } from "./proxy-vhost-preview.js";
-import { readSessionToken, writeHtml, writeJson } from "./request.js";
+import { writeHtml, writeJson } from "./request.js";
 import { requireSessionToken } from "./route-helpers.js";
 import { renderRustDeskConnectPage } from "./rustdesk-connect.js";
 import type { WebRouteHandler } from "./web-route-context.js";
@@ -14,10 +14,12 @@ export const handleCoreWebRoutes: WebRouteHandler = async ({
   response,
   url,
   locale,
+  sessionToken,
   api,
   config,
   startedAt,
-  handleDashboard
+  handleDashboard,
+  renderLoginPage
 }) => {
   if (request.method === "GET" && url.pathname === "/healthz") {
     writeJson(
@@ -46,7 +48,7 @@ export const handleCoreWebRoutes: WebRouteHandler = async ({
       response,
       200,
       renderRustDeskConnectPage(locale, await api.loadRustDeskPublicConnection(), {
-        hasSession: Boolean(readSessionToken(request)),
+        hasSession: Boolean(sessionToken),
         notice: getNoticeFromUrl(url)
       })
     );
@@ -54,7 +56,7 @@ export const handleCoreWebRoutes: WebRouteHandler = async ({
   }
 
   if (request.method === "GET" && url.pathname === "/proxy-vhost") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const slug = url.searchParams.get("slug")?.trim() ?? "";
     const payload = await api.request<ProxyRenderPayload>(
       `/v1/apps/${encodeURIComponent(slug)}/proxy-preview`,
@@ -79,8 +81,18 @@ export const handleCoreWebRoutes: WebRouteHandler = async ({
   }
 
   if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/login")) {
-    await handleDashboard(request, response);
-    return true;
+    return handleDashboard({
+      request,
+      response,
+      url,
+      locale,
+      sessionToken,
+      api,
+      config,
+      startedAt,
+      handleDashboard,
+      renderLoginPage
+    });
   }
 
   return false;

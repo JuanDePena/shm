@@ -7,6 +7,7 @@ import { handleDesiredStateResourceRoute } from "./desired-state-resource-routes
 import { handleMailRoute } from "./mail-routes.js";
 import {
   clearSessionCookie,
+  readSessionToken,
   readLocale,
   redirect,
   type WebLocale,
@@ -40,10 +41,7 @@ export interface PanelWebRuntimeConfig {
 export interface StartPanelWebServerArgs {
   api: PanelWebApi;
   config: PanelWebRuntimeConfig;
-  handleDashboard: (
-    request: IncomingMessage,
-    response: ServerResponse
-  ) => Promise<void>;
+  handleDashboard: (context: WebRouteContext) => Promise<boolean>;
   renderLoginPage: (locale: WebLocale, notice?: PanelNotice) => string;
   startedAt: number;
 }
@@ -59,6 +57,7 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
       response,
       url,
       locale: readLocale(request),
+      sessionToken: readSessionToken(request),
       api: args.api,
       config: args.config,
       startedAt: args.startedAt,
@@ -69,19 +68,13 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
     for (const handler of [
       handleCoreWebRoutes,
       handleSessionWebRoutes,
-      handleActionWebRoutes
+      handleActionWebRoutes,
+      handleDesiredStateResourceRoute,
+      handleMailRoute
     ] satisfies WebRouteHandler[]) {
       if (await handler(context)) {
         return;
       }
-    }
-
-    if (await handleDesiredStateResourceRoute(args.api, request, response, url)) {
-      return;
-    }
-
-    if (await handleMailRoute(args.api, request, response, url)) {
-      return;
     }
 
     writeJson(response, 404, {

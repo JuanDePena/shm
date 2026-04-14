@@ -1,7 +1,4 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
-
 import {
-  type PanelWebApi,
   noticeReturnTo
 } from "./api-client.js";
 import {
@@ -13,15 +10,17 @@ import {
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
 import { readFormBody, redirect } from "./request.js";
 import { requireSessionToken } from "./route-helpers.js";
+import type { WebRouteHandler } from "./web-route-context.js";
 
-export async function handleMailRoute(
-  api: PanelWebApi,
-  request: IncomingMessage,
-  response: ServerResponse,
-  url: URL
-): Promise<boolean> {
+export const handleMailRoute: WebRouteHandler = async ({
+  api,
+  request,
+  response,
+  url,
+  sessionToken
+}) => {
   if (request.method === "POST" && url.pathname === "/resources/mail/domains/upsert") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const next = parseMailDomainForm(form);
     await api.request("/v1/mail/domains", {
@@ -41,7 +40,7 @@ export async function handleMailRoute(
   }
 
   if (request.method === "POST" && url.pathname === "/resources/mail/domains/delete") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const domainName = form.get("domainName")?.trim() ?? "";
     await api.request(`/v1/mail/domains/${encodeURIComponent(domainName)}`, {
@@ -60,7 +59,7 @@ export async function handleMailRoute(
   }
 
   if (request.method === "POST" && url.pathname === "/resources/mail/mailboxes/upsert") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const next = parseMailboxForm(form);
     await api.request("/v1/mail/mailboxes", {
@@ -80,7 +79,7 @@ export async function handleMailRoute(
   }
 
   if (request.method === "POST" && url.pathname === "/resources/mail/mailboxes/delete") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const address = form.get("address")?.trim() ?? "";
     await api.request(`/v1/mail/mailboxes/${encodeURIComponent(address)}`, {
@@ -99,7 +98,7 @@ export async function handleMailRoute(
   }
 
   if (request.method === "POST" && url.pathname === "/resources/mail/aliases/upsert") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const next = parseMailAliasForm(form);
     await api.request("/v1/mail/aliases", {
@@ -119,7 +118,7 @@ export async function handleMailRoute(
   }
 
   if (request.method === "POST" && url.pathname === "/resources/mail/aliases/delete") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const address = form.get("address")?.trim() ?? "";
     await api.request(`/v1/mail/aliases/${encodeURIComponent(address)}`, {
@@ -138,7 +137,7 @@ export async function handleMailRoute(
   }
 
   if (request.method === "POST" && url.pathname === "/resources/mail/quotas/upsert") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const next = parseMailboxQuotaForm(form);
     await api.request("/v1/mail/quotas", {
@@ -158,7 +157,7 @@ export async function handleMailRoute(
   }
 
   if (request.method === "POST" && url.pathname === "/resources/mail/quotas/delete") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const mailboxAddress = form.get("mailboxAddress")?.trim() ?? "";
     await api.request(`/v1/mail/quotas/${encodeURIComponent(mailboxAddress)}`, {
@@ -177,4 +176,4 @@ export async function handleMailRoute(
   }
 
   return false;
-}
+};

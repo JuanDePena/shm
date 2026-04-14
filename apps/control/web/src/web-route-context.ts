@@ -11,13 +11,11 @@ export interface WebRouteContext {
   response: ServerResponse;
   url: URL;
   locale: WebLocale;
+  sessionToken: string | null;
   api: PanelWebApi;
   config: PanelWebRuntimeConfig;
   startedAt: number;
-  handleDashboard: (
-    request: IncomingMessage,
-    response: ServerResponse
-  ) => Promise<void>;
+  handleDashboard: (context: WebRouteContext) => Promise<boolean>;
   renderLoginPage: (locale: WebLocale, notice?: PanelNotice) => string;
 }
 

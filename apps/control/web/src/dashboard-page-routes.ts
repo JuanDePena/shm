@@ -1,5 +1,3 @@
-import { type IncomingMessage, type ServerResponse } from "node:http";
-
 import { type PanelNotice } from "@simplehost/panel-ui";
 
 import {
@@ -17,35 +15,34 @@ import {
 import { renderDashboardPage } from "./dashboard-page.js";
 import {
   clearSessionCookie,
-  readLocale,
-  readSessionToken,
   redirect,
   sanitizeReturnTo,
   type WebLocale,
   writeHtml
 } from "./request.js";
+import type { WebRouteHandler } from "./web-route-context.js";
 
 export function createDashboardHandler(args: {
   api: PanelWebApi;
   defaultImportPath: string;
   renderLoginPage: (locale: WebLocale, notice?: PanelNotice) => string;
   version: string;
-}) {
-  return async function handleDashboard(
-    request: IncomingMessage,
-    response: ServerResponse
-  ): Promise<void> {
-    const token = readSessionToken(request);
-    const url = new URL(request.url ?? "/", "http://127.0.0.1");
-    const locale = readLocale(request);
+}): WebRouteHandler {
+  return async function handleDashboard({
+    request,
+    response,
+    url,
+    locale,
+    sessionToken
+  }): Promise<boolean> {
     const view = normalizeDashboardView(url.searchParams.get("view"));
     const rawTab = url.searchParams.get("tab") ?? undefined;
     const desiredStateTab = normalizeDesiredStateTab(rawTab);
     const focus = normalizeDashboardFocus(url.searchParams.get("focus"));
 
-    if (!token) {
+    if (!sessionToken) {
       writeHtml(response, 200, args.renderLoginPage(locale, getNoticeFromUrl(url)));
-      return;
+      return true;
     }
 
     const canonicalTarget = resolveCanonicalDashboardTarget(view, rawTab);
@@ -64,11 +61,11 @@ export function createDashboardHandler(args: {
 
     if (canonicalLocation !== currentLocation) {
       redirect(response, canonicalLocation);
-      return;
+      return true;
     }
 
     try {
-      const data = await args.api.loadDashboardData(token);
+      const data = await args.api.loadDashboardData(sessionToken);
       writeHtml(
         response,
         200,
@@ -84,10 +81,11 @@ export function createDashboardHandler(args: {
           view
         })
       );
+      return true;
     } catch (error) {
       if (error instanceof WebApiError && error.statusCode === 401) {
         redirect(response, "/login", clearSessionCookie());
-        return;
+        return true;
       }
 
       writeHtml(
@@ -98,6 +96,7 @@ export function createDashboardHandler(args: {
           message: error instanceof Error ? error.message : String(error)
         })
       );
+      return true;
     }
   };
 }

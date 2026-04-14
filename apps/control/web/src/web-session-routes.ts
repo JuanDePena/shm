@@ -8,7 +8,6 @@ import {
   clearSessionCookie,
   normalizeLocale,
   readFormBody,
-  readSessionToken,
   redirect,
   sanitizeReturnTo,
   serializeLocaleCookie,
@@ -23,7 +22,8 @@ export const handleSessionWebRoutes: WebRouteHandler = async ({
   url,
   locale,
   api,
-  renderLoginPage
+  renderLoginPage,
+  sessionToken
 }) => {
   if (request.method === "POST" && url.pathname === "/preferences/locale") {
     const form = await readFormBody(request);
@@ -67,13 +67,11 @@ export const handleSessionWebRoutes: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/auth/logout") {
-    const token = readSessionToken(request);
-
-    if (token) {
+    if (sessionToken) {
       try {
         await api.request("/v1/auth/logout", {
           method: "POST",
-          token
+          token: sessionToken
         });
       } catch {
         // Ignore logout errors and clear the local cookie anyway.

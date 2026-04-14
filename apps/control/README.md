@@ -78,4 +78,5 @@ From this directory:
 - `apps/control/src/router.test.ts` now locks in the combined routing split between control health, `/v1/*`, and UI routes.
 - `control-web` now mirrors the API boundary pattern with `WebRouteContext` plus route slices for core pages, session routes, and action routes.
 - `control-web` now also exposes `createPanelWebSurface`, which plays the same role for UI routing that `PanelApiSurface` already plays for the API boundary.
+- `WebRouteContext` now carries `sessionToken`, aligning the web auth/session seam more closely with `ApiRouteContext.bearerToken`.
 - The remaining work is runtime unification and release normalization, not source ownership.

@@ -18,10 +18,11 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
   response,
   url,
   api,
-  config
+  config,
+  sessionToken
 }) => {
   if (request.method === "GET" && url.pathname === "/inventory/export") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const yaml = await api.request<string>("/v1/inventory/export", {
       token,
       responseType: "text"
@@ -35,7 +36,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/actions/inventory-import") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const pathValue = form.get("path")?.trim() || config.inventory.importPath;
     const result = await api.request<InventoryImportSummary>("/v1/inventory/import", {
@@ -56,7 +57,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/actions/reconcile-run") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const result = await api.request<{ generatedJobCount: number; skippedJobCount: number }>(
       "/v1/reconcile/run",
       {
@@ -75,7 +76,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/actions/zone-sync") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const zoneName = form.get("zoneName")?.trim() ?? "";
     const result = await api.request<JobDispatchResponse>(
@@ -93,7 +94,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/actions/app-reconcile") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const slug = form.get("slug")?.trim() ?? "";
     const requestBody: AppReconcileRequest = {
@@ -118,7 +119,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/actions/app-render-proxy") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const slug = form.get("slug")?.trim() ?? "";
     const result = await api.request<JobDispatchResponse>(
@@ -136,7 +137,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/actions/database-reconcile") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const appSlug = form.get("appSlug")?.trim() ?? "";
     const password = form.get("desiredPassword")?.trim();
@@ -165,7 +166,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/actions/code-server-update") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const rpmUrl = form.get("rpmUrl")?.trim() ?? "";
     const expectedSha256 = form.get("expectedSha256")?.trim() || undefined;
@@ -198,7 +199,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/actions/package-inventory-refresh") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const returnTo = form.get("returnTo") ?? "/";
     const nodeIds = form.getAll("nodeIds").map((value) => value.trim()).filter(Boolean);
@@ -224,7 +225,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/actions/package-install") {
-    const token = await requireSessionToken(request);
+    const token = requireSessionToken({ sessionToken });
     const form = await readFormBody(request);
     const returnTo = form.get("returnTo") ?? "/";
     const nodeIds = form.getAll("nodeIds").map((value) => value.trim()).filter(Boolean);
