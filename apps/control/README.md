@@ -43,6 +43,8 @@ From `/opt/simplehostman/src`:
 - `pnpm build:control`
 - `pnpm typecheck:control`
 - `pnpm start:control`
+- `pnpm start:control:combined`
+- `pnpm start:control:split`
 - `pnpm start:control:api`
 - `pnpm start:control:web`
 
@@ -61,9 +63,13 @@ From this directory:
 - `pnpm typecheck:api`
 - `pnpm typecheck:web`
 - `pnpm typecheck:entrypoint`
+- `pnpm start:split`
+- `pnpm start:split:foreground`
 
 ## Migration notes
 
 - `apps/control` is already the canonical source location for control-plane UI and API code.
 - `apps/control/tsconfig.json` is the current ownership boundary for the transitional `control-shared`, `control-api`, `control-web`, and combined entrypoint candidate.
+- `apps/control/src/index.ts` now represents a real one-process candidate that can serve UI and `/v1/*` on one request surface without changing the live runtime.
+- the web layer can now consume the API boundary either through HTTP or through an in-process `PanelWebApi` implementation.
 - The remaining work is runtime unification and release normalization, not source ownership.

@@ -66,6 +66,18 @@ export interface PanelWebApi {
   ): Promise<void>;
 }
 
+export interface PanelWebApiRequestOptions {
+  method?: string;
+  token?: string | null;
+  body?: unknown;
+  responseType?: "json" | "text";
+}
+
+export type PanelWebApiRequest = <T>(
+  pathname: string,
+  options?: PanelWebApiRequestOptions
+) => Promise<T>;
+
 function createApiBaseUrl(config: Pick<PanelRuntimeConfig, "api">): string {
   return `http://${config.api.host}:${config.api.port}`;
 }
@@ -73,12 +85,7 @@ function createApiBaseUrl(config: Pick<PanelRuntimeConfig, "api">): string {
 async function requestWithBaseUrl<T>(
   baseUrl: string,
   pathname: string,
-  options: {
-    method?: string;
-    token?: string | null;
-    body?: unknown;
-    responseType?: "json" | "text";
-  } = {}
+  options: PanelWebApiRequestOptions = {}
 ): Promise<T> {
   const response = await fetch(new URL(pathname, baseUrl), {
     method: options.method ?? "GET",
@@ -117,21 +124,7 @@ async function requestWithBaseUrl<T>(
   return (responseText ? JSON.parse(responseText) : null) as T;
 }
 
-export function createHttpPanelWebApi(
-  config: Pick<PanelRuntimeConfig, "api"> = createPanelRuntimeConfig()
-): PanelWebApi {
-  const baseUrl = createApiBaseUrl(config);
-
-  const request = <T>(
-    pathname: string,
-    options: {
-      method?: string;
-      token?: string | null;
-      body?: unknown;
-      responseType?: "json" | "text";
-    } = {}
-  ) => requestWithBaseUrl<T>(baseUrl, pathname, options);
-
+export function createPanelWebApiFromRequest(request: PanelWebApiRequest): PanelWebApi {
   return {
     request,
     async loadDashboardData(token: string): Promise<DashboardData> {
@@ -212,16 +205,20 @@ export function createHttpPanelWebApi(
   };
 }
 
+export function createHttpPanelWebApi(
+  config: Pick<PanelRuntimeConfig, "api"> = createPanelRuntimeConfig()
+): PanelWebApi {
+  const baseUrl = createApiBaseUrl(config);
+  return createPanelWebApiFromRequest((pathname, options = {}) =>
+    requestWithBaseUrl(baseUrl, pathname, options)
+  );
+}
+
 export const defaultPanelWebApi = createHttpPanelWebApi();
 
 export function apiRequest<T>(
   pathname: string,
-  options: {
-    method?: string;
-    token?: string | null;
-    body?: unknown;
-    responseType?: "json" | "text";
-  } = {}
+  options: PanelWebApiRequestOptions = {}
 ): Promise<T> {
   return defaultPanelWebApi.request(pathname, options);
 }

@@ -16,6 +16,8 @@
     "clean": "pnpm -r --if-present clean && find . -name '*.tsbuildinfo' -delete",
     "start:control:api": "pnpm --dir apps/control/api start",
     "start:control:web": "pnpm --dir apps/control/web start",
+    "start:control:split": "pnpm --dir apps/control start:split",
+    "start:control:combined": "pnpm --dir apps/control start:combined",
     "start:worker": "pnpm --filter @simplehost/panel-worker start",
     "start:agent": "pnpm --filter @simplehost/manager-agent start",
     "start:cli": "pnpm --filter @simplehost/manager-cli start",

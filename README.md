@@ -53,6 +53,8 @@ Useful commands:
 - `pnpm audit:legacy-roots`
 - `pnpm test`
 - `pnpm start:control`
+- `pnpm start:control:combined`
+- `pnpm start:control:split`
 - `pnpm start:control:api`
 - `pnpm start:control:web`
 - `pnpm start:worker`

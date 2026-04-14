@@ -2,6 +2,7 @@ import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 export * from "./runtime.js";
+export * from "./http.js";
 
 export function isMainModule(
   importMetaUrl: string,

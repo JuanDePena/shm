@@ -11,6 +11,7 @@ Current scope:
 - process and module-entry helpers shared by `control-api` and `control-web`
 - shared runtime context creation for the control-plane boundary
 - shared server shutdown helpers used by standalone and combined entrypoints
+- mock HTTP invocation helpers used by the combined candidate to call the API boundary in-process
 - control-plane process seams that support convergence toward one runtime
 - transitional glue that belongs to the unified `apps/control` boundary but should not live in `packages/*`
 

@@ -8,6 +8,7 @@ import {
   type ControlProcessContext
 } from "@simplehost/control-shared";
 import {
+  type PanelControlPlaneStore,
   createPostgresControlPlaneStore,
   NodeAuthorizationError,
   UserAuthorizationError
@@ -16,32 +17,19 @@ import {
 import { writeJson } from "./api-http.js";
 import { createApiRequestHandler } from "./api-routes.js";
 
-export async function createPanelApiRuntime(
-  context: ControlProcessContext = createControlProcessContext()
-): Promise<{
-  server: ReturnType<typeof createServer>;
+export interface PanelApiSurface {
+  controlPlaneStore: PanelControlPlaneStore;
+  requestHandler: ReturnType<typeof createApiRequestHandler>;
   close: () => Promise<void>;
-}> {
-  const controlPlaneStore = await createPostgresControlPlaneStore(
-    context.config.database.url,
-    {
-      pollIntervalMs: context.config.worker.pollIntervalMs,
-      bootstrapEnrollmentToken: context.config.auth.bootstrapEnrollmentToken,
-      sessionTtlSeconds: context.config.auth.sessionTtlSeconds,
-      bootstrapAdminEmail: context.config.auth.bootstrapAdminEmail,
-      bootstrapAdminPassword: context.config.auth.bootstrapAdminPassword,
-      bootstrapAdminName: context.config.auth.bootstrapAdminName,
-      defaultInventoryImportPath: context.config.inventory.importPath,
-      jobPayloadSecret: context.config.jobs.payloadSecret
-    }
-  );
-  const requestHandler = createApiRequestHandler({
-    config: context.config,
-    startedAt: context.startedAt,
-    controlPlaneStore
-  });
-  const server = createServer((request, response) => {
-    void requestHandler(request, response).catch((error: unknown) => {
+}
+
+export function createPanelApiHttpHandler(
+  requestHandler: ReturnType<typeof createApiRequestHandler>
+): ReturnType<typeof createApiRequestHandler> {
+  return async (request, response) => {
+    try {
+      await requestHandler(request, response);
+    } catch (error: unknown) {
       if (error instanceof NodeAuthorizationError) {
         writeJson(response, 401, {
           error: "Unauthorized",
@@ -66,8 +54,49 @@ export async function createPanelApiRuntime(
         error: "Internal Server Error",
         message: error instanceof Error ? error.message : String(error)
       });
-    });
+    }
+  };
+}
+
+export async function createPanelApiSurface(
+  context: ControlProcessContext = createControlProcessContext()
+): Promise<PanelApiSurface> {
+  const controlPlaneStore = await createPostgresControlPlaneStore(
+    context.config.database.url,
+    {
+      pollIntervalMs: context.config.worker.pollIntervalMs,
+      bootstrapEnrollmentToken: context.config.auth.bootstrapEnrollmentToken,
+      sessionTtlSeconds: context.config.auth.sessionTtlSeconds,
+      bootstrapAdminEmail: context.config.auth.bootstrapAdminEmail,
+      bootstrapAdminPassword: context.config.auth.bootstrapAdminPassword,
+      bootstrapAdminName: context.config.auth.bootstrapAdminName,
+      defaultInventoryImportPath: context.config.inventory.importPath,
+      jobPayloadSecret: context.config.jobs.payloadSecret
+    }
+  );
+  const requestHandler = createApiRequestHandler({
+    config: context.config,
+    startedAt: context.startedAt,
+    controlPlaneStore
   });
+
+  return {
+    controlPlaneStore,
+    requestHandler,
+    close: async () => {
+      await controlPlaneStore.close();
+    }
+  };
+}
+
+export async function createPanelApiRuntime(
+  context: ControlProcessContext = createControlProcessContext()
+): Promise<{
+  server: ReturnType<typeof createServer>;
+  close: () => Promise<void>;
+}> {
+  const surface = await createPanelApiSurface(context);
+  const server = createServer(createPanelApiHttpHandler(surface.requestHandler));
 
   server.listen(context.config.api.port, context.config.api.host, () => {
     console.log(`SHP API listening on http://${context.config.api.host}:${context.config.api.port}`);
@@ -77,7 +106,7 @@ export async function createPanelApiRuntime(
     server,
     close: async () => {
       await closeHttpServer(server);
-      await controlPlaneStore.close();
+      await surface.close();
     }
   };
 }

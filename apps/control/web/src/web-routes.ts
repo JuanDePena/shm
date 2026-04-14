@@ -451,12 +451,15 @@ export function createRequestHandler(args: StartPanelWebServerArgs) {
   };
 }
 
-export function startPanelWebServer(
+export function createServerRequestListener(
   args: StartPanelWebServerArgs
-): ReturnType<typeof createServer> {
+): (request: IncomingMessage, response: ServerResponse) => Promise<void> {
   const requestHandler = createRequestHandler(args);
-  const server = createServer((request, response) => {
-    void requestHandler(request, response).catch((error: unknown) => {
+
+  return async (request, response) => {
+    try {
+      await requestHandler(request, response);
+    } catch (error: unknown) {
       const locale = readLocale(request);
 
       if (error instanceof WebApiError && error.statusCode === 401) {
@@ -472,8 +475,14 @@ export function startPanelWebServer(
           message: error instanceof Error ? error.message : String(error)
         })
       );
-    });
-  });
+    }
+  };
+}
+
+export function startPanelWebServer(
+  args: StartPanelWebServerArgs
+): ReturnType<typeof createServer> {
+  const server = createServer(createServerRequestListener(args));
 
   server.listen(args.config.web.port, args.config.web.host, () => {
     console.log(`SHP Web listening on http://${args.config.web.host}:${args.config.web.port}`);

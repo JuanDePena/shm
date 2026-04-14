@@ -90,6 +90,7 @@ Responsibility:
 
 - unified source ownership for UI and API
 - transitional internal separation between `shared/`, `web/`, `api/`, and a combined entrypoint candidate under `src/`
+- current combined candidate already supports one-process routing for UI and `/v1/*` at the source level
 - eventual target is one control-plane runtime and one port
 
 ### `apps/worker`

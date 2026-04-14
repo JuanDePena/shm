@@ -9,7 +9,27 @@ import {
 import { createHttpPanelWebApi, type PanelWebApi } from "./api-client.js";
 import { renderLoginPage } from "./auth-pages.js";
 import { createDashboardHandler } from "./dashboard-page-routes.js";
-import { startPanelWebServer } from "./web-routes.js";
+import { createServerRequestListener, startPanelWebServer } from "./web-routes.js";
+
+export function createPanelWebRequestListener(
+  context: ControlProcessContext = createControlProcessContext(),
+  api: PanelWebApi = createHttpPanelWebApi(context.config)
+): ReturnType<typeof createServerRequestListener> {
+  const handleDashboard = createDashboardHandler({
+    api,
+    defaultImportPath: context.config.inventory.importPath,
+    renderLoginPage,
+    version: context.config.version
+  });
+
+  return createServerRequestListener({
+    api,
+    config: context.config,
+    handleDashboard,
+    renderLoginPage,
+    startedAt: context.startedAt
+  });
+}
 
 export function createPanelWebRuntime(
   context: ControlProcessContext = createControlProcessContext(),
@@ -18,16 +38,15 @@ export function createPanelWebRuntime(
   server: ReturnType<typeof startPanelWebServer>;
   close: () => Promise<void>;
 } {
-  const handleDashboard = createDashboardHandler({
-    api,
-    defaultImportPath: context.config.inventory.importPath,
-    renderLoginPage,
-    version: context.config.version
-  });
   const server = startPanelWebServer({
     api,
     config: context.config,
-    handleDashboard,
+    handleDashboard: createDashboardHandler({
+      api,
+      defaultImportPath: context.config.inventory.importPath,
+      renderLoginPage,
+      version: context.config.version
+    }),
     renderLoginPage,
     startedAt: context.startedAt
   });
