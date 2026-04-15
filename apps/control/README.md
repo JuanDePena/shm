@@ -52,6 +52,7 @@ From `/opt/simplehostman/src`:
 - `pnpm start:control:api`
 - `pnpm start:control:web`
 - `pnpm test:control`
+- `pnpm test:control:preflight`
 - `pnpm test:control:candidate`
 - `pnpm test:control:runtime-parity`
 - `pnpm test:control:combined-smoke`
@@ -81,12 +82,14 @@ From this directory:
 - `pnpm start:split`
 - `pnpm start:split:foreground`
 - `pnpm test`
+- `pnpm test:preflight`
 - `pnpm test:candidate`
 - `pnpm test:runtime-parity`
 - `pnpm test:combined-smoke`
 - `pnpm test:combined:e2e`
 - `pnpm test:parity`
 - `pnpm check:candidate`
+- `pnpm check:preflight`
 
 ## Migration notes
 
@@ -111,6 +114,9 @@ From this directory:
 - `apps/control/src/runtime-surface.ts` now formalizes the combined candidate as a reusable runtime surface instead of leaving that shape implicit in server/bootstrap wiring.
 - `apps/control/src/test-harness.ts` now centralizes split/combined fixtures, stubbed API surfaces, and request-handler wiring for candidate validation.
 - `apps/control/src/runtime-parity-harness.ts` now boots split and combined candidate servers behind one reusable HTTP comparison harness.
+- `apps/control/src/preflight-surface.ts` now defines the source-level preflight surface for the combined candidate.
+- `apps/control/src/preflight-runner.ts` now executes a human-readable pre-promotion check sequence over a real ephemeral combined candidate server.
+- `apps/control/src/preflight-runner.test.ts` now validates both passing and degraded preflight outcomes.
 - `apps/control/src/request-context.test.ts` now locks the per-request caching behavior for session resolution, authenticated dashboard bootstrap, and health snapshot reuse.
 - the combined request handler now routes over `PanelApiSurface` and `PanelWebSurface` directly instead of wiring raw request listeners by hand.
 - `apps/control/src/router.test.ts` now locks parity for key split-vs-combined routes such as `/`, `/login`, `/v1/auth/me`, and `/v1/resources/spec`.
@@ -122,6 +128,7 @@ From this directory:
 - `apps/control/src/request-context.ts` now exposes an explicit per-request cache object for auth/bootstrap memoization and health snapshot reuse.
 - `apps/control/src/route-surface.ts` now gives the combined candidate a more semantic routing surface over health, API, and web requests.
 - `apps/control/src/runtime-contract.ts` now makes the one-process candidate explicit as a source-level runtime contract before any deploy/runtime promotion.
+- `apps/control/src/preflight-cli.ts` now prints a legible preflight report and exits non-zero on failure.
 - `control-web` now routes semantic mail/domain/mailbox/quota mutations through `PanelWebApi`, further shrinking direct transport-shaped coupling.
 - The remaining work is runtime unification and release normalization, not source ownership.
 
@@ -132,5 +139,8 @@ Before `combined` can move beyond source-only validation, all of these still nee
 - `pnpm test:runtime-parity` passes for representative protected routes
 - `pnpm test:combined-smoke` passes against the real web surface and stubbed in-process API boundary
 - `pnpm test:combined:e2e` passes against a real ephemeral combined candidate server
+- `pnpm test:preflight` passes for both successful and degraded source-level preflight scenarios
+- `pnpm preflight` prints a passing human-readable report for the current candidate
 - `pnpm check:candidate` stays green from `apps/control`
+- source-level `preflight` remains the highest promoted state of `combined`
 - split mode remains the documented and packaged runtime default under `scripts/` and `packaging/`

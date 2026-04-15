@@ -63,8 +63,11 @@ Current checkpoint on 2026-04-14:
 - `control-web` now routes semantic mail/domain/mailbox/quota mutations through `PanelWebApi`, shrinking another slice of direct transport-shaped coupling
 - the generic `request()` primitive is now internal to `control-web`'s API-client implementation rather than part of the public `PanelWebApi` seam
 - `apps/control/src/runtime-surface.ts` now formalizes the combined candidate runtime surface independently from the HTTP server wrapper
+- `apps/control/src/preflight-surface.ts`, `preflight-runner.ts`, and `preflight-cli.ts` now define a source-level pre-promotion flow for the combined candidate
+- `apps/control/src/preflight-runner.test.ts` now validates both passing and degraded preflight scenarios using harness-driven auth/bootstrap failures
 - `pnpm test:control:candidate` now acts as the shortest canonical test command for the combined candidate before any runtime promotion work
 - `pnpm test:control:runtime-parity` now acts as the canonical process-level parity check between split and combined candidate servers
+- `pnpm check:control:preflight` now acts as the canonical source-level pre-promotion check for the combined candidate
 - `pnpm audit:legacy-roots` now guards against reintroducing functional references to legacy repo roots or retired package names outside docs/build output
 - clean-room validation passed from the unified tree: `pnpm install --frozen-lockfile`, `pnpm build:clean-room`, `pnpm typecheck`, `pnpm build:panel-runtime`, `pnpm build:manager-runtime`, `pnpm typecheck:panel-runtime`, `pnpm typecheck:manager-runtime`, and `git diff --check`
 
@@ -87,12 +90,20 @@ Before `apps/control` can attempt any promotion of `combined` beyond source-leve
 - `pnpm test:control:combined-smoke`
 - `pnpm test:control:combined:e2e`
 - `pnpm check:control:candidate`
+- `pnpm check:control:preflight`
 
 And all of the following should still be true:
 
 - split mode remains the documented runtime default in `scripts/` and `packaging/`
 - no deploy flow under `/opt/simplehostman/release` or `systemd` units has switched to `combined`
 - candidate validation remains entirely workspace-local and reversible
+
+Promotion language at the current checkpoint:
+
+- `candidate source-ready`: unit/parity/smoke/e2e validation is green inside the workspace
+- `candidate runtime-ready`: process-level parity and ephemeral server validation are green
+- `candidate preflight-ready`: the human-readable source-level preflight report is green
+- `release-ready`: still not reached; packaging and deploy flows remain split-first
 
 ## Target layout
 

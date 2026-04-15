@@ -31,6 +31,26 @@ import { createCombinedControlRouteSurface } from "./route-surface.js";
 import { startCombinedControlServer, startControlCandidateServer } from "./server.js";
 import type { ControlCandidateRuntimeSurface } from "./runtime-surface.js";
 
+export interface StubApiErrorConfig {
+  statusCode?: number;
+  message: string;
+}
+
+export interface ControlTestHarnessOptions {
+  webPort?: number;
+  loginError?: StubApiErrorConfig;
+  currentUserError?: StubApiErrorConfig;
+  overviewError?: StubApiErrorConfig;
+  packageInstallError?: StubApiErrorConfig;
+  proxyPreviewError?: StubApiErrorConfig;
+}
+
+function createStubApiError(config: StubApiErrorConfig): Error & { statusCode: number } {
+  const error = new Error(config.message) as Error & { statusCode: number };
+  error.statusCode = config.statusCode ?? 500;
+  return error;
+}
+
 function createJob(id: string): JobDispatchResponse["jobs"][number] {
   return {
     id,
@@ -162,18 +182,34 @@ export function createStubApiSurface(args: {
   currentUser: AuthenticatedUserSummary;
   dashboard: ControlDashboardBootstrap;
   loginResponse: AuthLoginResponse;
+  loginError?: StubApiErrorConfig;
+  currentUserError?: StubApiErrorConfig;
+  overviewError?: StubApiErrorConfig;
+  packageInstallError?: StubApiErrorConfig;
+  proxyPreviewError?: StubApiErrorConfig;
 }): Pick<PanelApiSurface, "auth" | "requestHandler"> {
   const isAuthorized = (request: IncomingMessage) =>
     readBearerToken(request.headers.authorization) === args.loginResponse.sessionToken;
 
   const auth = {
-    login: async () => args.loginResponse,
+    login: async () => {
+      if (args.loginError) {
+        throw createStubApiError(args.loginError);
+      }
+
+      return args.loginResponse;
+    },
     logout: async () => {},
     getCurrentUser: async (token: string | null) => {
+      if (args.currentUserError && token === args.loginResponse.sessionToken) {
+        throw createStubApiError(args.currentUserError);
+      }
+
       if (token !== args.loginResponse.sessionToken) {
-        const error = new Error("Unauthorized") as Error & { statusCode: number };
-        error.statusCode = 401;
-        throw error;
+        throw createStubApiError({
+          statusCode: 401,
+          message: "Unauthorized"
+        });
       }
 
       return args.currentUser;
@@ -229,6 +265,14 @@ export function createStubApiSurface(args: {
     }
 
     if (url.pathname === "/v1/packages/install" && request.method === "POST") {
+      if (args.packageInstallError) {
+        writeJson(response, args.packageInstallError.statusCode ?? 500, {
+          error: args.packageInstallError.message,
+          message: args.packageInstallError.message
+        });
+        return;
+      }
+
       writeJson(response, 200, { jobs: [createJob("pkg-install-1")] });
       return;
     }
@@ -254,6 +298,14 @@ export function createStubApiSurface(args: {
         writeJson(response, 200, args.currentUser);
         return;
       case "/v1/operations/overview":
+        if (args.overviewError) {
+          writeJson(response, args.overviewError.statusCode ?? 500, {
+            error: args.overviewError.message,
+            message: args.overviewError.message
+          });
+          return;
+        }
+
         writeJson(response, 200, args.dashboard.overview);
         return;
       case "/v1/inventory/summary":
@@ -287,6 +339,14 @@ export function createStubApiSurface(args: {
         writeJson(response, 200, args.dashboard.packages);
         return;
       case "/v1/apps/adudoc/proxy-preview":
+        if (args.proxyPreviewError) {
+          writeJson(response, args.proxyPreviewError.statusCode ?? 500, {
+            error: args.proxyPreviewError.message,
+            message: args.proxyPreviewError.message
+          });
+          return;
+        }
+
         writeJson(response, 200, {
           serverName: "adudoc.com",
           serverAliases: ["www.adudoc.com"],
@@ -326,9 +386,7 @@ export function createSplitRequestHandler(args: {
   };
 }
 
-export async function createControlTestHarness(args: {
-  webPort?: number;
-} = {}) {
+export async function createControlTestHarness(args: ControlTestHarnessOptions = {}) {
   const context = createTestContext({
     webPort: args.webPort
   });
@@ -338,7 +396,12 @@ export async function createControlTestHarness(args: {
   const apiSurface = createStubApiSurface({
     currentUser,
     dashboard,
-    loginResponse
+    loginResponse,
+    loginError: args.loginError,
+    currentUserError: args.currentUserError,
+    overviewError: args.overviewError,
+    packageInstallError: args.packageInstallError,
+    proxyPreviewError: args.proxyPreviewError
   });
   const apiHttpHandler = createPanelApiHttpHandler(apiSurface.requestHandler);
   const webApi: PanelWebApi = createInProcessPanelWebApi(apiHttpHandler, apiSurface.auth);
