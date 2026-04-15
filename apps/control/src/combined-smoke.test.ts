@@ -4,7 +4,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import type {
   AuthLoginResponse,
-  AuthenticatedUserSummary
+  AuthenticatedUserSummary,
+  ProxyRenderPayload
 } from "@simplehost/panel-contracts";
 import {
   createPanelApiHttpHandler,
@@ -186,6 +187,12 @@ function createStubApiSurface(args: {
       return;
     }
 
+    if (url.pathname === "/v1/resources/spec" && request.method === "PUT") {
+      response.writeHead(204);
+      response.end();
+      return;
+    }
+
     if (!isAuthorized(request)) {
       writeJson(response, 401, {
         error: "Unauthorized",
@@ -230,6 +237,14 @@ function createStubApiSurface(args: {
         return;
       case "/v1/packages/summary":
         writeJson(response, 200, args.dashboard.packages);
+        return;
+      case "/v1/apps/adudoc/proxy-preview":
+        writeJson(response, 200, {
+          serverName: "adudoc.com",
+          serverAliases: ["www.adudoc.com"],
+          proxyPassUrl: "http://127.0.0.1:10301/",
+          vhostName: "adudoc"
+        } satisfies ProxyRenderPayload);
         return;
       default:
         writeJson(response, 404, {
@@ -340,8 +355,20 @@ test("combined candidate matches split behavior with real web/api surfaces", asy
       url: "/resources/apps/delete",
       body: "slug=adudoc",
       headers: {
+        cookie: "shp_session=test-session",
         "content-type": "application/x-www-form-urlencoded; charset=utf-8"
       }
+    },
+    {
+      method: "GET",
+      url: "/proxy-vhost?slug=adudoc&format=json",
+      headers: {
+        cookie: "shp_session=test-session"
+      }
+    },
+    {
+      method: "GET",
+      url: "/proxy-vhost?slug=adudoc&format=json"
     },
     {
       method: "GET",

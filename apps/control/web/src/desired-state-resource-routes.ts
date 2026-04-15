@@ -20,10 +20,10 @@ export const handleDesiredStateResourceRoute: WebRouteHandler = async ({
   request,
   response,
   url,
-  sessionToken
+  requireSession
 }) => {
   if (request.method === "POST" && url.pathname === "/resources/tenants/upsert") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const next = parseTenantForm(form);
     await api.mutateDesiredState(token, `web.tenant.upsert:${next.slug}`, (spec) => ({
@@ -35,7 +35,7 @@ export const handleDesiredStateResourceRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/tenants/delete") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const slug = form.get("originalSlug")?.trim() ?? form.get("slug")?.trim() ?? "";
     await api.mutateDesiredState(token, `web.tenant.delete:${slug}`, (spec) => ({
@@ -47,7 +47,7 @@ export const handleDesiredStateResourceRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/nodes/upsert") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const next = parseNodeForm(form);
     await api.mutateDesiredState(token, `web.node.upsert:${next.nodeId}`, (spec) => ({
@@ -64,7 +64,7 @@ export const handleDesiredStateResourceRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/nodes/delete") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const nodeId = form.get("originalNodeId")?.trim() ?? form.get("nodeId")?.trim() ?? "";
     await api.mutateDesiredState(token, `web.node.delete:${nodeId}`, (spec) => ({
@@ -76,7 +76,7 @@ export const handleDesiredStateResourceRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/zones/upsert") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const next = parseZoneForm(form);
     await api.mutateDesiredState(token, `web.zone.upsert:${next.zoneName}`, (spec) => ({
@@ -93,7 +93,7 @@ export const handleDesiredStateResourceRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/zones/delete") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const zoneName =
       form.get("originalZoneName")?.trim() ?? form.get("zoneName")?.trim() ?? "";
@@ -106,7 +106,7 @@ export const handleDesiredStateResourceRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/apps/upsert") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const next = parseAppForm(form);
     await api.mutateDesiredState(token, `web.app.upsert:${next.slug}`, (spec) => ({
@@ -118,7 +118,7 @@ export const handleDesiredStateResourceRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/apps/delete") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const slug = form.get("originalSlug")?.trim() ?? form.get("slug")?.trim() ?? "";
     await api.mutateDesiredState(token, `web.app.delete:${slug}`, (spec) => ({
@@ -130,7 +130,7 @@ export const handleDesiredStateResourceRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/databases/upsert") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const next = parseDatabaseForm(form);
     await api.mutateDesiredState(token, `web.database.upsert:${next.appSlug}`, (spec) => ({
@@ -147,7 +147,7 @@ export const handleDesiredStateResourceRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/databases/delete") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const appSlug =
       form.get("originalAppSlug")?.trim() ?? form.get("appSlug")?.trim() ?? "";
@@ -160,7 +160,7 @@ export const handleDesiredStateResourceRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/backups/upsert") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const next = parseBackupPolicyForm(form);
     await api.mutateDesiredState(token, `web.backup-policy.upsert:${next.policySlug}`, (spec) => ({
@@ -177,7 +177,7 @@ export const handleDesiredStateResourceRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/backups/delete") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const policySlug =
       form.get("originalPolicySlug")?.trim() ?? form.get("policySlug")?.trim() ?? "";

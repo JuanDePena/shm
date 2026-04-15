@@ -42,6 +42,7 @@
     "test:control": "pnpm --dir apps/control test:entrypoint",
     "test:control:combined-smoke": "pnpm --dir apps/control test:combined-smoke",
     "test:control:parity": "pnpm --dir apps/control test:parity",
+    "check:control:candidate": "pnpm --dir apps/control check:candidate",
     "test:control:web": "pnpm --dir apps/control test:web",
     "build:control:entrypoint": "pnpm --dir apps/control build:entrypoint",
     "typecheck:control:entrypoint": "pnpm --dir apps/control typecheck:entrypoint"

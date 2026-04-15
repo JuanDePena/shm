@@ -63,6 +63,7 @@ Useful commands:
 - `pnpm test:control`
 - `pnpm test:control:combined-smoke`
 - `pnpm test:control:parity`
+- `pnpm check:control:candidate`
 - `pnpm start:worker`
 - `pnpm start:agent`
 - `pnpm start:cli`

@@ -22,6 +22,7 @@
     "start:candidate": "pnpm start:combined",
     "start:combined:dev": "pnpm build:entrypoint && SIMPLEHOST_CONTROL_RUNTIME_MODE=combined node dist/index.js",
     "start:combined:smoke": "pnpm start:combined:dev",
+    "check:candidate": "pnpm typecheck:local && pnpm test:parity && pnpm test:combined-smoke",
     "test:entrypoint": "pnpm build:entrypoint && node --test dist/**/*.test.js",
     "test:combined-smoke": "pnpm build:entrypoint && node --test dist/combined-smoke.test.js",
     "test:parity": "pnpm test:entrypoint",

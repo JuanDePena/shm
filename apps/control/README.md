@@ -53,6 +53,7 @@ From `/opt/simplehostman/src`:
 - `pnpm test:control`
 - `pnpm test:control:combined-smoke`
 - `pnpm test:control:parity`
+- `pnpm check:control:candidate`
 
 From this directory:
 
@@ -77,6 +78,7 @@ From this directory:
 - `pnpm test`
 - `pnpm test:combined-smoke`
 - `pnpm test:parity`
+- `pnpm check:candidate`
 
 ## Migration notes
 
@@ -99,4 +101,7 @@ From this directory:
 - `apps/control/src/router.test.ts` now locks parity for key split-vs-combined routes such as `/`, `/login`, `/v1/auth/me`, and `/v1/resources/spec`.
 - `apps/control/src/request-context.ts` now defines a combined per-request context with shared session resolution and authenticated dashboard loading.
 - `apps/control/src/combined-smoke.test.ts` now exercises the combined candidate against real `PanelWebSurface` routing with a stubbed in-process API boundary.
+- `apps/control/src/auth-gate.ts` now provides a cached combined auth/bootstrap gate, so the candidate can reuse resolved session and authenticated dashboard state inside one request.
+- `apps/control/src/route-surface.ts` now gives the combined candidate a more semantic routing surface over health, API, and web requests.
+- `apps/control/src/runtime-contract.ts` now makes the one-process candidate explicit as a source-level runtime contract before any deploy/runtime promotion.
 - The remaining work is runtime unification and release normalization, not source ownership.

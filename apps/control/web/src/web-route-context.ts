@@ -2,9 +2,11 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import type { PanelNotice } from "@simplehost/panel-ui";
 import type {
+  ControlAuthenticatedSession,
   ControlAuthenticatedDashboardBootstrap,
   ControlResolvedSession
 } from "@simplehost/control-shared";
+import { ControlSessionRequiredError } from "@simplehost/control-shared";
 
 import type { PanelWebApi } from "./api-client.js";
 import { readLocale, readSessionToken } from "./request.js";
@@ -18,6 +20,7 @@ export interface WebRouteContext {
   locale: WebLocale;
   sessionToken: string | null;
   resolveSession: () => Promise<ControlResolvedSession>;
+  requireSession: () => Promise<ControlAuthenticatedSession>;
   loadAuthenticatedDashboard: () => Promise<ControlAuthenticatedDashboardBootstrap>;
   api: PanelWebApi;
   config: PanelWebRuntimeConfig;
@@ -38,6 +41,41 @@ export function createWebRouteContext(args: {
   renderLoginPage: WebRouteContext["renderLoginPage"];
 }): WebRouteContext {
   const sessionToken = readSessionToken(args.request);
+  let resolvedSessionPromise: Promise<ControlResolvedSession> | undefined;
+  let requiredSessionPromise: Promise<ControlAuthenticatedSession> | undefined;
+  let authenticatedDashboardPromise:
+    | Promise<ControlAuthenticatedDashboardBootstrap>
+    | undefined;
+
+  const resolveSession = (): Promise<ControlResolvedSession> =>
+    (resolvedSessionPromise ??= args.api.resolveSession(sessionToken));
+  const requireSession = async (): Promise<ControlAuthenticatedSession> => {
+    if (!requiredSessionPromise) {
+      requiredSessionPromise = resolveSession().then((session) => {
+        if (session.state === "anonymous") {
+          throw new ControlSessionRequiredError("Session required");
+        }
+
+        return session;
+      });
+    }
+
+    return requiredSessionPromise;
+  };
+  const loadAuthenticatedDashboard =
+    async (): Promise<ControlAuthenticatedDashboardBootstrap> => {
+      if (!authenticatedDashboardPromise) {
+        authenticatedDashboardPromise = args.api
+          .loadAuthenticatedDashboard(sessionToken)
+          .then((result) => {
+            resolvedSessionPromise = Promise.resolve(result.session);
+            requiredSessionPromise = Promise.resolve(result.session);
+            return result;
+          });
+      }
+
+      return authenticatedDashboardPromise;
+    };
 
   return {
     request: args.request,
@@ -45,8 +83,9 @@ export function createWebRouteContext(args: {
     url: new URL(args.request.url ?? "/", "http://127.0.0.1"),
     locale: readLocale(args.request),
     sessionToken,
-    resolveSession: () => args.api.resolveSession(sessionToken),
-    loadAuthenticatedDashboard: () => args.api.loadAuthenticatedDashboard(sessionToken),
+    resolveSession,
+    requireSession,
+    loadAuthenticatedDashboard,
     api: args.api,
     config: args.config,
     startedAt: args.startedAt,

@@ -17,10 +17,10 @@ export const handleMailRoute: WebRouteHandler = async ({
   request,
   response,
   url,
-  sessionToken
+  requireSession
 }) => {
   if (request.method === "POST" && url.pathname === "/resources/mail/domains/upsert") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const next = parseMailDomainForm(form);
     await api.request("/v1/mail/domains", {
@@ -40,7 +40,7 @@ export const handleMailRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/mail/domains/delete") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const domainName = form.get("domainName")?.trim() ?? "";
     await api.request(`/v1/mail/domains/${encodeURIComponent(domainName)}`, {
@@ -59,7 +59,7 @@ export const handleMailRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/mail/mailboxes/upsert") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const next = parseMailboxForm(form);
     await api.request("/v1/mail/mailboxes", {
@@ -79,7 +79,7 @@ export const handleMailRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/mail/mailboxes/delete") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const address = form.get("address")?.trim() ?? "";
     await api.request(`/v1/mail/mailboxes/${encodeURIComponent(address)}`, {
@@ -98,7 +98,7 @@ export const handleMailRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/mail/aliases/upsert") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const next = parseMailAliasForm(form);
     await api.request("/v1/mail/aliases", {
@@ -118,7 +118,7 @@ export const handleMailRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/mail/aliases/delete") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const address = form.get("address")?.trim() ?? "";
     await api.request(`/v1/mail/aliases/${encodeURIComponent(address)}`, {
@@ -137,7 +137,7 @@ export const handleMailRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/mail/quotas/upsert") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const next = parseMailboxQuotaForm(form);
     await api.request("/v1/mail/quotas", {
@@ -157,7 +157,7 @@ export const handleMailRoute: WebRouteHandler = async ({
   }
 
   if (request.method === "POST" && url.pathname === "/resources/mail/quotas/delete") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const mailboxAddress = form.get("mailboxAddress")?.trim() ?? "";
     await api.request(`/v1/mail/quotas/${encodeURIComponent(mailboxAddress)}`, {

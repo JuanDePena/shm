@@ -25,7 +25,11 @@ function createStubApi(
       throw new Error("Unexpected current-user request in test");
     },
     resolveSession: async () => {
-      throw new Error("Unexpected session resolution in test");
+      return {
+        state: "anonymous",
+        token: null,
+        currentUser: null
+      };
     },
     loadAuthenticatedDashboard: async () => {
       throw new Error("Unexpected authenticated dashboard load in test");

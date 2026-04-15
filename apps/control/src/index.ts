@@ -8,7 +8,7 @@ import {
   registerGracefulShutdown,
   type ControlProcessContext
 } from "../shared/src/index.js";
-import { createCombinedControlSurface } from "./request-handler.js";
+import { createCombinedControlRuntimeContract } from "./runtime-contract.js";
 import { createPanelWebRuntime } from "@simplehost/control-web";
 
 export type ControlRuntimeMode = "combined" | "split";
@@ -41,8 +41,8 @@ export async function createSplitControlRuntime(
 export async function createCombinedControlRuntime(
   context: ControlProcessContext = createControlProcessContext()
 ) {
-  const surface = await createCombinedControlSurface(context);
-  const server = createServer(surface.requestHandler);
+  const contract = await createCombinedControlRuntimeContract(context);
+  const server = createServer(contract.requestHandler);
 
   server.listen(context.config.web.port, context.config.web.host, () => {
     console.log(`SHP Control listening on http://${context.config.web.host}:${context.config.web.port}`);
@@ -50,10 +50,11 @@ export async function createCombinedControlRuntime(
 
   return {
     context,
+    contract,
     server,
     close: async () => {
       await closeHttpServer(server);
-      await surface.close();
+      await contract.close();
     }
   };
 }

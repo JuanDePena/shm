@@ -49,6 +49,8 @@ Current checkpoint on 2026-04-14:
 - `apps/control/src/request-context.ts` now represents the per-request combined runtime context, including session resolution and authenticated dashboard loading
 - explicit source-level combined-runtime aliases now exist (`pnpm start:control:combined:dev`, `pnpm test:control:parity`) while packaging and scripts still document split mode as the operational default
 - an additional smoke layer now exists for the combined candidate through `pnpm start:control:combined:smoke` and `pnpm test:control:combined-smoke`, using the real `PanelWebSurface` against a stubbed in-process API boundary
+- `apps/control/src/auth-gate.ts`, `apps/control/src/route-surface.ts`, and `apps/control/src/runtime-contract.ts` now make the combined candidate more explicit: cached auth/bootstrap per request, semantic routing over health/API/web, and a named runtime contract for future one-process promotion
+- `control-web` now caches `resolveSession()`, `requireSession()`, and `loadAuthenticatedDashboard()` per request, and several protected routes now consume `requireSession()` rather than the older raw session-token seam
 - `pnpm audit:legacy-roots` now guards against reintroducing functional references to legacy repo roots or retired package names outside docs/build output
 - clean-room validation passed from the unified tree: `pnpm install --frozen-lockfile`, `pnpm build:clean-room`, `pnpm typecheck`, `pnpm build:panel-runtime`, `pnpm build:manager-runtime`, `pnpm typecheck:panel-runtime`, `pnpm typecheck:manager-runtime`, and `git diff --check`
 

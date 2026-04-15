@@ -16,6 +16,7 @@ export const handleCoreWebRoutes: WebRouteHandler = async ({
   locale,
   sessionToken,
   resolveSession,
+  requireSession,
   loadAuthenticatedDashboard,
   api,
   config,
@@ -58,7 +59,7 @@ export const handleCoreWebRoutes: WebRouteHandler = async ({
   }
 
   if (request.method === "GET" && url.pathname === "/proxy-vhost") {
-    const token = requireSessionToken({ sessionToken });
+    const token = await requireSessionToken({ requireSession });
     const slug = url.searchParams.get("slug")?.trim() ?? "";
     const payload = await api.request<ProxyRenderPayload>(
       `/v1/apps/${encodeURIComponent(slug)}/proxy-preview`,
@@ -90,6 +91,7 @@ export const handleCoreWebRoutes: WebRouteHandler = async ({
       locale,
       sessionToken,
       resolveSession,
+      requireSession,
       loadAuthenticatedDashboard,
       api,
       config,
