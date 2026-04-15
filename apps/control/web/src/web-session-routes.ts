@@ -3,7 +3,6 @@ import {
   type AuthLoginResponse
 } from "@simplehost/panel-contracts";
 
-import { WebApiError } from "./api-client.js";
 import {
   clearSessionCookie,
   normalizeLocale,
@@ -11,9 +10,9 @@ import {
   redirect,
   sanitizeReturnTo,
   serializeLocaleCookie,
-  serializeSessionCookie,
-  writeHtml
+  serializeSessionCookie
 } from "./request.js";
+import { renderLoginError } from "./web-auth-helpers.js";
 import type { WebRouteHandler } from "./web-route-context.js";
 
 export const handleSessionWebRoutes: WebRouteHandler = async ({
@@ -53,14 +52,7 @@ export const handleSessionWebRoutes: WebRouteHandler = async ({
         serializeSessionCookie(login.sessionToken, login.expiresAt)
       );
     } catch (error) {
-      writeHtml(
-        response,
-        error instanceof WebApiError ? error.statusCode : 500,
-        renderLoginPage(locale, {
-          kind: "error",
-          message: error instanceof Error ? error.message : String(error)
-        })
-      );
+      renderLoginError(response, locale, renderLoginPage, error);
     }
 
     return true;

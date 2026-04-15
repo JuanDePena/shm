@@ -40,6 +40,7 @@ Current checkpoint on 2026-04-14:
 - `control-web` now mirrors the API route-handler style through `WebRouteContext` plus dedicated route slices for core pages, session flows, and action handlers
 - `control-web` also now exposes a reusable `PanelWebSurface`, and health payload construction is shared across `api`, `web`, and `control` through `control-shared`
 - `WebRouteContext` now owns the per-request `sessionToken`, so dashboard rendering, desired-state mutations, mail actions, and operational actions all reuse the same web-side auth/session seam
+- web-side auth/session UX now has a shared helper layer for route-context creation, login redirects, cookie clearing, and login-error rendering, reducing duplication before full runtime convergence
 - `pnpm audit:legacy-roots` now guards against reintroducing functional references to legacy repo roots or retired package names outside docs/build output
 - clean-room validation passed from the unified tree: `pnpm install --frozen-lockfile`, `pnpm build:clean-room`, `pnpm typecheck`, `pnpm build:panel-runtime`, `pnpm build:manager-runtime`, `pnpm typecheck:panel-runtime`, `pnpm typecheck:manager-runtime`, and `git diff --check`
 

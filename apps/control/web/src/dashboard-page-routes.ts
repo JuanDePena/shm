@@ -14,12 +14,12 @@ import {
 } from "./dashboard-routing.js";
 import { renderDashboardPage } from "./dashboard-page.js";
 import {
-  clearSessionCookie,
   redirect,
   sanitizeReturnTo,
   type WebLocale,
   writeHtml
 } from "./request.js";
+import { redirectToLogin, renderLoginError } from "./web-auth-helpers.js";
 import type { WebRouteHandler } from "./web-route-context.js";
 
 export function createDashboardHandler(args: {
@@ -84,18 +84,11 @@ export function createDashboardHandler(args: {
       return true;
     } catch (error) {
       if (error instanceof WebApiError && error.statusCode === 401) {
-        redirect(response, "/login", clearSessionCookie());
+        redirectToLogin(response, "Session required");
         return true;
       }
 
-      writeHtml(
-        response,
-        500,
-        args.renderLoginPage(locale, {
-          kind: "error",
-          message: error instanceof Error ? error.message : String(error)
-        })
-      );
+      renderLoginError(response, locale, args.renderLoginPage, error);
       return true;
     }
   };

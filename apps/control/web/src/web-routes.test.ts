@@ -4,10 +4,13 @@ import test from "node:test";
 import { invokeRequestHandler } from "@simplehost/control-shared";
 
 import type { PanelWebApi } from "./api-client.js";
+import { WebApiError } from "./api-client.js";
 import { createPanelWebSurface } from "./index.js";
 import { type PanelWebRuntimeConfig } from "./web-routes.js";
 
-function createStubApi(): PanelWebApi {
+function createStubApi(
+  overrides: Partial<PanelWebApi> = {}
+): PanelWebApi {
   return {
     request: async () => {
       throw new Error("Unexpected API request in test");
@@ -26,7 +29,8 @@ function createStubApi(): PanelWebApi {
     },
     mutateDesiredState: async () => {
       throw new Error("Unexpected desired-state mutation in test");
-    }
+    },
+    ...overrides
   };
 }
 
@@ -108,4 +112,53 @@ test("unknown routes still return a structured 404 payload", async () => {
     method: "GET",
     path: "/no-such-route"
   });
+});
+
+test("missing session on protected routes redirects to login", async () => {
+  const handler = createPanelWebSurface(
+    {
+      config: createConfig(),
+      startedAt: Date.now()
+    },
+    createStubApi()
+  ).requestListener;
+
+  const response = await invokeRequestHandler(handler, {
+    method: "POST",
+    url: "/resources/apps/delete",
+    body: "slug=adudoc",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded; charset=utf-8"
+    }
+  });
+
+  assert.equal(response.statusCode, 303);
+  assert.equal(response.headers.location, "/login?notice=Session%20required&kind=error");
+  assert.match(String(response.headers["set-cookie"]), /shp_session=;/);
+});
+
+test("login failures render the login page with the API error message", async () => {
+  const handler = createPanelWebSurface(
+    {
+      config: createConfig(),
+      startedAt: Date.now()
+    },
+    createStubApi({
+      request: async () => {
+        throw new WebApiError(401, "Invalid credentials");
+      }
+    })
+  ).requestListener;
+
+  const response = await invokeRequestHandler(handler, {
+    method: "POST",
+    url: "/auth/login",
+    body: "email=admin%40example.com&password=bad-pass",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded; charset=utf-8"
+    }
+  });
+
+  assert.equal(response.statusCode, 401);
+  assert.match(response.bodyText, /Invalid credentials/);
 });

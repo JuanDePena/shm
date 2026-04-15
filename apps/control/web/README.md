@@ -17,4 +17,5 @@ This entrypoint remains separate only as a transitional source boundary inside `
 Common process and runtime helpers now live in `/opt/simplehostman/src/apps/control/shared`.
 `createPanelWebSurface()` now acts as the reusable UI-side equivalent of the API surface boundary.
 `WebRouteContext` now carries `sessionToken`, so dashboard, desired-state, mail, and action handlers all share one per-request auth/session boundary.
+Login redirects, cookie clearing, and login-error rendering now flow through a shared auth/session helper layer instead of being duplicated across route handlers.
 The long-term target is one control-plane runtime process serving both UI and API.

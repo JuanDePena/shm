@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { PanelNotice } from "@simplehost/panel-ui";
 
 import type { PanelWebApi } from "./api-client.js";
+import { readLocale, readSessionToken } from "./request.js";
 import type { PanelWebRuntimeConfig } from "./web-routes.js";
 import type { WebLocale } from "./request.js";
 
@@ -20,3 +21,26 @@ export interface WebRouteContext {
 }
 
 export type WebRouteHandler = (context: WebRouteContext) => Promise<boolean>;
+
+export function createWebRouteContext(args: {
+  request: IncomingMessage;
+  response: ServerResponse;
+  api: PanelWebApi;
+  config: PanelWebRuntimeConfig;
+  startedAt: number;
+  handleDashboard: WebRouteContext["handleDashboard"];
+  renderLoginPage: WebRouteContext["renderLoginPage"];
+}): WebRouteContext {
+  return {
+    request: args.request,
+    response: args.response,
+    url: new URL(args.request.url ?? "/", "http://127.0.0.1"),
+    locale: readLocale(args.request),
+    sessionToken: readSessionToken(args.request),
+    api: args.api,
+    config: args.config,
+    startedAt: args.startedAt,
+    handleDashboard: args.handleDashboard,
+    renderLoginPage: args.renderLoginPage
+  };
+}
