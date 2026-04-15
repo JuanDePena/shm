@@ -1,25 +1,33 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { writeJson } from "@simplehost/control-api";
+import {
+  createPanelApiHttpHandler,
+  writeJson,
+  type PanelApiSurface
+} from "@simplehost/control-api";
 import {
   createRuntimeHealthSnapshot,
   type ControlProcessContext
 } from "@simplehost/control-shared";
+import type { PanelWebSurface } from "@simplehost/control-web";
 
 export interface CombinedControlRouterArgs {
   context: ControlProcessContext;
-  apiRequestHandler: (request: IncomingMessage, response: ServerResponse) => Promise<void>;
-  webRequestHandler: (request: IncomingMessage, response: ServerResponse) => Promise<void>;
+  apiSurface: Pick<PanelApiSurface, "requestHandler">;
+  webSurface: Pick<PanelWebSurface, "requestListener">;
 }
 
 export function createCombinedControlRequestHandler({
   context,
-  apiRequestHandler,
-  webRequestHandler
+  apiSurface,
+  webSurface
 }: CombinedControlRouterArgs): (
   request: IncomingMessage,
   response: ServerResponse
 ) => Promise<void> {
+  const apiRequestHandler = createPanelApiHttpHandler(apiSurface.requestHandler);
+  const webRequestHandler = webSurface.requestListener;
+
   return async (request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
 

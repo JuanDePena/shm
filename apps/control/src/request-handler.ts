@@ -2,22 +2,23 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import {
   createPanelApiHttpHandler,
-  createPanelApiSurface
+  createPanelApiSurface,
+  type PanelApiSurface
 } from "@simplehost/control-api";
 import {
   createControlProcessContext,
   type ControlProcessContext
 } from "@simplehost/control-shared";
-import { createPanelWebSurface } from "@simplehost/control-web";
+import { createPanelWebSurface, type PanelWebSurface } from "@simplehost/control-web";
 
 import { createInProcessPanelWebApi } from "./in-process-web-api.js";
 import { createCombinedControlRequestHandler } from "./router.js";
 
 export interface CombinedControlSurface {
-  apiRequestHandler: (request: IncomingMessage, response: ServerResponse) => Promise<void>;
+  apiSurface: PanelApiSurface;
   close: () => Promise<void>;
   requestHandler: (request: IncomingMessage, response: ServerResponse) => Promise<void>;
-  webRequestHandler: (request: IncomingMessage, response: ServerResponse) => Promise<void>;
+  webSurface: PanelWebSurface;
 }
 
 export async function createCombinedControlSurface(
@@ -27,16 +28,15 @@ export async function createCombinedControlSurface(
   const apiRequestHandler = createPanelApiHttpHandler(apiSurface.requestHandler);
   const api = createInProcessPanelWebApi(apiRequestHandler);
   const webSurface = createPanelWebSurface(context, api);
-  const webRequestHandler = webSurface.requestListener;
 
   return {
-    apiRequestHandler,
+    apiSurface,
     close: apiSurface.close,
     requestHandler: createCombinedControlRequestHandler({
       context,
-      apiRequestHandler,
-      webRequestHandler
+      apiSurface,
+      webSurface
     }),
-    webRequestHandler
+    webSurface
   };
 }

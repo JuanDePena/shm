@@ -18,6 +18,7 @@
     "start:control:web": "pnpm --dir apps/control/web start",
     "start:control:split": "pnpm --dir apps/control start:split",
     "start:control:combined": "pnpm --dir apps/control start:combined",
+    "start:control:candidate": "pnpm --dir apps/control start:candidate",
     "start:worker": "pnpm --filter @simplehost/panel-worker start",
     "start:agent": "pnpm --filter @simplehost/manager-agent start",
     "start:cli": "pnpm --filter @simplehost/manager-cli start",
@@ -37,6 +38,7 @@
     "typecheck:control:shared": "pnpm --dir apps/control typecheck:shared",
     "start:control": "pnpm --dir apps/control start:combined",
     "test:control": "pnpm --dir apps/control test:entrypoint",
+    "test:control:parity": "pnpm --dir apps/control test:parity",
     "test:control:web": "pnpm --dir apps/control test:web",
     "build:control:entrypoint": "pnpm --dir apps/control build:entrypoint",
     "typecheck:control:entrypoint": "pnpm --dir apps/control typecheck:entrypoint"

@@ -53,11 +53,13 @@ Useful commands:
 - `pnpm audit:legacy-roots`
 - `pnpm test`
 - `pnpm start:control`
+- `pnpm start:control:candidate`
 - `pnpm start:control:combined`
 - `pnpm start:control:split`
 - `pnpm start:control:api`
 - `pnpm start:control:web`
 - `pnpm test:control`
+- `pnpm test:control:parity`
 - `pnpm start:worker`
 - `pnpm start:agent`
 - `pnpm start:cli`

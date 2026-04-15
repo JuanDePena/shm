@@ -42,6 +42,8 @@ Current checkpoint on 2026-04-14:
 - `WebRouteContext` now owns the per-request `sessionToken`, so dashboard rendering, desired-state mutations, mail actions, and operational actions all reuse the same web-side auth/session seam
 - web-side auth/session UX now has a shared helper layer for route-context creation, login redirects, cookie clearing, and login-error rendering, reducing duplication before full runtime convergence
 - `PanelWebApi` now exposes semantic auth methods for `login`, `logout`, and `current user`, shrinking the remaining direct dependency on raw auth route strings inside `control-web`
+- `PanelWebApi` now also exposes `loadDashboardBootstrap()`, making the initial authenticated dashboard load a first-class surface instead of a route-local bundle of fetches
+- the combined control candidate now routes over `PanelApiSurface` and `PanelWebSurface` directly, and source tests now lock basic split-vs-combined parity for key routes (`/`, `/login`, `/v1/auth/me`, `/v1/resources/spec`)
 - `pnpm audit:legacy-roots` now guards against reintroducing functional references to legacy repo roots or retired package names outside docs/build output
 - clean-room validation passed from the unified tree: `pnpm install --frozen-lockfile`, `pnpm build:clean-room`, `pnpm typecheck`, `pnpm build:panel-runtime`, `pnpm build:manager-runtime`, `pnpm typecheck:panel-runtime`, `pnpm typecheck:manager-runtime`, and `git diff --check`
 

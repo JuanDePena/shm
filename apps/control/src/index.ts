@@ -9,7 +9,6 @@ import {
   type ControlProcessContext
 } from "../shared/src/index.js";
 import { createCombinedControlSurface } from "./request-handler.js";
-import { createCombinedControlRequestHandler } from "./router.js";
 import { createPanelWebRuntime } from "@simplehost/control-web";
 
 export type ControlRuntimeMode = "combined" | "split";
@@ -43,13 +42,7 @@ export async function createCombinedControlRuntime(
   context: ControlProcessContext = createControlProcessContext()
 ) {
   const surface = await createCombinedControlSurface(context);
-  const server = createServer(
-    createCombinedControlRequestHandler({
-      context,
-      apiRequestHandler: surface.apiRequestHandler,
-      webRequestHandler: surface.webRequestHandler
-    })
-  );
+  const server = createServer(surface.requestHandler);
 
   server.listen(context.config.web.port, context.config.web.host, () => {
     console.log(`SHP Control listening on http://${context.config.web.host}:${context.config.web.port}`);

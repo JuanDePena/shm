@@ -65,7 +65,7 @@ export function createDashboardHandler(args: {
     }
 
     try {
-      const data = await args.api.loadDashboardData(sessionToken);
+      const data = await args.api.loadDashboardBootstrap(sessionToken);
       writeHtml(
         response,
         200,

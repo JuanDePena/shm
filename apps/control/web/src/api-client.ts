@@ -37,6 +37,8 @@ export interface DashboardData {
   packages: PackageInventorySnapshot;
 }
 
+export type DashboardBootstrap = DashboardData;
+
 export class WebApiError extends Error {
   constructor(
     public readonly statusCode: number,
@@ -60,6 +62,7 @@ export interface PanelWebApi {
   login(credentials: AuthLoginRequest): Promise<AuthLoginResponse>;
   logout(token: string): Promise<void>;
   getCurrentUser(token: string): Promise<AuthenticatedUserSummary>;
+  loadDashboardBootstrap(token: string): Promise<DashboardBootstrap>;
   loadDashboardData(token: string): Promise<DashboardData>;
   loadRustDeskPublicConnection(): Promise<RustDeskPublicConnectionInfo>;
   loadDesiredStateSpec(token: string): Promise<DesiredStateSpec>;
@@ -147,7 +150,7 @@ export function createPanelWebApiFromRequest(request: PanelWebApiRequest): Panel
     getCurrentUser(token: string): Promise<AuthenticatedUserSummary> {
       return request<AuthenticatedUserSummary>("/v1/auth/me", { token });
     },
-    async loadDashboardData(token: string): Promise<DashboardData> {
+    async loadDashboardBootstrap(token: string): Promise<DashboardBootstrap> {
       const [
         currentUser,
         overview,
@@ -190,6 +193,9 @@ export function createPanelWebApiFromRequest(request: PanelWebApiRequest): Panel
         mail,
         packages
       };
+    },
+    async loadDashboardData(token: string): Promise<DashboardData> {
+      return this.loadDashboardBootstrap(token);
     },
     loadRustDeskPublicConnection(): Promise<RustDeskPublicConnectionInfo> {
       return request<RustDeskPublicConnectionInfo>("/v1/public/rustdesk");
@@ -245,6 +251,10 @@ export function apiRequest<T>(
 
 export function loadDashboardData(token: string): Promise<DashboardData> {
   return defaultPanelWebApi.loadDashboardData(token);
+}
+
+export function loadDashboardBootstrap(token: string): Promise<DashboardBootstrap> {
+  return defaultPanelWebApi.loadDashboardBootstrap(token);
 }
 
 export function loadRustDeskPublicConnection(): Promise<RustDeskPublicConnectionInfo> {

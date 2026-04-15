@@ -43,17 +43,20 @@ From `/opt/simplehostman/src`:
 - `pnpm build:control`
 - `pnpm typecheck:control`
 - `pnpm start:control`
+- `pnpm start:control:candidate`
 - `pnpm start:control:combined`
 - `pnpm start:control:split`
 - `pnpm start:control:api`
 - `pnpm start:control:web`
 - `pnpm test:control`
+- `pnpm test:control:parity`
 
 From this directory:
 
 - `pnpm build`
 - `pnpm typecheck:local`
 - `pnpm start:combined`
+- `pnpm start:candidate`
 - `pnpm start:api`
 - `pnpm start:web`
 - `pnpm build:shared`
@@ -67,6 +70,7 @@ From this directory:
 - `pnpm start:split`
 - `pnpm start:split:foreground`
 - `pnpm test`
+- `pnpm test:parity`
 
 ## Migration notes
 
@@ -81,4 +85,7 @@ From this directory:
 - `WebRouteContext` now carries `sessionToken`, aligning the web auth/session seam more closely with `ApiRouteContext.bearerToken`.
 - web-side login redirects, unauthorized handling, and login error rendering now flow through a shared auth/session helper layer and route-context factory.
 - `PanelWebApi` now exposes semantic auth methods, reducing the remaining raw `/v1/auth/*` coupling inside `control-web`.
+- `PanelWebApi` now also exposes `loadDashboardBootstrap()`, making the initial authenticated dashboard load an explicit surface instead of a route-local bundle of fetches.
+- the combined request handler now routes over `PanelApiSurface` and `PanelWebSurface` directly instead of wiring raw request listeners by hand.
+- `apps/control/src/router.test.ts` now locks parity for key split-vs-combined routes such as `/`, `/login`, `/v1/auth/me`, and `/v1/resources/spec`.
 - The remaining work is runtime unification and release normalization, not source ownership.
