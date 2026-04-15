@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { startCombinedControlServer } from "./server.js";
-import { createControlTestHarness } from "./test-harness.js";
+import {
+  createControlTestHarness,
+  startCombinedControlTestRuntime
+} from "./test-harness.js";
 
 test("combined candidate serves authenticated flow over a real HTTP server", async () => {
   const harness = await createControlTestHarness({ webPort: 0 });
-  const runtime = await startCombinedControlServer({
-    context: harness.combinedSurface.context,
-    surface: harness.combinedSurface,
+  const runtime = await startCombinedControlTestRuntime(harness, {
     host: "127.0.0.1",
     port: 0
   });

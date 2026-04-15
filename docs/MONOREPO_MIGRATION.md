@@ -57,9 +57,14 @@ Current checkpoint on 2026-04-14:
 - `apps/control/src/server.ts` now exposes a reusable combined server candidate that can be booted on an ephemeral port for workspace-level smoke validation
 - `apps/control/src/combined-server.test.ts` now exercises that real HTTP candidate with an authenticated end-to-end flow, complementing the split-vs-combined parity smoke tests
 - `apps/control/src/test-harness.ts` now centralizes stubbed API surfaces, shared fixtures, and split-vs-combined request-handler wiring so candidate tests reuse one canonical setup
+- `apps/control/src/runtime-parity-harness.ts` now boots split and combined candidate servers behind one reusable HTTP comparison harness
 - `apps/control/src/request-context.test.ts` now locks the request-level caching contract for resolved session state, authenticated dashboard bootstrap, and health snapshot memoization
+- `apps/control/src/runtime-parity.test.ts` now compares split and combined candidate servers across representative protected routes such as packages, desired-state mutations, mail mutations, proxy preview, and logout
 - `control-web` now routes semantic mail/domain/mailbox/quota mutations through `PanelWebApi`, shrinking another slice of direct transport-shaped coupling
+- the generic `request()` primitive is now internal to `control-web`'s API-client implementation rather than part of the public `PanelWebApi` seam
+- `apps/control/src/runtime-surface.ts` now formalizes the combined candidate runtime surface independently from the HTTP server wrapper
 - `pnpm test:control:candidate` now acts as the shortest canonical test command for the combined candidate before any runtime promotion work
+- `pnpm test:control:runtime-parity` now acts as the canonical process-level parity check between split and combined candidate servers
 - `pnpm audit:legacy-roots` now guards against reintroducing functional references to legacy repo roots or retired package names outside docs/build output
 - clean-room validation passed from the unified tree: `pnpm install --frozen-lockfile`, `pnpm build:clean-room`, `pnpm typecheck`, `pnpm build:panel-runtime`, `pnpm build:manager-runtime`, `pnpm typecheck:panel-runtime`, `pnpm typecheck:manager-runtime`, and `git diff --check`
 
@@ -72,6 +77,22 @@ The following areas are still transitional even though `src` is now canonical:
 - imported release scripts under `src/scripts/{panel,manager}` now build from the unified source tree, but still preserve legacy product-specific release flows that must be normalized later
 - imported service names such as `spanel-*` and `shm-agent` remain transitional until release/runtime convergence
 - imported packaging is now source-aligned with `/opt/simplehostman/release`, but product boundaries inside `packaging/{panel,manager}` are still transitional
+
+## Combined candidate pre-promotion checklist
+
+Before `apps/control` can attempt any promotion of `combined` beyond source-level validation, all of the following should remain green:
+
+- `pnpm test:control:parity`
+- `pnpm test:control:runtime-parity`
+- `pnpm test:control:combined-smoke`
+- `pnpm test:control:combined:e2e`
+- `pnpm check:control:candidate`
+
+And all of the following should still be true:
+
+- split mode remains the documented runtime default in `scripts/` and `packaging/`
+- no deploy flow under `/opt/simplehostman/release` or `systemd` units has switched to `combined`
+- candidate validation remains entirely workspace-local and reversible
 
 ## Target layout
 

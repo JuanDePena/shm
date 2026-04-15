@@ -44,6 +44,7 @@
     "test:control:candidate": "pnpm --dir apps/control test:candidate",
     "test:control:combined-smoke": "pnpm --dir apps/control test:combined-smoke",
     "test:control:combined:e2e": "pnpm --dir apps/control test:combined:e2e",
+    "test:control:runtime-parity": "pnpm --dir apps/control test:runtime-parity",
     "test:control:parity": "pnpm --dir apps/control test:parity",
     "check:control:candidate": "pnpm --dir apps/control check:candidate",
     "test:control:web": "pnpm --dir apps/control test:web",

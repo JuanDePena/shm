@@ -58,15 +58,6 @@ export class WebApiError extends Error {
 }
 
 export interface PanelWebApi extends ControlAuthSurface {
-  request<T>(
-    pathname: string,
-    options?: {
-      method?: string;
-      token?: string | null;
-      body?: unknown;
-      responseType?: "json" | "text";
-    }
-  ): Promise<T>;
   login(credentials: AuthLoginRequest): Promise<AuthLoginResponse>;
   logout(token: string | null): Promise<void>;
   getCurrentUser(token: string | null): Promise<AuthenticatedUserSummary>;
@@ -207,7 +198,6 @@ export function createPanelWebApiFromRequest(request: PanelWebApiRequest): Panel
   });
 
   const api: PanelWebApi = {
-    request,
     login(credentials: AuthLoginRequest): Promise<AuthLoginResponse> {
       return request<AuthLoginResponse>("/v1/auth/login", {
         method: "POST",
@@ -455,7 +445,7 @@ export function apiRequest<T>(
   pathname: string,
   options: PanelWebApiRequestOptions = {}
 ): Promise<T> {
-  return defaultPanelWebApi.request(pathname, options);
+  return requestWithBaseUrl(createApiBaseUrl(createPanelRuntimeConfig()), pathname, options);
 }
 
 export function loadDashboardData(token: string): Promise<DashboardData> {

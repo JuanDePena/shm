@@ -53,6 +53,7 @@ From `/opt/simplehostman/src`:
 - `pnpm start:control:web`
 - `pnpm test:control`
 - `pnpm test:control:candidate`
+- `pnpm test:control:runtime-parity`
 - `pnpm test:control:combined-smoke`
 - `pnpm test:control:combined:e2e`
 - `pnpm test:control:parity`
@@ -81,6 +82,7 @@ From this directory:
 - `pnpm start:split:foreground`
 - `pnpm test`
 - `pnpm test:candidate`
+- `pnpm test:runtime-parity`
 - `pnpm test:combined-smoke`
 - `pnpm test:combined:e2e`
 - `pnpm test:parity`
@@ -106,14 +108,29 @@ From this directory:
 - `apps/control/src/bootstrap-surface.ts` now concentrates auth, dashboard bootstrap, runtime health, and the high-level API/web surfaces used by the combined candidate.
 - `apps/control/src/combined-surface.ts` now acts as the central high-level primitive for the combined candidate, tying together the bootstrap surface, route surface, request-context factory, and request handler.
 - `apps/control/src/server.ts` now exposes a reusable combined server candidate that can be started on an ephemeral port for smoke/e2e validation before any deploy/runtime promotion.
+- `apps/control/src/runtime-surface.ts` now formalizes the combined candidate as a reusable runtime surface instead of leaving that shape implicit in server/bootstrap wiring.
 - `apps/control/src/test-harness.ts` now centralizes split/combined fixtures, stubbed API surfaces, and request-handler wiring for candidate validation.
+- `apps/control/src/runtime-parity-harness.ts` now boots split and combined candidate servers behind one reusable HTTP comparison harness.
 - `apps/control/src/request-context.test.ts` now locks the per-request caching behavior for session resolution, authenticated dashboard bootstrap, and health snapshot reuse.
 - the combined request handler now routes over `PanelApiSurface` and `PanelWebSurface` directly instead of wiring raw request listeners by hand.
 - `apps/control/src/router.test.ts` now locks parity for key split-vs-combined routes such as `/`, `/login`, `/v1/auth/me`, and `/v1/resources/spec`.
 - `apps/control/src/request-context.ts` now defines a combined per-request context with shared session resolution and authenticated dashboard loading.
+- `apps/control/src/runtime-parity.test.ts` now compares split and combined candidates over real HTTP servers for protected routes such as packages, desired-state mutations, mail mutations, proxy preview, and logout.
 - `apps/control/src/combined-smoke.test.ts` now exercises the combined candidate against real `PanelWebSurface` routing with a stubbed in-process API boundary.
 - `apps/control/src/combined-server.test.ts` now starts the combined candidate on a real ephemeral HTTP port and validates an authenticated flow end-to-end.
 - `apps/control/src/auth-gate.ts` now provides a cached combined auth/bootstrap gate, so the candidate can reuse resolved session and authenticated dashboard state inside one request.
+- `apps/control/src/request-context.ts` now exposes an explicit per-request cache object for auth/bootstrap memoization and health snapshot reuse.
 - `apps/control/src/route-surface.ts` now gives the combined candidate a more semantic routing surface over health, API, and web requests.
 - `apps/control/src/runtime-contract.ts` now makes the one-process candidate explicit as a source-level runtime contract before any deploy/runtime promotion.
+- `control-web` now routes semantic mail/domain/mailbox/quota mutations through `PanelWebApi`, further shrinking direct transport-shaped coupling.
 - The remaining work is runtime unification and release normalization, not source ownership.
+
+## Combined pre-promotion checklist
+
+Before `combined` can move beyond source-only validation, all of these still need to hold:
+
+- `pnpm test:runtime-parity` passes for representative protected routes
+- `pnpm test:combined-smoke` passes against the real web surface and stubbed in-process API boundary
+- `pnpm test:combined:e2e` passes against a real ephemeral combined candidate server
+- `pnpm check:candidate` stays green from `apps/control`
+- split mode remains the documented and packaged runtime default under `scripts/` and `packaging/`

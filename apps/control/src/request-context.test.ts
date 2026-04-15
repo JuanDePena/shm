@@ -23,6 +23,10 @@ test("combined request context caches session, dashboard bootstrap and health pe
     context.resolveSession(),
     context.resolveSession()
   ]);
+  const [isAuthenticatedA, isAuthenticatedB] = await Promise.all([
+    context.isAuthenticated(),
+    context.isAuthenticated()
+  ]);
   const [dashboardA, dashboardB] = await Promise.all([
     context.loadAuthenticatedDashboard(),
     context.loadAuthenticatedDashboard()
@@ -33,9 +37,16 @@ test("combined request context caches session, dashboard bootstrap and health pe
   assert.equal(context.method, "GET");
   assert.equal(context.pathname, "/");
   assert.equal(context.sessionToken, "test-session");
+  assert.ok(context.cache.auth.resolvedSessionPromise);
+  assert.ok(context.cache.auth.requiredSessionPromise);
+  assert.ok(context.cache.auth.authenticatedDashboardPromise);
+  assert.ok(context.cache.auth.isAuthenticatedPromise);
   assert.equal(resolvedA, resolvedB);
+  assert.equal(isAuthenticatedA, true);
+  assert.equal(isAuthenticatedA, isAuthenticatedB);
   assert.equal(dashboardA, dashboardB);
   assert.equal(healthA, healthB);
+  assert.equal(context.cache.healthSnapshot, healthA);
   assert.equal(requiredSession.token, "test-session");
   assert.equal(dashboardA.session.token, "test-session");
 });

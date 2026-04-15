@@ -3,26 +3,29 @@ import {
   type ControlProcessContext
 } from "@simplehost/control-shared";
 
-import { createControlCombinedSurface, type ControlCombinedSurface } from "./combined-surface.js";
+import {
+  createCombinedControlRuntimeSurface,
+  type CombinedControlRuntimeSurface
+} from "./runtime-surface.js";
 
 export interface CombinedControlRuntimeContract {
   readonly mode: "combined-candidate";
   readonly context: ControlProcessContext;
-  readonly requestHandler: ControlCombinedSurface["requestHandler"];
-  readonly surface: ControlCombinedSurface;
+  readonly requestHandler: CombinedControlRuntimeSurface["requestHandler"];
+  readonly surface: CombinedControlRuntimeSurface["surface"];
   close(): Promise<void>;
 }
 
 export async function createCombinedControlRuntimeContract(
   context: ControlProcessContext = createControlProcessContext()
 ): Promise<CombinedControlRuntimeContract> {
-  const surface = await createControlCombinedSurface(context);
+  const runtimeSurface = await createCombinedControlRuntimeSurface(context);
 
   return {
-    mode: "combined-candidate",
-    context,
-    requestHandler: surface.requestHandler,
-    surface,
-    close: surface.close
+    mode: runtimeSurface.mode,
+    context: runtimeSurface.context,
+    requestHandler: runtimeSurface.requestHandler,
+    surface: runtimeSurface.surface,
+    close: runtimeSurface.close
   };
 }

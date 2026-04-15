@@ -9,7 +9,15 @@ import {
 } from "@simplehost/control-shared";
 
 import type { ControlBootstrapSurface } from "./bootstrap-surface.js";
-import { createCombinedControlAuthGate } from "./auth-gate.js";
+import {
+  createCombinedControlAuthGate,
+  type CombinedControlAuthGateCache
+} from "./auth-gate.js";
+
+export interface CombinedControlRequestCache {
+  auth: CombinedControlAuthGateCache;
+  healthSnapshot?: ReturnType<typeof createRuntimeHealthSnapshot<{ mode: string }>>;
+}
 
 export interface CombinedControlRequestContext {
   request: IncomingMessage;
@@ -19,6 +27,7 @@ export interface CombinedControlRequestContext {
   pathname: string;
   sessionToken: string | null;
   surface: ControlBootstrapSurface;
+  cache: CombinedControlRequestCache;
   getHealthSnapshot(): ReturnType<typeof createRuntimeHealthSnapshot<{ mode: string }>>;
   isAuthenticated(): Promise<boolean>;
   resolveSession(): Promise<ControlResolvedSession>;
@@ -34,13 +43,14 @@ export function createCombinedControlRequestContext(args: {
   const sessionToken = readSessionTokenFromCookieHeader(args.request.headers.cookie);
   const method = args.request.method ?? "GET";
   const url = new URL(args.request.url ?? "/", "http://127.0.0.1");
+  const cache: CombinedControlRequestCache = {
+    auth: {}
+  };
   const authGate = createCombinedControlAuthGate({
     sessionToken,
-    surface: args.surface
+    surface: args.surface,
+    cache: cache.auth
   });
-  let healthSnapshot:
-    | ReturnType<typeof createRuntimeHealthSnapshot<{ mode: string }>>
-    | undefined;
 
   return {
     request: args.request,
@@ -50,8 +60,9 @@ export function createCombinedControlRequestContext(args: {
     pathname: url.pathname,
     sessionToken,
     surface: args.surface,
+    cache,
     getHealthSnapshot: () =>
-      (healthSnapshot ??= args.surface.runtime.getHealthSnapshot()),
+      (cache.healthSnapshot ??= args.surface.runtime.getHealthSnapshot()),
     isAuthenticated: authGate.isAuthenticated,
     resolveSession: authGate.resolveSession,
     requireSession: authGate.requireSession,

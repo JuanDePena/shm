@@ -11,13 +11,21 @@ import {
   type CombinedControlRuntimeContract
 } from "./runtime-contract.js";
 import type { ControlCombinedSurface } from "./combined-surface.js";
+import type { ControlCandidateRuntimeSurface } from "./runtime-surface.js";
 
-export interface CombinedControlServerRuntime {
+export interface ControlCandidateServerRuntime<
+  TMode extends "combined-candidate" | "split-candidate"
+> {
   readonly context: ControlProcessContext;
-  readonly contract: CombinedControlRuntimeContract;
+  readonly mode: TMode;
   readonly server: Server;
   readonly origin: string;
   close(): Promise<void>;
+}
+
+export interface CombinedControlServerRuntime
+  extends ControlCandidateServerRuntime<"combined-candidate"> {
+  readonly contract: CombinedControlRuntimeContract;
 }
 
 function resolveOrigin(server: Server): string {
@@ -29,6 +37,40 @@ function resolveOrigin(server: Server): string {
 
   const host = address.address === "::" ? "127.0.0.1" : address.address;
   return `http://${host}:${address.port}`;
+}
+
+export async function startControlCandidateServer<TMode extends "combined-candidate" | "split-candidate">(
+  args: {
+    context: ControlProcessContext;
+    surface: ControlCandidateRuntimeSurface<TMode>;
+    host?: string;
+    port?: number;
+  }
+): Promise<ControlCandidateServerRuntime<TMode>> {
+  const server = createServer(args.surface.requestHandler);
+
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(
+      args.port ?? args.context.config.web.port,
+      args.host ?? args.context.config.web.host,
+      () => {
+        server.off("error", reject);
+        resolve();
+      }
+    );
+  });
+
+  return {
+    context: args.context,
+    mode: args.surface.mode,
+    server,
+    origin: resolveOrigin(server),
+    close: async () => {
+      await closeHttpServer(server);
+      await args.surface.close();
+    }
+  };
 }
 
 export async function startCombinedControlServer(args: {
@@ -47,28 +89,26 @@ export async function startCombinedControlServer(args: {
         close: args.surface.close
       }
     : await createCombinedControlRuntimeContract(context);
-  const server = createServer(contract.requestHandler);
-
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(
-      args.port ?? context.config.web.port,
-      args.host ?? context.config.web.host,
-      () => {
-        server.off("error", reject);
-        resolve();
-      }
-    );
+  const runtime = await startControlCandidateServer({
+    context,
+    surface: {
+      mode: contract.mode,
+      context,
+      requestHandler: contract.requestHandler,
+      close: contract.close
+    },
+    host: args.host,
+    port: args.port
   });
 
   return {
     context,
+    mode: runtime.mode,
     contract,
-    server,
-    origin: resolveOrigin(server),
+    server: runtime.server,
+    origin: runtime.origin,
     close: async () => {
-      await closeHttpServer(server);
-      await contract.close();
+      await runtime.close();
     }
   };
 }

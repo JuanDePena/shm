@@ -28,6 +28,8 @@ import { createInProcessPanelWebApi } from "./in-process-web-api.js";
 import { createCombinedControlRequestContext } from "./request-context.js";
 import { createCombinedControlRequestHandler } from "./request-handler.js";
 import { createCombinedControlRouteSurface } from "./route-surface.js";
+import { startCombinedControlServer, startControlCandidateServer } from "./server.js";
+import type { ControlCandidateRuntimeSurface } from "./runtime-surface.js";
 
 function createJob(id: string): JobDispatchResponse["jobs"][number] {
   return {
@@ -374,6 +376,17 @@ export async function createControlTestHarness(args: {
       // Stub surfaces do not own external resources.
     }
   };
+  const splitSurface: ControlCandidateRuntimeSurface<"split-candidate"> = {
+    mode: "split-candidate",
+    context,
+    requestHandler: createSplitRequestHandler({
+      apiSurface,
+      webSurface
+    }),
+    close: async () => {
+      // Stub surfaces do not own external resources.
+    }
+  };
 
   return {
     context,
@@ -384,11 +397,39 @@ export async function createControlTestHarness(args: {
     webApi,
     webSurface,
     bootstrapSurface,
+    splitSurface,
     combinedSurface,
-    split: createSplitRequestHandler({
-      apiSurface,
-      webSurface
-    }),
+    split: splitSurface.requestHandler,
     combined: combinedSurface.requestHandler
   };
+}
+
+export async function startSplitControlTestRuntime(
+  harness: Awaited<ReturnType<typeof createControlTestHarness>>,
+  args: {
+    host?: string;
+    port?: number;
+  } = {}
+) {
+  return startControlCandidateServer({
+    context: harness.context,
+    surface: harness.splitSurface,
+    host: args.host,
+    port: args.port
+  });
+}
+
+export async function startCombinedControlTestRuntime(
+  harness: Awaited<ReturnType<typeof createControlTestHarness>>,
+  args: {
+    host?: string;
+    port?: number;
+  } = {}
+) {
+  return startCombinedControlServer({
+    context: harness.combinedSurface.context,
+    surface: harness.combinedSurface,
+    host: args.host,
+    port: args.port
+  });
 }

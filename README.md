@@ -62,6 +62,7 @@ Useful commands:
 - `pnpm start:control:api`
 - `pnpm start:control:web`
 - `pnpm test:control`
+- `pnpm test:control:runtime-parity`
 - `pnpm test:control:combined-smoke`
 - `pnpm test:control:combined:e2e`
 - `pnpm test:control:parity`

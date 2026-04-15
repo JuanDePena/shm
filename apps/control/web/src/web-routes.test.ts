@@ -12,9 +12,6 @@ function createStubApi(
   overrides: Partial<PanelWebApi> = {}
 ): PanelWebApi {
   return {
-    request: async () => {
-      throw new Error("Unexpected API request in test");
-    },
     login: async () => {
       throw new Error("Unexpected login request in test");
     },

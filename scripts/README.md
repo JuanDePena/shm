@@ -14,7 +14,7 @@ Path:
 
 These scripts now resolve the unified source root under `/opt/simplehostman/src`, even when their operational behavior is still product-specific.
 They should continue treating the split control runtime as the operational default until the combined `apps/control` candidate is promoted beyond source-level validation.
-For now, source validation of the candidate combined mode should happen through workspace commands such as `pnpm start:control:combined:dev`, `pnpm dev:control:combined`, `pnpm test:control:parity`, `pnpm test:control:combined-smoke`, and `pnpm test:control:combined:e2e`, not through production deploy scripts.
+For now, source validation of the candidate combined mode should happen through workspace commands such as `pnpm start:control:combined:dev`, `pnpm dev:control:combined`, `pnpm test:control:parity`, `pnpm test:control:runtime-parity`, `pnpm test:control:combined-smoke`, and `pnpm test:control:combined:e2e`, not through production deploy scripts.
 `pnpm check:control:candidate` is now the shortest canonical command for validating the combined candidate boundary from source.
 
 ## Shared helpers
