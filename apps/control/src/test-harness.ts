@@ -42,6 +42,8 @@ export interface ControlTestHarnessOptions {
   currentUserError?: StubApiErrorConfig;
   overviewError?: StubApiErrorConfig;
   packageInstallError?: StubApiErrorConfig;
+  desiredStateApplyError?: StubApiErrorConfig;
+  mailDomainUpsertError?: StubApiErrorConfig;
   proxyPreviewError?: StubApiErrorConfig;
 }
 
@@ -161,10 +163,35 @@ export function createTestContext(args: {
   return {
     config: {
       api: { host: "127.0.0.1", port: 4100 },
+      auth: {
+        bootstrapEnrollmentToken: "test-enrollment-token",
+        bootstrapAdminEmail: "admin@example.com",
+        bootstrapAdminPassword: "good-pass",
+        bootstrapAdminName: "Admin",
+        sessionTtlSeconds: 43200
+      },
+      database: {
+        url: "postgresql://simplehost_panel:test@127.0.0.1:5433/simplehost_panel"
+      },
       env: "test",
       inventory: { importPath: "/tmp/inventory.yaml" },
+      jobs: {
+        payloadSecret: "test-payload-secret"
+      },
+      rustdesk: {
+        publicHostname: null,
+        txtRecordFqdn: null,
+        primaryNodeId: null,
+        primaryDnsTarget: null,
+        secondaryNodeId: null,
+        secondaryDnsTarget: null
+      },
       version: "0.1.0-test",
-      web: { host: "127.0.0.1", port: args.webPort ?? 3200 }
+      web: { host: "127.0.0.1", port: args.webPort ?? 3200 },
+      worker: {
+        pollIntervalMs: 5000,
+        logLevel: "info"
+      }
     } as ControlProcessContext["config"] & PanelWebProcessContext["config"],
     startedAt: Date.now() - 10_000
   };
@@ -186,6 +213,8 @@ export function createStubApiSurface(args: {
   currentUserError?: StubApiErrorConfig;
   overviewError?: StubApiErrorConfig;
   packageInstallError?: StubApiErrorConfig;
+  desiredStateApplyError?: StubApiErrorConfig;
+  mailDomainUpsertError?: StubApiErrorConfig;
   proxyPreviewError?: StubApiErrorConfig;
 }): Pick<PanelApiSurface, "auth" | "requestHandler"> {
   const isAuthorized = (request: IncomingMessage) =>
@@ -242,12 +271,28 @@ export function createStubApiSurface(args: {
     }
 
     if (url.pathname === "/v1/resources/spec" && request.method === "PUT") {
+      if (args.desiredStateApplyError) {
+        writeJson(response, args.desiredStateApplyError.statusCode ?? 500, {
+          error: args.desiredStateApplyError.message,
+          message: args.desiredStateApplyError.message
+        });
+        return;
+      }
+
       response.writeHead(204);
       response.end();
       return;
     }
 
     if (url.pathname === "/v1/mail/domains" && request.method === "POST") {
+      if (args.mailDomainUpsertError) {
+        writeJson(response, args.mailDomainUpsertError.statusCode ?? 500, {
+          error: args.mailDomainUpsertError.message,
+          message: args.mailDomainUpsertError.message
+        });
+        return;
+      }
+
       response.writeHead(204);
       response.end();
       return;
@@ -401,6 +446,8 @@ export async function createControlTestHarness(args: ControlTestHarnessOptions =
     currentUserError: args.currentUserError,
     overviewError: args.overviewError,
     packageInstallError: args.packageInstallError,
+    desiredStateApplyError: args.desiredStateApplyError,
+    mailDomainUpsertError: args.mailDomainUpsertError,
     proxyPreviewError: args.proxyPreviewError
   });
   const apiHttpHandler = createPanelApiHttpHandler(apiSurface.requestHandler);

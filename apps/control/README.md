@@ -53,12 +53,14 @@ From `/opt/simplehostman/src`:
 - `pnpm start:control:web`
 - `pnpm test:control`
 - `pnpm test:control:preflight`
+- `pnpm test:control:release-candidate`
 - `pnpm test:control:candidate`
 - `pnpm test:control:runtime-parity`
 - `pnpm test:control:combined-smoke`
 - `pnpm test:control:combined:e2e`
 - `pnpm test:control:parity`
 - `pnpm check:control:candidate`
+- `pnpm check:control:release-candidate`
 
 From this directory:
 
@@ -83,6 +85,7 @@ From this directory:
 - `pnpm start:split:foreground`
 - `pnpm test`
 - `pnpm test:preflight`
+- `pnpm test:release-candidate`
 - `pnpm test:candidate`
 - `pnpm test:runtime-parity`
 - `pnpm test:combined-smoke`
@@ -90,6 +93,7 @@ From this directory:
 - `pnpm test:parity`
 - `pnpm check:candidate`
 - `pnpm check:preflight`
+- `pnpm check:release-candidate`
 
 ## Migration notes
 
@@ -117,6 +121,9 @@ From this directory:
 - `apps/control/src/preflight-surface.ts` now defines the source-level preflight surface for the combined candidate.
 - `apps/control/src/preflight-runner.ts` now executes a human-readable pre-promotion check sequence over a real ephemeral combined candidate server.
 - `apps/control/src/preflight-runner.test.ts` now validates both passing and degraded preflight outcomes.
+- `apps/control/src/release-candidate-config.ts`, `startup-manifest.ts`, and `release-candidate-surface.ts` now define a release-like config and startup manifest for the combined candidate without touching deploy/runtime.
+- `apps/control/src/release-candidate-runner.ts` and `release-candidate-cli.ts` now execute a more release-like combined candidate smoke pass with a structured startup manifest and human-readable report.
+- `apps/control/src/release-candidate-runner.test.ts` now validates passing and degraded release-candidate scenarios, including mutation and proxy-preview failures.
 - `apps/control/src/request-context.test.ts` now locks the per-request caching behavior for session resolution, authenticated dashboard bootstrap, and health snapshot reuse.
 - the combined request handler now routes over `PanelApiSurface` and `PanelWebSurface` directly instead of wiring raw request listeners by hand.
 - `apps/control/src/router.test.ts` now locks parity for key split-vs-combined routes such as `/`, `/login`, `/v1/auth/me`, and `/v1/resources/spec`.
@@ -141,6 +148,9 @@ Before `combined` can move beyond source-only validation, all of these still nee
 - `pnpm test:combined:e2e` passes against a real ephemeral combined candidate server
 - `pnpm test:preflight` passes for both successful and degraded source-level preflight scenarios
 - `pnpm preflight` prints a passing human-readable report for the current candidate
+- `pnpm test:release-candidate` passes for both successful and degraded release-like candidate scenarios
+- `pnpm release-candidate` prints a passing startup manifest plus release-like smoke report for the current candidate
+- `pnpm check:release-candidate` stays green from `apps/control`
 - `pnpm check:candidate` stays green from `apps/control`
-- source-level `preflight` remains the highest promoted state of `combined`
+- source-level `release-candidate` is now the highest promoted state of `combined`
 - split mode remains the documented and packaged runtime default under `scripts/` and `packaging/`

@@ -14,7 +14,7 @@ Path:
 
 These scripts now resolve the unified source root under `/opt/simplehostman/src`, even when their operational behavior is still product-specific.
 They should continue treating the split control runtime as the operational default until the combined `apps/control` candidate is promoted beyond source-level validation.
-For now, source validation of the candidate combined mode should happen through workspace commands such as `pnpm start:control:combined:dev`, `pnpm dev:control:combined`, `pnpm test:control:parity`, `pnpm test:control:runtime-parity`, `pnpm test:control:combined-smoke`, `pnpm test:control:combined:e2e`, and `pnpm check:control:preflight`, not through production deploy scripts.
+For now, source validation of the candidate combined mode should happen through workspace commands such as `pnpm start:control:combined:dev`, `pnpm dev:control:combined`, `pnpm test:control:parity`, `pnpm test:control:runtime-parity`, `pnpm test:control:combined-smoke`, `pnpm test:control:combined:e2e`, `pnpm check:control:preflight`, and `pnpm check:control:release-candidate`, not through production deploy scripts.
 `pnpm check:control:candidate` is now the shortest canonical command for validating the combined candidate boundary from source.
 
 Current language:
@@ -22,6 +22,7 @@ Current language:
 - `split current`: operational runtime shape used by deploy scripts and current packaging
 - `combined candidate`: source-level one-process candidate validated by unit/parity/smoke/e2e tests
 - `combined preflight`: source-level candidate plus a human-readable pre-promotion check sequence, still fully workspace-local
+- `combined release-candidate`: source-level candidate plus a release-like startup manifest and smoke runner, still below deploy/release promotion
 
 ## Shared helpers
 

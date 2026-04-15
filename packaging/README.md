@@ -15,7 +15,7 @@ This split is transitional and exists to avoid mixing source migration with runt
 For now, packaging should keep assuming the deployed control plane remains in split mode even though `apps/control` already has a validated combined candidate in source.
 Source-level combined-mode validation currently lives in workspace scripts and tests only; packaging should not yet promote that candidate to the default runtime.
 That validation now explicitly includes runtime parity checks (`pnpm test:control:runtime-parity`) in addition to handler-level parity and combined-server smoke coverage.
-It also now includes a source-level preflight report (`pnpm check:control:preflight`), but that still remains below any packaging or release promotion threshold.
+It also now includes a source-level preflight report (`pnpm check:control:preflight`) and a release-like source smoke runner (`pnpm check:control:release-candidate`), but both still remain below any packaging or release promotion threshold.
 The new combined runtime contract, combined surface/server candidate, and candidate checks are meant to reduce packaging risk before any service/unit changes happen.
 
 Current language:
@@ -23,6 +23,7 @@ Current language:
 - `split current`: packaged and deployed runtime model
 - `combined candidate`: source-level one-process candidate
 - `combined preflight`: source-level candidate with a human-readable pre-promotion check, still not packaging-ready
+- `combined release-candidate`: source-level candidate with a release-like startup manifest and smoke runner, still not packaging-ready
 
 The current runtime normalization target is:
 

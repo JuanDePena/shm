@@ -25,6 +25,6 @@ Login redirects, cookie clearing, and login-error rendering now flow through a s
 `PanelWebApi` now also exposes semantic mail/domain/mailbox/quota mutations, continuing the shift away from route-shaped `request()` calls inside web handlers.
 The generic `request()` primitive is now internal to the API-client implementation rather than part of the `PanelWebApi` interface, so the web layer depends on semantic methods instead of a transport-shaped escape hatch.
 `WebRouteContext` now caches `resolveSession()`, `requireSession()`, and `loadAuthenticatedDashboard()` per request, which makes protected web routes a closer match to the combined runtime candidate.
-That same semantic web boundary is now what the source-level `combined preflight` exercises before any runtime promotion work.
+That same semantic web boundary is now what the source-level `combined preflight` and `combined release-candidate` checks exercise before any runtime promotion work.
 That bootstrap seam is now backed by a reusable dashboard-bootstrap service in `control-shared`, rather than being assembled inline inside a route handler.
 The long-term target is one control-plane runtime process serving both UI and API.

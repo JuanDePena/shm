@@ -63,12 +63,14 @@ Useful commands:
 - `pnpm start:control:web`
 - `pnpm test:control`
 - `pnpm test:control:preflight`
+- `pnpm test:control:release-candidate`
 - `pnpm test:control:runtime-parity`
 - `pnpm test:control:combined-smoke`
 - `pnpm test:control:combined:e2e`
 - `pnpm test:control:parity`
 - `pnpm check:control:candidate`
 - `pnpm check:control:preflight`
+- `pnpm check:control:release-candidate`
 - `pnpm start:worker`
 - `pnpm start:agent`
 - `pnpm start:cli`

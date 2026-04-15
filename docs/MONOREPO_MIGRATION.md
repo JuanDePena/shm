@@ -65,9 +65,12 @@ Current checkpoint on 2026-04-14:
 - `apps/control/src/runtime-surface.ts` now formalizes the combined candidate runtime surface independently from the HTTP server wrapper
 - `apps/control/src/preflight-surface.ts`, `preflight-runner.ts`, and `preflight-cli.ts` now define a source-level pre-promotion flow for the combined candidate
 - `apps/control/src/preflight-runner.test.ts` now validates both passing and degraded preflight scenarios using harness-driven auth/bootstrap failures
+- `apps/control/src/release-candidate-config.ts`, `startup-manifest.ts`, `release-candidate-surface.ts`, `release-candidate-runner.ts`, and `release-candidate-cli.ts` now define a more release-like source-level validation flow for the combined candidate
+- `apps/control/src/release-candidate-runner.test.ts` now validates both passing and degraded release-candidate scenarios, including mutation and proxy-preview failures
 - `pnpm test:control:candidate` now acts as the shortest canonical test command for the combined candidate before any runtime promotion work
 - `pnpm test:control:runtime-parity` now acts as the canonical process-level parity check between split and combined candidate servers
 - `pnpm check:control:preflight` now acts as the canonical source-level pre-promotion check for the combined candidate
+- `pnpm check:control:release-candidate` now acts as the canonical source-level release-like smoke check for the combined candidate
 - `pnpm audit:legacy-roots` now guards against reintroducing functional references to legacy repo roots or retired package names outside docs/build output
 - clean-room validation passed from the unified tree: `pnpm install --frozen-lockfile`, `pnpm build:clean-room`, `pnpm typecheck`, `pnpm build:panel-runtime`, `pnpm build:manager-runtime`, `pnpm typecheck:panel-runtime`, `pnpm typecheck:manager-runtime`, and `git diff --check`
 
@@ -91,6 +94,7 @@ Before `apps/control` can attempt any promotion of `combined` beyond source-leve
 - `pnpm test:control:combined:e2e`
 - `pnpm check:control:candidate`
 - `pnpm check:control:preflight`
+- `pnpm check:control:release-candidate`
 
 And all of the following should still be true:
 
@@ -103,6 +107,7 @@ Promotion language at the current checkpoint:
 - `candidate source-ready`: unit/parity/smoke/e2e validation is green inside the workspace
 - `candidate runtime-ready`: process-level parity and ephemeral server validation are green
 - `candidate preflight-ready`: the human-readable source-level preflight report is green
+- `candidate release-like-ready`: the release-like startup manifest and smoke report are green inside the workspace
 - `release-ready`: still not reached; packaging and deploy flows remain split-first
 
 ## Target layout
