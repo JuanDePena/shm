@@ -20,6 +20,7 @@
     "start:split:foreground": "pnpm start:api && pnpm start:web",
     "start:combined": "node dist/index.js",
     "start:candidate": "pnpm start:combined",
+    "start:combined:dev": "pnpm build:entrypoint && SIMPLEHOST_CONTROL_RUNTIME_MODE=combined node dist/index.js",
     "test:entrypoint": "pnpm build:entrypoint && node --test dist/**/*.test.js",
     "test:parity": "pnpm test:entrypoint",
     "test:web": "pnpm --dir web test",

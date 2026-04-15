@@ -1,43 +1,24 @@
 import { createPanelRuntimeConfig, type PanelRuntimeConfig } from "@simplehost/panel-config";
 import {
-  type AuditEventSummary,
+  type AuthenticatedUserSummary,
   type AuthLoginRequest,
   type AuthLoginResponse,
-  type AuthenticatedUserSummary,
-  type BackupsOverview,
   type DesiredStateApplyRequest,
   type DesiredStateExportResponse,
   type DesiredStateSpec,
-  type InventoryStateSnapshot,
-  type JobHistoryEntry,
-  type MailOverview,
-  type NodeHealthSnapshot,
-  type OperationsOverview,
-  type PackageInventorySnapshot,
-  type ResourceDriftSummary,
-  type RustDeskOverview,
   type RustDeskPublicConnectionInfo
 } from "@simplehost/panel-contracts";
 import { type PanelNotice } from "@simplehost/panel-ui";
+import {
+  loadControlDashboardBootstrap,
+  type ControlAuthSurface,
+  type ControlDashboardBootstrap
+} from "@simplehost/control-shared";
 
 import { sanitizeReturnTo } from "./request.js";
 
-export interface DashboardData {
-  currentUser: AuthenticatedUserSummary;
-  overview: OperationsOverview;
-  inventory: InventoryStateSnapshot;
-  desiredState: DesiredStateExportResponse;
-  drift: ResourceDriftSummary[];
-  nodeHealth: NodeHealthSnapshot[];
-  jobHistory: JobHistoryEntry[];
-  auditEvents: AuditEventSummary[];
-  backups: BackupsOverview;
-  rustdesk: RustDeskOverview;
-  mail: MailOverview;
-  packages: PackageInventorySnapshot;
-}
-
-export type DashboardBootstrap = DashboardData;
+export type DashboardData = ControlDashboardBootstrap;
+export type DashboardBootstrap = ControlDashboardBootstrap;
 
 export class WebApiError extends Error {
   constructor(
@@ -49,7 +30,7 @@ export class WebApiError extends Error {
   }
 }
 
-export interface PanelWebApi {
+export interface PanelWebApi extends ControlAuthSurface {
   request<T>(
     pathname: string,
     options?: {
@@ -60,8 +41,8 @@ export interface PanelWebApi {
     }
   ): Promise<T>;
   login(credentials: AuthLoginRequest): Promise<AuthLoginResponse>;
-  logout(token: string): Promise<void>;
-  getCurrentUser(token: string): Promise<AuthenticatedUserSummary>;
+  logout(token: string | null): Promise<void>;
+  getCurrentUser(token: string | null): Promise<AuthenticatedUserSummary>;
   loadDashboardBootstrap(token: string): Promise<DashboardBootstrap>;
   loadDashboardData(token: string): Promise<DashboardData>;
   loadRustDeskPublicConnection(): Promise<RustDeskPublicConnectionInfo>;
@@ -141,58 +122,41 @@ export function createPanelWebApiFromRequest(request: PanelWebApiRequest): Panel
         body: credentials
       });
     },
-    async logout(token: string): Promise<void> {
+    async logout(token: string | null): Promise<void> {
       await request("/v1/auth/logout", {
         method: "POST",
         token
       });
     },
-    getCurrentUser(token: string): Promise<AuthenticatedUserSummary> {
-      return request<AuthenticatedUserSummary>("/v1/auth/me", { token });
+    getCurrentUser(token: string | null) {
+      return request("/v1/auth/me", { token });
     },
     async loadDashboardBootstrap(token: string): Promise<DashboardBootstrap> {
-      const [
-        currentUser,
-        overview,
-        inventory,
-        desiredState,
-        drift,
-        nodeHealth,
-        jobHistory,
-        auditEvents,
-        backups,
-        rustdesk,
-        mail,
-        packages
-      ] = await Promise.all([
-        this.getCurrentUser(token),
-        request<OperationsOverview>("/v1/operations/overview", { token }),
-        request<InventoryStateSnapshot>("/v1/inventory/summary", { token }),
-        request<DesiredStateExportResponse>("/v1/resources/spec", { token }),
-        request<ResourceDriftSummary[]>("/v1/resources/drift", { token }),
-        request<NodeHealthSnapshot[]>("/v1/nodes/health", { token }),
-        request<JobHistoryEntry[]>("/v1/jobs/history?limit=30", { token }),
-        request<AuditEventSummary[]>("/v1/audit/events?limit=30", { token }),
-        request<BackupsOverview>("/v1/backups/summary", { token }),
-        request<RustDeskOverview>("/v1/platform/rustdesk", { token }),
-        request<MailOverview>("/v1/mail/overview", { token }),
-        request<PackageInventorySnapshot>("/v1/packages/summary", { token })
-      ]);
-
-      return {
-        currentUser,
-        overview,
-        inventory,
-        desiredState,
-        drift,
-        nodeHealth,
-        jobHistory,
-        auditEvents,
-        backups,
-        rustdesk,
-        mail,
-        packages
-      };
+      return loadControlDashboardBootstrap(token, {
+        getCurrentUser: (nextToken) => this.getCurrentUser(nextToken),
+        getOverview: (nextToken) =>
+          request("/v1/operations/overview", { token: nextToken }),
+        getInventory: (nextToken) =>
+          request("/v1/inventory/summary", { token: nextToken }),
+        getDesiredState: (nextToken) =>
+          request<DesiredStateExportResponse>("/v1/resources/spec", { token: nextToken }),
+        getDrift: (nextToken) =>
+          request("/v1/resources/drift", { token: nextToken }),
+        getNodeHealth: (nextToken) =>
+          request("/v1/nodes/health", { token: nextToken }),
+        getJobHistory: (nextToken) =>
+          request("/v1/jobs/history?limit=30", { token: nextToken }),
+        getAuditEvents: (nextToken) =>
+          request("/v1/audit/events?limit=30", { token: nextToken }),
+        getBackups: (nextToken) =>
+          request("/v1/backups/summary", { token: nextToken }),
+        getRustDesk: (nextToken) =>
+          request("/v1/platform/rustdesk", { token: nextToken }),
+        getMail: (nextToken) =>
+          request("/v1/mail/overview", { token: nextToken }),
+        getPackages: (nextToken) =>
+          request("/v1/packages/summary", { token: nextToken })
+      });
     },
     async loadDashboardData(token: string): Promise<DashboardData> {
       return this.loadDashboardBootstrap(token);

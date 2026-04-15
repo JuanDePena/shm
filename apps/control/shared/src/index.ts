@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 
 export * from "./runtime.js";
 export * from "./http.js";
+export * from "./auth.js";
+export * from "./dashboard-bootstrap.js";
 
 export function isMainModule(
   importMetaUrl: string,

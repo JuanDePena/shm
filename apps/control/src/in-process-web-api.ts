@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import {
   invokeRequestHandler,
+  type ControlAuthSurface,
   type InvokedHttpResponse
 } from "@simplehost/control-shared";
 import {
@@ -33,9 +34,10 @@ export function createInProcessPanelWebApi(
   requestHandler: (
     request: IncomingMessage,
     response: ServerResponse
-  ) => Promise<void> | void
+  ) => Promise<void> | void,
+  auth?: ControlAuthSurface
 ): PanelWebApi {
-  return createPanelWebApiFromRequest(async <T>(
+  const request = async <T>(
     pathname: string,
     options: PanelWebApiRequestOptions = {}
   ): Promise<T> => {
@@ -60,5 +62,20 @@ export function createInProcessPanelWebApi(
     }
 
     return (response.bodyText ? JSON.parse(response.bodyText) : null) as T;
-  });
+  };
+
+  const api = createPanelWebApiFromRequest(request);
+
+  if (!auth) {
+    return api;
+  }
+
+  return {
+    ...api,
+    login: (credentials) => auth.login(credentials),
+    logout: async (token) => {
+      await auth.logout(token);
+    },
+    getCurrentUser: (token) => auth.getCurrentUser(token)
+  };
 }

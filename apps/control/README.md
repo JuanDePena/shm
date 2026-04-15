@@ -45,6 +45,7 @@ From `/opt/simplehostman/src`:
 - `pnpm start:control`
 - `pnpm start:control:candidate`
 - `pnpm start:control:combined`
+- `pnpm start:control:combined:dev`
 - `pnpm start:control:split`
 - `pnpm start:control:api`
 - `pnpm start:control:web`
@@ -57,6 +58,7 @@ From this directory:
 - `pnpm typecheck:local`
 - `pnpm start:combined`
 - `pnpm start:candidate`
+- `pnpm start:combined:dev`
 - `pnpm start:api`
 - `pnpm start:web`
 - `pnpm build:shared`
@@ -86,6 +88,8 @@ From this directory:
 - web-side login redirects, unauthorized handling, and login error rendering now flow through a shared auth/session helper layer and route-context factory.
 - `PanelWebApi` now exposes semantic auth methods, reducing the remaining raw `/v1/auth/*` coupling inside `control-web`.
 - `PanelWebApi` now also exposes `loadDashboardBootstrap()`, making the initial authenticated dashboard load an explicit surface instead of a route-local bundle of fetches.
+- `control-api` now exposes an auth surface, so the combined candidate can reuse semantic `login/logout/current user` operations without routing those paths back through HTTP in-process.
+- `apps/control/src/bootstrap-surface.ts` now concentrates auth, dashboard bootstrap, runtime health, and the high-level API/web surfaces used by the combined candidate.
 - the combined request handler now routes over `PanelApiSurface` and `PanelWebSurface` directly instead of wiring raw request listeners by hand.
 - `apps/control/src/router.test.ts` now locks parity for key split-vs-combined routes such as `/`, `/login`, `/v1/auth/me`, and `/v1/resources/spec`.
 - The remaining work is runtime unification and release normalization, not source ownership.

@@ -55,6 +55,7 @@ Useful commands:
 - `pnpm start:control`
 - `pnpm start:control:candidate`
 - `pnpm start:control:combined`
+- `pnpm start:control:combined:dev`
 - `pnpm start:control:split`
 - `pnpm start:control:api`
 - `pnpm start:control:web`

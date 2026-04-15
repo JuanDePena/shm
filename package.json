@@ -19,6 +19,7 @@
     "start:control:split": "pnpm --dir apps/control start:split",
     "start:control:combined": "pnpm --dir apps/control start:combined",
     "start:control:candidate": "pnpm --dir apps/control start:candidate",
+    "start:control:combined:dev": "pnpm --dir apps/control start:combined:dev",
     "start:worker": "pnpm --filter @simplehost/panel-worker start",
     "start:agent": "pnpm --filter @simplehost/manager-agent start",
     "start:cli": "pnpm --filter @simplehost/manager-cli start",

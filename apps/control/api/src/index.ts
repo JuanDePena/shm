@@ -5,6 +5,7 @@ import {
   createControlProcessContext,
   isMainModule,
   registerGracefulShutdown,
+  type ControlAuthSurface,
   type ControlProcessContext
 } from "@simplehost/control-shared";
 import {
@@ -20,6 +21,7 @@ import { createApiRequestHandler } from "./api-routes.js";
 export { writeJson } from "./api-http.js";
 
 export interface PanelApiSurface {
+  auth: ControlAuthSurface;
   controlPlaneStore: PanelControlPlaneStore;
   requestHandler: ReturnType<typeof createApiRequestHandler>;
   close: () => Promise<void>;
@@ -81,8 +83,16 @@ export async function createPanelApiSurface(
     startedAt: context.startedAt,
     controlPlaneStore
   });
+  const auth: ControlAuthSurface = {
+    login: async (credentials) => controlPlaneStore.loginUser(credentials),
+    logout: async (token) => {
+      await controlPlaneStore.logoutUser(token);
+    },
+    getCurrentUser: async (token) => controlPlaneStore.getCurrentUser(token)
+  };
 
   return {
+    auth,
     controlPlaneStore,
     requestHandler,
     close: async () => {

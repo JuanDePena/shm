@@ -12,6 +12,7 @@ Path:
 - `manager/`: packaging imported from the former `SHM` repository
 
 This split is transitional and exists to avoid mixing source migration with runtime/release convergence.
+For now, packaging should keep assuming the deployed control plane remains in split mode even though `apps/control` already has a validated combined candidate in source.
 
 The current runtime normalization target is:
 

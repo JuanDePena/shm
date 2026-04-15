@@ -1,6 +1,7 @@
 import type { ServerResponse } from "node:http";
 
 import type { PanelNotice } from "@simplehost/panel-ui";
+import { isUnauthorizedError } from "@simplehost/control-shared";
 
 import { WebApiError } from "./api-client.js";
 import {
@@ -32,9 +33,14 @@ export function renderLoginError(
   renderLoginPage: (locale: WebLocale, notice?: PanelNotice) => string,
   error: unknown
 ): void {
+  const statusCode =
+    isUnauthorizedError(error) || error instanceof WebApiError
+      ? error.statusCode
+      : 500;
+
   writeHtml(
     response,
-    error instanceof WebApiError ? error.statusCode : 500,
+    statusCode,
     renderLoginPage(locale, {
       kind: "error",
       message: error instanceof Error ? error.message : String(error)
