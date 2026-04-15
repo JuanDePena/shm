@@ -13,6 +13,9 @@ import type {
   RustDeskOverview
 } from "@simplehost/panel-contracts";
 
+import type { ControlAuthSurface, ControlAuthenticatedSession } from "./auth.js";
+import { requireControlSession } from "./auth.js";
+
 export interface ControlDashboardBootstrap {
   currentUser: AuthenticatedUserSummary;
   overview: OperationsOverview;
@@ -26,6 +29,11 @@ export interface ControlDashboardBootstrap {
   rustdesk: RustDeskOverview;
   mail: MailOverview;
   packages: PackageInventorySnapshot;
+}
+
+export interface ControlAuthenticatedDashboardBootstrap {
+  session: ControlAuthenticatedSession;
+  dashboard: ControlDashboardBootstrap;
 }
 
 export interface ControlDashboardBootstrapLoaders {
@@ -42,6 +50,11 @@ export interface ControlDashboardBootstrapLoaders {
   getMail(token: string): Promise<MailOverview>;
   getPackages(token: string): Promise<PackageInventorySnapshot>;
 }
+
+export type ControlDashboardBootstrapDataLoaders = Omit<
+  ControlDashboardBootstrapLoaders,
+  "getCurrentUser"
+>;
 
 export async function loadControlDashboardBootstrap(
   token: string,
@@ -88,5 +101,56 @@ export async function loadControlDashboardBootstrap(
     rustdesk,
     mail,
     packages
+  };
+}
+
+export async function loadAuthenticatedControlDashboardBootstrap(
+  token: string | null,
+  auth: Pick<ControlAuthSurface, "getCurrentUser">,
+  loaders: ControlDashboardBootstrapDataLoaders
+): Promise<ControlAuthenticatedDashboardBootstrap> {
+  const session = await requireControlSession(token, auth);
+  const [
+    overview,
+    inventory,
+    desiredState,
+    drift,
+    nodeHealth,
+    jobHistory,
+    auditEvents,
+    backups,
+    rustdesk,
+    mail,
+    packages
+  ] = await Promise.all([
+    loaders.getOverview(session.token),
+    loaders.getInventory(session.token),
+    loaders.getDesiredState(session.token),
+    loaders.getDrift(session.token),
+    loaders.getNodeHealth(session.token),
+    loaders.getJobHistory(session.token),
+    loaders.getAuditEvents(session.token),
+    loaders.getBackups(session.token),
+    loaders.getRustDesk(session.token),
+    loaders.getMail(session.token),
+    loaders.getPackages(session.token)
+  ]);
+
+  return {
+    session,
+    dashboard: {
+      currentUser: session.currentUser,
+      overview,
+      inventory,
+      desiredState,
+      drift,
+      nodeHealth,
+      jobHistory,
+      auditEvents,
+      backups,
+      rustdesk,
+      mail,
+      packages
+    }
   };
 }

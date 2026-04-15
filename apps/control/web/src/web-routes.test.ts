@@ -24,6 +24,12 @@ function createStubApi(
     getCurrentUser: async () => {
       throw new Error("Unexpected current-user request in test");
     },
+    resolveSession: async () => {
+      throw new Error("Unexpected session resolution in test");
+    },
+    loadAuthenticatedDashboard: async () => {
+      throw new Error("Unexpected authenticated dashboard load in test");
+    },
     loadDashboardBootstrap: async () => {
       throw new Error("Unexpected dashboard bootstrap load in test");
     },

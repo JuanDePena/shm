@@ -6,6 +6,7 @@ import type {
   AuthenticatedUserSummary
 } from "@simplehost/panel-contracts";
 import {
+  ControlSessionRequiredError,
   createRuntimeHealthSnapshot,
   type ControlDashboardBootstrap,
   type ControlProcessContext
@@ -48,6 +49,7 @@ test("control bootstrap surface delegates auth and dashboard bootstrap", async (
   const context = createTestContext();
   let currentUserCalls = 0;
   let dashboardCalls = 0;
+  let authenticatedDashboardCalls = 0;
 
   const expectedBootstrap = {
     currentUser: createAuthenticatedUserSummary()
@@ -76,18 +78,42 @@ test("control bootstrap surface delegates auth and dashboard bootstrap", async (
       loadDashboardBootstrap: async () => {
         dashboardCalls += 1;
         return expectedBootstrap;
+      },
+      loadAuthenticatedDashboard: async (token: string | null) => {
+        authenticatedDashboardCalls += 1;
+
+        if (!token) {
+          throw new ControlSessionRequiredError();
+        }
+
+        return {
+          session: {
+            state: "authenticated",
+            token,
+            currentUser: expectedBootstrap.currentUser
+          },
+          dashboard: expectedBootstrap
+        };
       }
     },
     webSurface
   });
 
+  const resolvedAnonymousSession = await surface.session.resolve(null);
+  const resolvedSession = await surface.session.resolve("test-session");
   const currentUser = await surface.auth.getCurrentUser("test-session");
   const bootstrap = await surface.dashboard.loadBootstrap("test-session");
+  const authenticatedBootstrap = await surface.dashboard.loadAuthenticated("test-session");
 
-  assert.equal(currentUserCalls, 1);
+  assert.equal(resolvedAnonymousSession.state, "anonymous");
+  assert.equal(resolvedSession.state, "authenticated");
+  assert.equal(currentUserCalls, 2);
   assert.equal(dashboardCalls, 1);
+  assert.equal(authenticatedDashboardCalls, 1);
   assert.deepEqual(currentUser, expectedBootstrap.currentUser);
   assert.equal(bootstrap, expectedBootstrap);
+  assert.equal(authenticatedBootstrap.dashboard, expectedBootstrap);
+  assert.deepEqual(authenticatedBootstrap.session.currentUser, expectedBootstrap.currentUser);
   const healthSnapshot = surface.runtime.getHealthSnapshot();
   const expectedHealth = createRuntimeHealthSnapshot({
     config: context.config,

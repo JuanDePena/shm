@@ -56,10 +56,12 @@ Useful commands:
 - `pnpm start:control:candidate`
 - `pnpm start:control:combined`
 - `pnpm start:control:combined:dev`
+- `pnpm start:control:combined:smoke`
 - `pnpm start:control:split`
 - `pnpm start:control:api`
 - `pnpm start:control:web`
 - `pnpm test:control`
+- `pnpm test:control:combined-smoke`
 - `pnpm test:control:parity`
 - `pnpm start:worker`
 - `pnpm start:agent`

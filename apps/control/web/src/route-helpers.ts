@@ -1,4 +1,5 @@
-import { WebApiError } from "./api-client.js";
+import { ControlSessionRequiredError } from "@simplehost/control-shared";
+
 import type { WebRouteContext } from "./web-route-context.js";
 
 export function requireSessionToken(
@@ -7,7 +8,7 @@ export function requireSessionToken(
   const token = context.sessionToken;
 
   if (!token) {
-    throw new WebApiError(401, "Missing session.");
+    throw new ControlSessionRequiredError("Missing session.");
   }
 
   return token;

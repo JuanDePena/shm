@@ -1,9 +1,12 @@
 import { type PanelNotice } from "@simplehost/panel-ui";
+import {
+  ControlSessionRequiredError,
+  isUnauthorizedError
+} from "@simplehost/control-shared";
 
 import {
   getNoticeFromUrl,
-  type PanelWebApi,
-  WebApiError
+  type PanelWebApi
 } from "./api-client.js";
 import {
   buildDashboardViewUrl,
@@ -33,14 +36,17 @@ export function createDashboardHandler(args: {
     response,
     url,
     locale,
-    sessionToken
+    resolveSession,
+    loadAuthenticatedDashboard
   }): Promise<boolean> {
     const view = normalizeDashboardView(url.searchParams.get("view"));
     const rawTab = url.searchParams.get("tab") ?? undefined;
     const desiredStateTab = normalizeDesiredStateTab(rawTab);
     const focus = normalizeDashboardFocus(url.searchParams.get("focus"));
 
-    if (!sessionToken) {
+    const session = await resolveSession();
+
+    if (session.state === "anonymous") {
       writeHtml(response, 200, args.renderLoginPage(locale, getNoticeFromUrl(url)));
       return true;
     }
@@ -65,13 +71,13 @@ export function createDashboardHandler(args: {
     }
 
     try {
-      const data = await args.api.loadDashboardBootstrap(sessionToken);
+      const { dashboard } = await loadAuthenticatedDashboard();
       writeHtml(
         response,
         200,
         renderDashboardPage({
           currentPath: sanitizeReturnTo(`${url.pathname}${url.search}`),
-          data,
+          data: dashboard,
           defaultImportPath: args.defaultImportPath,
           desiredStateTab,
           focus,
@@ -83,7 +89,7 @@ export function createDashboardHandler(args: {
       );
       return true;
     } catch (error) {
-      if (error instanceof WebApiError && error.statusCode === 401) {
+      if (error instanceof ControlSessionRequiredError || isUnauthorizedError(error)) {
         redirectToLogin(response, "Session required");
         return true;
       }

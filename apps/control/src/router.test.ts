@@ -99,6 +99,49 @@ function createStubBootstrapSurface(args: {
     context,
     apiSurface: args.apiSurface,
     webApi: {
+      loadAuthenticatedDashboard: async (token: string | null) => {
+        if (!token) {
+          throw new Error("Session required");
+        }
+
+        return {
+          session: {
+            state: "authenticated",
+            token,
+            currentUser: createAuthenticatedUserSummary()
+          },
+          dashboard: {
+            currentUser: createAuthenticatedUserSummary(),
+            overview: {
+              tenants: 0,
+              nodes: 0,
+              zones: 0,
+              apps: 0,
+              databases: 0,
+              mailDomains: 0,
+              backupPolicies: 0,
+              backupRuns: 0,
+              pendingJobs: 0,
+              failedJobs: 0,
+              driftedResources: 0
+            },
+            inventory: { tenants: [], nodes: [], zones: [], apps: [], databases: [], mailDomains: [], mailboxes: [], mailAliases: [], mailQuotas: [] },
+            desiredState: { spec: { tenants: [], nodes: [], zones: [], apps: [], databases: [], mail: { domains: [], mailboxes: [], aliases: [], quotas: [] }, backupPolicies: [] } },
+            drift: [],
+            nodeHealth: [],
+            jobHistory: [],
+            auditEvents: [],
+            backups: { policies: [], latestRuns: [] },
+            rustdesk: { relay: null, server: null, listeners: [], nodes: [] },
+            mail: { domains: [], mailboxes: [], aliases: [], quotas: [] },
+            packages: { nodes: [], packages: [] }
+          }
+        } as unknown as ControlBootstrapSurface["dashboard"] extends {
+          loadAuthenticated(token: string | null): Promise<infer T>;
+        }
+          ? T
+          : never;
+      },
       loadDashboardBootstrap: async () => ({
         currentUser: createAuthenticatedUserSummary(),
         overview: {

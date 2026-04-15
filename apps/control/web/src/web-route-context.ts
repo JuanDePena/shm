@@ -1,6 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import type { PanelNotice } from "@simplehost/panel-ui";
+import type {
+  ControlAuthenticatedDashboardBootstrap,
+  ControlResolvedSession
+} from "@simplehost/control-shared";
 
 import type { PanelWebApi } from "./api-client.js";
 import { readLocale, readSessionToken } from "./request.js";
@@ -13,6 +17,8 @@ export interface WebRouteContext {
   url: URL;
   locale: WebLocale;
   sessionToken: string | null;
+  resolveSession: () => Promise<ControlResolvedSession>;
+  loadAuthenticatedDashboard: () => Promise<ControlAuthenticatedDashboardBootstrap>;
   api: PanelWebApi;
   config: PanelWebRuntimeConfig;
   startedAt: number;
@@ -31,12 +37,16 @@ export function createWebRouteContext(args: {
   handleDashboard: WebRouteContext["handleDashboard"];
   renderLoginPage: WebRouteContext["renderLoginPage"];
 }): WebRouteContext {
+  const sessionToken = readSessionToken(args.request);
+
   return {
     request: args.request,
     response: args.response,
     url: new URL(args.request.url ?? "/", "http://127.0.0.1"),
     locale: readLocale(args.request),
-    sessionToken: readSessionToken(args.request),
+    sessionToken,
+    resolveSession: () => args.api.resolveSession(sessionToken),
+    loadAuthenticatedDashboard: () => args.api.loadAuthenticatedDashboard(sessionToken),
     api: args.api,
     config: args.config,
     startedAt: args.startedAt,

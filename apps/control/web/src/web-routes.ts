@@ -1,8 +1,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
 import { type PanelNotice } from "@simplehost/panel-ui";
+import { isUnauthorizedError } from "@simplehost/control-shared";
 
-import { type PanelWebApi, WebApiError } from "./api-client.js";
+import { type PanelWebApi } from "./api-client.js";
 import { handleDesiredStateResourceRoute } from "./desired-state-resource-routes.js";
 import { handleMailRoute } from "./mail-routes.js";
 import {
@@ -97,7 +98,7 @@ export function createServerRequestListener(
         renderLoginPage: args.renderLoginPage
       });
 
-      if (error instanceof WebApiError && error.statusCode === 401) {
+      if (isUnauthorizedError(error)) {
         redirectToLogin(response);
         return;
       }
