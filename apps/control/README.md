@@ -47,11 +47,13 @@ From `/opt/simplehostman/src`:
 - `pnpm start:control:combined`
 - `pnpm start:control:combined:dev`
 - `pnpm start:control:combined:smoke`
+- `pnpm dev:control:combined`
 - `pnpm start:control:split`
 - `pnpm start:control:api`
 - `pnpm start:control:web`
 - `pnpm test:control`
 - `pnpm test:control:combined-smoke`
+- `pnpm test:control:combined:e2e`
 - `pnpm test:control:parity`
 - `pnpm check:control:candidate`
 
@@ -63,6 +65,7 @@ From this directory:
 - `pnpm start:candidate`
 - `pnpm start:combined:dev`
 - `pnpm start:combined:smoke`
+- `pnpm dev:combined`
 - `pnpm start:api`
 - `pnpm start:web`
 - `pnpm build:shared`
@@ -77,6 +80,7 @@ From this directory:
 - `pnpm start:split:foreground`
 - `pnpm test`
 - `pnpm test:combined-smoke`
+- `pnpm test:combined:e2e`
 - `pnpm test:parity`
 - `pnpm check:candidate`
 
@@ -95,12 +99,16 @@ From this directory:
 - `PanelWebApi` now exposes semantic auth methods, reducing the remaining raw `/v1/auth/*` coupling inside `control-web`.
 - `PanelWebApi` now also exposes `loadDashboardBootstrap()`, making the initial authenticated dashboard load an explicit surface instead of a route-local bundle of fetches.
 - `PanelWebApi` now also exposes `resolveSession()` and `loadAuthenticatedDashboard()`, so the web boundary and the combined candidate can share the same session/bootstrap seam.
+- `PanelWebApi` now also exposes semantic operational methods such as inventory export/import, reconcile dispatches, package actions, and proxy-preview loading, shrinking the remaining direct dependency on raw route strings inside `control-web`.
 - `control-api` now exposes an auth surface, so the combined candidate can reuse semantic `login/logout/current user` operations without routing those paths back through HTTP in-process.
 - `apps/control/src/bootstrap-surface.ts` now concentrates auth, dashboard bootstrap, runtime health, and the high-level API/web surfaces used by the combined candidate.
+- `apps/control/src/combined-surface.ts` now acts as the central high-level primitive for the combined candidate, tying together the bootstrap surface, route surface, request-context factory, and request handler.
+- `apps/control/src/server.ts` now exposes a reusable combined server candidate that can be started on an ephemeral port for smoke/e2e validation before any deploy/runtime promotion.
 - the combined request handler now routes over `PanelApiSurface` and `PanelWebSurface` directly instead of wiring raw request listeners by hand.
 - `apps/control/src/router.test.ts` now locks parity for key split-vs-combined routes such as `/`, `/login`, `/v1/auth/me`, and `/v1/resources/spec`.
 - `apps/control/src/request-context.ts` now defines a combined per-request context with shared session resolution and authenticated dashboard loading.
 - `apps/control/src/combined-smoke.test.ts` now exercises the combined candidate against real `PanelWebSurface` routing with a stubbed in-process API boundary.
+- `apps/control/src/combined-server.test.ts` now starts the combined candidate on a real ephemeral HTTP port and validates an authenticated flow end-to-end.
 - `apps/control/src/auth-gate.ts` now provides a cached combined auth/bootstrap gate, so the candidate can reuse resolved session and authenticated dashboard state inside one request.
 - `apps/control/src/route-surface.ts` now gives the combined candidate a more semantic routing surface over health, API, and web requests.
 - `apps/control/src/runtime-contract.ts` now makes the one-process candidate explicit as a source-level runtime contract before any deploy/runtime promotion.

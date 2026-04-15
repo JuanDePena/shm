@@ -51,6 +51,11 @@ Current checkpoint on 2026-04-14:
 - an additional smoke layer now exists for the combined candidate through `pnpm start:control:combined:smoke` and `pnpm test:control:combined-smoke`, using the real `PanelWebSurface` against a stubbed in-process API boundary
 - `apps/control/src/auth-gate.ts`, `apps/control/src/route-surface.ts`, and `apps/control/src/runtime-contract.ts` now make the combined candidate more explicit: cached auth/bootstrap per request, semantic routing over health/API/web, and a named runtime contract for future one-process promotion
 - `control-web` now caches `resolveSession()`, `requireSession()`, and `loadAuthenticatedDashboard()` per request, and several protected routes now consume `requireSession()` rather than the older raw session-token seam
+- `control-shared` now exposes a reusable `createControlSessionSurface()` seam, and both the combined candidate and `control-web` use that direction to keep session resolution more uniform
+- `PanelWebApi` now also exposes semantic operational methods for inventory export/import, reconcile dispatches, package actions, and proxy-preview loading, reducing transport-shaped coupling inside `control-web`
+- `apps/control/src/combined-surface.ts` now acts as the central high-level primitive for the one-process candidate, wiring together bootstrap, route surface, request-context creation, and the combined request handler
+- `apps/control/src/server.ts` now exposes a reusable combined server candidate that can be booted on an ephemeral port for workspace-level smoke validation
+- `apps/control/src/combined-server.test.ts` now exercises that real HTTP candidate with an authenticated end-to-end flow, complementing the split-vs-combined parity smoke tests
 - `pnpm audit:legacy-roots` now guards against reintroducing functional references to legacy repo roots or retired package names outside docs/build output
 - clean-room validation passed from the unified tree: `pnpm install --frozen-lockfile`, `pnpm build:clean-room`, `pnpm typecheck`, `pnpm build:panel-runtime`, `pnpm build:manager-runtime`, `pnpm typecheck:panel-runtime`, `pnpm typecheck:manager-runtime`, and `git diff --check`
 

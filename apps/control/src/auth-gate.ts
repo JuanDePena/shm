@@ -56,6 +56,6 @@ export function createCombinedControlAuthGate(args: {
     resolveSession,
     requireSession,
     loadAuthenticatedDashboard,
-    isAuthenticated: async () => (await resolveSession()).state === "authenticated"
+    isAuthenticated: () => args.surface.session.isAuthenticated(args.sessionToken)
   };
 }

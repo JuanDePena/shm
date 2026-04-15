@@ -1,4 +1,3 @@
-import type { ProxyRenderPayload } from "@simplehost/panel-contracts";
 import { createRuntimeHealthSnapshot } from "@simplehost/control-shared";
 
 import { getNoticeFromUrl } from "./api-client.js";
@@ -61,10 +60,7 @@ export const handleCoreWebRoutes: WebRouteHandler = async ({
   if (request.method === "GET" && url.pathname === "/proxy-vhost") {
     const token = await requireSessionToken({ requireSession });
     const slug = url.searchParams.get("slug")?.trim() ?? "";
-    const payload = await api.request<ProxyRenderPayload>(
-      `/v1/apps/${encodeURIComponent(slug)}/proxy-preview`,
-      { token }
-    );
+    const payload = await api.loadProxyPreview(token, slug);
 
     if (url.searchParams.get("format") === "json") {
       writeJson(response, 200, buildProxyVhostPreview(payload));

@@ -1,19 +1,27 @@
 import { createPanelRuntimeConfig, type PanelRuntimeConfig } from "@simplehost/panel-config";
 import {
+  type AppReconcileRequest,
   type AuditEventSummary,
   type AuthenticatedUserSummary,
   type AuthLoginRequest,
   type AuthLoginResponse,
   type BackupsOverview,
+  type CodeServerUpdateRequest,
+  type DatabaseReconcileRequest,
   type DesiredStateApplyRequest,
   type DesiredStateExportResponse,
   type DesiredStateSpec,
   type InventoryStateSnapshot,
+  type InventoryImportSummary,
+  type JobDispatchResponse,
   type JobHistoryEntry,
   type MailOverview,
   type NodeHealthSnapshot,
   type OperationsOverview,
+  type PackageInstallRequest,
+  type PackageInventoryRefreshRequest,
   type PackageInventorySnapshot,
+  type ProxyRenderPayload,
   type ResourceDriftSummary,
   type RustDeskPublicConnectionInfo
   ,
@@ -21,6 +29,7 @@ import {
 } from "@simplehost/panel-contracts";
 import { type PanelNotice } from "@simplehost/panel-ui";
 import {
+  createControlSessionSurface,
   loadAuthenticatedControlDashboardBootstrap,
   loadControlDashboardBootstrap,
   type ControlAuthSurface,
@@ -28,7 +37,6 @@ import {
   type ControlResolvedSession,
   type ControlDashboardBootstrap
 } from "@simplehost/control-shared";
-import { resolveControlSession } from "@simplehost/control-shared";
 
 import { sanitizeReturnTo } from "./request.js";
 
@@ -65,6 +73,34 @@ export interface PanelWebApi extends ControlAuthSurface {
   loadDashboardBootstrap(token: string): Promise<DashboardBootstrap>;
   loadDashboardData(token: string): Promise<DashboardData>;
   loadRustDeskPublicConnection(): Promise<RustDeskPublicConnectionInfo>;
+  exportInventory(token: string): Promise<string>;
+  importInventory(token: string, path: string): Promise<InventoryImportSummary>;
+  runReconciliation(token: string): Promise<{ generatedJobCount: number; skippedJobCount: number }>;
+  syncZone(token: string, zoneName: string): Promise<JobDispatchResponse>;
+  reconcileApp(
+    token: string,
+    slug: string,
+    request: AppReconcileRequest
+  ): Promise<JobDispatchResponse>;
+  renderAppProxy(token: string, slug: string): Promise<JobDispatchResponse>;
+  reconcileDatabase(
+    token: string,
+    appSlug: string,
+    request: DatabaseReconcileRequest
+  ): Promise<JobDispatchResponse>;
+  updateCodeServer(
+    token: string,
+    request: CodeServerUpdateRequest
+  ): Promise<JobDispatchResponse>;
+  refreshPackageInventory(
+    token: string,
+    request: PackageInventoryRefreshRequest
+  ): Promise<JobDispatchResponse>;
+  installPackages(
+    token: string,
+    request: PackageInstallRequest
+  ): Promise<JobDispatchResponse>;
+  loadProxyPreview(token: string, slug: string): Promise<ProxyRenderPayload>;
   loadDesiredStateSpec(token: string): Promise<DesiredStateSpec>;
   applyDesiredStateSpec(token: string, spec: DesiredStateSpec, reason: string): Promise<void>;
   mutateDesiredState(
@@ -158,7 +194,7 @@ export function createPanelWebApiFromRequest(request: PanelWebApiRequest): Panel
       request<PackageInventorySnapshot>("/v1/packages/summary", { token })
   });
 
-  return {
+  const api: PanelWebApi = {
     request,
     login(credentials: AuthLoginRequest): Promise<AuthLoginResponse> {
       return request<AuthLoginResponse>("/v1/auth/login", {
@@ -172,32 +208,134 @@ export function createPanelWebApiFromRequest(request: PanelWebApiRequest): Panel
         token
       });
     },
-    getCurrentUser(token: string | null) {
-      return request("/v1/auth/me", { token });
+    getCurrentUser(token: string | null): Promise<AuthenticatedUserSummary> {
+      return request<AuthenticatedUserSummary>("/v1/auth/me", { token });
     },
-    resolveSession(token: string | null): Promise<ControlResolvedSession> {
-      return resolveControlSession(token, this);
+    resolveSession: async (_token: string | null): Promise<ControlResolvedSession> => {
+      throw new Error("resolveSession not initialized");
     },
     loadAuthenticatedDashboard(
       token: string | null
     ): Promise<ControlAuthenticatedDashboardBootstrap> {
-      return loadAuthenticatedControlDashboardBootstrap(
-        token,
-        this,
-        createDashboardLoaders()
-      );
+      return loadAuthenticatedControlDashboardBootstrap(token, api, createDashboardLoaders());
     },
     async loadDashboardBootstrap(token: string): Promise<DashboardBootstrap> {
       return loadControlDashboardBootstrap(token, {
-        getCurrentUser: (nextToken) => this.getCurrentUser(nextToken),
+        getCurrentUser: (nextToken) => api.getCurrentUser(nextToken),
         ...createDashboardLoaders()
       });
     },
     async loadDashboardData(token: string): Promise<DashboardData> {
-      return this.loadDashboardBootstrap(token);
+      return api.loadDashboardBootstrap(token);
     },
     loadRustDeskPublicConnection(): Promise<RustDeskPublicConnectionInfo> {
       return request<RustDeskPublicConnectionInfo>("/v1/public/rustdesk");
+    },
+    exportInventory(token: string): Promise<string> {
+      return request<string>("/v1/inventory/export", {
+        token,
+        responseType: "text"
+      });
+    },
+    importInventory(token: string, path: string): Promise<InventoryImportSummary> {
+      return request<InventoryImportSummary>("/v1/inventory/import", {
+        method: "POST",
+        token,
+        body: { path }
+      });
+    },
+    runReconciliation(
+      token: string
+    ): Promise<{ generatedJobCount: number; skippedJobCount: number }> {
+      return request<{ generatedJobCount: number; skippedJobCount: number }>(
+        "/v1/reconcile/run",
+        {
+          method: "POST",
+          token
+        }
+      );
+    },
+    syncZone(token: string, zoneName: string): Promise<JobDispatchResponse> {
+      return request<JobDispatchResponse>(
+        `/v1/zones/${encodeURIComponent(zoneName)}/sync`,
+        {
+          method: "POST",
+          token
+        }
+      );
+    },
+    reconcileApp(
+      token: string,
+      slug: string,
+      reconcileRequest: AppReconcileRequest
+    ): Promise<JobDispatchResponse> {
+      return request<JobDispatchResponse>(
+        `/v1/apps/${encodeURIComponent(slug)}/reconcile`,
+        {
+          method: "POST",
+          token,
+          body: reconcileRequest
+        }
+      );
+    },
+    renderAppProxy(token: string, slug: string): Promise<JobDispatchResponse> {
+      return request<JobDispatchResponse>(
+        `/v1/apps/${encodeURIComponent(slug)}/render-proxy`,
+        {
+          method: "POST",
+          token
+        }
+      );
+    },
+    reconcileDatabase(
+      token: string,
+      appSlug: string,
+      reconcileRequest: DatabaseReconcileRequest
+    ): Promise<JobDispatchResponse> {
+      return request<JobDispatchResponse>(
+        `/v1/databases/${encodeURIComponent(appSlug)}/reconcile`,
+        {
+          method: "POST",
+          token,
+          body: reconcileRequest
+        }
+      );
+    },
+    updateCodeServer(
+      token: string,
+      updateRequest: CodeServerUpdateRequest
+    ): Promise<JobDispatchResponse> {
+      return request<JobDispatchResponse>("/v1/code-server/update", {
+        method: "POST",
+        token,
+        body: updateRequest
+      });
+    },
+    refreshPackageInventory(
+      token: string,
+      refreshRequest: PackageInventoryRefreshRequest
+    ): Promise<JobDispatchResponse> {
+      return request<JobDispatchResponse>("/v1/packages/refresh", {
+        method: "POST",
+        token,
+        body: refreshRequest
+      });
+    },
+    installPackages(
+      token: string,
+      installRequest: PackageInstallRequest
+    ): Promise<JobDispatchResponse> {
+      return request<JobDispatchResponse>("/v1/packages/install", {
+        method: "POST",
+        token,
+        body: installRequest
+      });
+    },
+    loadProxyPreview(token: string, slug: string): Promise<ProxyRenderPayload> {
+      return request<ProxyRenderPayload>(
+        `/v1/apps/${encodeURIComponent(slug)}/proxy-preview`,
+        { token }
+      );
     },
     async loadDesiredStateSpec(token: string): Promise<DesiredStateSpec> {
       const exported = await request<DesiredStateExportResponse>("/v1/resources/spec", {
@@ -224,10 +362,15 @@ export function createPanelWebApiFromRequest(request: PanelWebApiRequest): Panel
       reason: string,
       action: (spec: DesiredStateSpec) => DesiredStateSpec
     ): Promise<void> {
-      const spec = await this.loadDesiredStateSpec(token);
-      await this.applyDesiredStateSpec(token, action(spec), reason);
+      const spec = await api.loadDesiredStateSpec(token);
+      await api.applyDesiredStateSpec(token, action(spec), reason);
     }
   };
+
+  const sessionSurface = createControlSessionSurface(api);
+  api.resolveSession = (token: string | null) => sessionSurface.resolve(token);
+
+  return api;
 }
 
 export function createHttpPanelWebApi(

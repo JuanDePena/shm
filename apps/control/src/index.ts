@@ -1,15 +1,12 @@
-import { createServer } from "node:http";
-
 import { createPanelApiRuntime } from "@simplehost/control-api";
 import {
-  closeHttpServer,
   createControlProcessContext,
   isMainModule,
   registerGracefulShutdown,
   type ControlProcessContext
 } from "../shared/src/index.js";
-import { createCombinedControlRuntimeContract } from "./runtime-contract.js";
 import { createPanelWebRuntime } from "@simplehost/control-web";
+import { startCombinedControlServer } from "./server.js";
 
 export type ControlRuntimeMode = "combined" | "split";
 
@@ -41,22 +38,13 @@ export async function createSplitControlRuntime(
 export async function createCombinedControlRuntime(
   context: ControlProcessContext = createControlProcessContext()
 ) {
-  const contract = await createCombinedControlRuntimeContract(context);
-  const server = createServer(contract.requestHandler);
+  const runtime = await startCombinedControlServer({ context });
 
-  server.listen(context.config.web.port, context.config.web.host, () => {
-    console.log(`SHP Control listening on http://${context.config.web.host}:${context.config.web.port}`);
-  });
+  console.log(
+    `SHP Control listening on http://${context.config.web.host}:${context.config.web.port}`
+  );
 
-  return {
-    context,
-    contract,
-    server,
-    close: async () => {
-      await closeHttpServer(server);
-      await contract.close();
-    }
-  };
+  return runtime;
 }
 
 export const createUnifiedControlRuntime = createCombinedControlRuntime;

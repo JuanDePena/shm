@@ -26,6 +26,12 @@ export type ControlResolvedSession =
   | ControlAnonymousSession
   | ControlAuthenticatedSession;
 
+export interface ControlSessionSurface {
+  resolve(token: string | null): Promise<ControlResolvedSession>;
+  require(token: string | null): Promise<ControlAuthenticatedSession>;
+  isAuthenticated(token: string | null): Promise<boolean>;
+}
+
 export class ControlSessionRequiredError extends Error {
   readonly statusCode = 401;
 
@@ -85,6 +91,17 @@ export async function requireControlSession(
   }
 
   return session;
+}
+
+export function createControlSessionSurface(
+  auth: Pick<ControlAuthSurface, "getCurrentUser">
+): ControlSessionSurface {
+  return {
+    resolve: (token) => resolveControlSession(token, auth),
+    require: (token) => requireControlSession(token, auth),
+    isAuthenticated: async (token) =>
+      (await resolveControlSession(token, auth)).state === "authenticated"
+  };
 }
 
 export function isUnauthorizedStatusCode(statusCode: number): boolean {

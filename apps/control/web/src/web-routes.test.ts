@@ -43,6 +43,39 @@ function createStubApi(
     loadRustDeskPublicConnection: async () => {
       throw new Error("Unexpected RustDesk load in test");
     },
+    exportInventory: async () => {
+      throw new Error("Unexpected inventory export in test");
+    },
+    importInventory: async () => {
+      throw new Error("Unexpected inventory import in test");
+    },
+    runReconciliation: async () => {
+      throw new Error("Unexpected reconciliation run in test");
+    },
+    syncZone: async () => {
+      throw new Error("Unexpected zone sync in test");
+    },
+    reconcileApp: async () => {
+      throw new Error("Unexpected app reconcile in test");
+    },
+    renderAppProxy: async () => {
+      throw new Error("Unexpected proxy render in test");
+    },
+    reconcileDatabase: async () => {
+      throw new Error("Unexpected database reconcile in test");
+    },
+    updateCodeServer: async () => {
+      throw new Error("Unexpected code-server update in test");
+    },
+    refreshPackageInventory: async () => {
+      throw new Error("Unexpected package inventory refresh in test");
+    },
+    installPackages: async () => {
+      throw new Error("Unexpected package install in test");
+    },
+    loadProxyPreview: async () => {
+      throw new Error("Unexpected proxy preview in test");
+    },
     loadDesiredStateSpec: async () => {
       throw new Error("Unexpected desired-state load in test");
     },

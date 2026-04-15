@@ -13,7 +13,6 @@ import {
   type PanelApiSurface
 } from "@simplehost/control-api";
 import {
-  invokeRequestHandler,
   type ControlDashboardBootstrap,
   type ControlProcessContext
 } from "@simplehost/control-shared";
@@ -25,8 +24,12 @@ import {
 } from "@simplehost/control-web";
 
 import { createControlBootstrapSurface } from "./bootstrap-surface.js";
+import type { ControlCombinedSurface } from "./combined-surface.js";
 import { createInProcessPanelWebApi } from "./in-process-web-api.js";
-import { createCombinedControlRequestHandler } from "./router.js";
+import { createCombinedControlRequestContext } from "./request-context.js";
+import { createCombinedControlRequestHandler } from "./request-handler.js";
+import { createCombinedControlRouteSurface } from "./route-surface.js";
+import { startCombinedControlServer } from "./server.js";
 
 function createAuthenticatedUserSummary(): AuthenticatedUserSummary {
   return {
@@ -126,7 +129,7 @@ function createTestContext(): ControlProcessContext & PanelWebProcessContext {
       env: "test",
       inventory: { importPath: "/tmp/inventory.yaml" },
       version: "0.1.0-test",
-      web: { host: "127.0.0.1", port: 3200 }
+      web: { host: "127.0.0.1", port: 0 }
     } as ControlProcessContext["config"] & PanelWebProcessContext["config"],
     startedAt: Date.now() - 10_000
   };
@@ -144,7 +147,7 @@ function createStubApiSurface(args: {
   currentUser: AuthenticatedUserSummary;
   dashboard: ControlDashboardBootstrap;
   loginResponse: AuthLoginResponse;
-}): Pick<PanelApiSurface, "auth" | "requestHandler"> {
+}): PanelApiSurface {
   const isAuthorized = (request: IncomingMessage) =>
     readBearerToken(request.headers.authorization) === args.loginResponse.sessionToken;
 
@@ -182,12 +185,6 @@ function createStubApiSurface(args: {
     }
 
     if (url.pathname === "/v1/auth/logout" && request.method === "POST") {
-      response.writeHead(204);
-      response.end();
-      return;
-    }
-
-    if (url.pathname === "/v1/resources/spec" && request.method === "PUT") {
       response.writeHead(204);
       response.end();
       return;
@@ -256,29 +253,15 @@ function createStubApiSurface(args: {
 
   return {
     auth,
-    requestHandler
+    controlPlaneStore: {
+      close: async () => {}
+    } as PanelApiSurface["controlPlaneStore"],
+    requestHandler,
+    close: async () => {}
   };
 }
 
-function createSplitRequestHandler(args: {
-  apiSurface: Pick<PanelApiSurface, "requestHandler">;
-  webSurface: Pick<PanelWebSurface, "requestListener">;
-}): (request: IncomingMessage, response: ServerResponse) => Promise<void> {
-  const apiRequestHandler = createPanelApiHttpHandler(args.apiSurface.requestHandler);
-
-  return async (request, response) => {
-    const url = new URL(request.url ?? "/", "http://127.0.0.1");
-
-    if (url.pathname === "/v1" || url.pathname.startsWith("/v1/")) {
-      await apiRequestHandler(request, response);
-      return;
-    }
-
-    await args.webSurface.requestListener(request, response);
-  };
-}
-
-function createSmokeHarness() {
+async function createStubCombinedSurface(): Promise<ControlCombinedSurface> {
   const context = createTestContext();
   const currentUser = createAuthenticatedUserSummary();
   const loginResponse = createAuthLoginResponse();
@@ -290,134 +273,113 @@ function createSmokeHarness() {
   });
   const apiHttpHandler = createPanelApiHttpHandler(apiSurface.requestHandler);
   const webApi: PanelWebApi = createInProcessPanelWebApi(apiHttpHandler, apiSurface.auth);
-  const webSurface = createPanelWebSurface(context, webApi);
+  const webSurface: PanelWebSurface = createPanelWebSurface(context, webApi);
   const bootstrapSurface = createControlBootstrapSurface({
     context,
     apiSurface,
     webApi,
     webSurface
   });
-
-  return {
-    split: createSplitRequestHandler({
-      apiSurface,
-      webSurface
-    }),
-    combined: createCombinedControlRequestHandler({
+  const routeSurface = createCombinedControlRouteSurface(bootstrapSurface);
+  const createRequestContext = (args: {
+    request: IncomingMessage;
+    response: ServerResponse;
+  }) =>
+    createCombinedControlRequestContext({
+      request: args.request,
+      response: args.response,
       surface: bootstrapSurface
-    })
-  };
-}
+    });
 
-function pickComparableHeaders(headers: Record<string, string | string[] | undefined>) {
   return {
-    "content-type": headers["content-type"],
-    location: headers.location,
-    "set-cookie": headers["set-cookie"]
+    context,
+    apiSurface,
+    bootstrapSurface,
+    routeSurface,
+    webSurface,
+    createRequestContext,
+    requestHandler: createCombinedControlRequestHandler({
+      surface: {
+        createRequestContext,
+        routeSurface
+      }
+    }),
+    close: apiSurface.close
   };
 }
 
-test("combined candidate matches split behavior with real web/api surfaces", async () => {
-  const harness = createSmokeHarness();
-  const requests = [
-    {
-      method: "GET",
-      url: "/v1/meta"
-    },
-    {
-      method: "GET",
-      url: "/login"
-    },
-    {
-      method: "GET",
-      url: "/?view=overview"
-    },
-    {
-      method: "GET",
-      url: "/?view=overview",
-      headers: {
-        cookie: "shp_session=test-session"
-      }
-    },
-    {
+test("combined candidate serves authenticated flow over a real HTTP server", async () => {
+  const surface = await createStubCombinedSurface();
+  const runtime = await startCombinedControlServer({
+    context: surface.context,
+    surface,
+    host: "127.0.0.1",
+    port: 0
+  });
+
+  try {
+    const healthResponse = await fetch(new URL("/healthz", runtime.origin));
+    assert.equal(healthResponse.status, 200);
+
+    const loginResponse = await fetch(new URL("/auth/login", runtime.origin), {
       method: "POST",
-      url: "/auth/login",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded; charset=utf-8"
+      },
       body: "email=admin%40example.com&password=good-pass",
-      headers: {
-        "content-type": "application/x-www-form-urlencoded; charset=utf-8"
-      }
-    },
-    {
-      method: "POST",
-      url: "/auth/logout",
-      headers: {
-        cookie: "shp_session=test-session"
-      }
-    },
-    {
-      method: "POST",
-      url: "/resources/apps/delete",
-      body: "slug=adudoc",
-      headers: {
-        cookie: "shp_session=test-session",
-        "content-type": "application/x-www-form-urlencoded; charset=utf-8"
-      }
-    },
-    {
-      method: "POST",
-      url: "/resources/apps/delete",
-      body: "slug=adudoc",
-      headers: {
-        "content-type": "application/x-www-form-urlencoded; charset=utf-8"
-      }
-    },
-    {
-      method: "GET",
-      url: "/proxy-vhost?slug=adudoc&format=json",
-      headers: {
-        cookie: "shp_session=test-session"
-      }
-    },
-    {
-      method: "GET",
-      url: "/proxy-vhost?slug=adudoc&format=json"
-    },
-    {
-      method: "GET",
-      url: "/v1/auth/me",
-      headers: {
-        authorization: "Bearer test-session"
-      }
-    },
-    {
-      method: "GET",
-      url: "/v1/resources/spec",
-      headers: {
-        authorization: "Bearer test-session"
-      }
-    }
-  ] as const;
+      redirect: "manual"
+    });
 
-  for (const request of requests) {
-    const [splitResponse, combinedResponse] = await Promise.all([
-      invokeRequestHandler(harness.split, request),
-      invokeRequestHandler(harness.combined, request)
-    ]);
+    assert.equal(loginResponse.status, 303);
+    const setCookie = loginResponse.headers.get("set-cookie");
+    assert.ok(setCookie, "login should set a session cookie");
+    const cookie = setCookie.split(";", 1)[0];
 
+    const dashboardResponse = await fetch(new URL("/?view=overview", runtime.origin), {
+      headers: {
+        cookie
+      }
+    });
+
+    assert.equal(dashboardResponse.status, 200);
+    const dashboardHtml = await dashboardResponse.text();
+    assert.match(dashboardHtml, /SimpleHostPanel/);
+
+    const vhostResponse = await fetch(
+      new URL("/proxy-vhost?slug=adudoc&format=json", runtime.origin),
+      {
+        headers: {
+          cookie
+        }
+      }
+    );
+
+    assert.equal(vhostResponse.status, 200);
+    const vhostPayload = await vhostResponse.json() as {
+      serverName: string;
+      httpVhost: string;
+      httpsVhost: string;
+    };
+    assert.equal(vhostPayload.serverName, "adudoc.com");
+    assert.match(vhostPayload.httpVhost, /ServerName adudoc\.com/);
+    assert.match(vhostPayload.httpsVhost, /ServerName adudoc\.com/);
+
+    const logoutResponse = await fetch(new URL("/auth/logout", runtime.origin), {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+        cookie
+      },
+      body: "returnTo=%2Flogin",
+      redirect: "manual"
+    });
+
+    assert.equal(logoutResponse.status, 303);
     assert.equal(
-      combinedResponse.statusCode,
-      splitResponse.statusCode,
-      `status mismatch for ${request.method} ${request.url}`
+      logoutResponse.headers.get("location"),
+      "/login?notice=Session%20closed&kind=info"
     );
-    assert.deepEqual(
-      pickComparableHeaders(combinedResponse.headers),
-      pickComparableHeaders(splitResponse.headers),
-      `header mismatch for ${request.method} ${request.url}`
-    );
-    assert.equal(
-      combinedResponse.bodyText,
-      splitResponse.bodyText,
-      `body mismatch for ${request.method} ${request.url}`
-    );
+  } finally {
+    await runtime.close();
   }
 });

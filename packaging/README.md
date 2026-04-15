@@ -14,7 +14,7 @@ Path:
 This split is transitional and exists to avoid mixing source migration with runtime/release convergence.
 For now, packaging should keep assuming the deployed control plane remains in split mode even though `apps/control` already has a validated combined candidate in source.
 Source-level combined-mode validation currently lives in workspace scripts and tests only; packaging should not yet promote that candidate to the default runtime.
-The new combined runtime contract and candidate checks are meant to reduce packaging risk before any service/unit changes happen.
+The new combined runtime contract, combined surface/server candidate, and candidate checks are meant to reduce packaging risk before any service/unit changes happen.
 
 The current runtime normalization target is:
 

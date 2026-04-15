@@ -1,11 +1,8 @@
 import {
+  createControlSessionSurface,
   createRuntimeHealthSnapshot,
-  requireControlSession,
-  resolveControlSession,
   type ControlAuthenticatedDashboardBootstrap,
   type ControlDashboardBootstrap,
-  type ControlAuthenticatedSession,
-  type ControlResolvedSession,
   type ControlProcessContext
 } from "@simplehost/control-shared";
 import type { PanelApiSurface } from "@simplehost/control-api";
@@ -14,10 +11,7 @@ import type { PanelWebApi, PanelWebSurface } from "@simplehost/control-web";
 export interface ControlBootstrapSurface {
   apiSurface: Pick<PanelApiSurface, "auth" | "requestHandler">;
   auth: Pick<PanelApiSurface["auth"], "login" | "logout" | "getCurrentUser">;
-  session: {
-    resolve(token: string | null): Promise<ControlResolvedSession>;
-    require(token: string | null): Promise<ControlAuthenticatedSession>;
-  };
+  session: ReturnType<typeof createControlSessionSurface>;
   dashboard: {
     loadBootstrap(token: string): Promise<ControlDashboardBootstrap>;
     loadAuthenticated(
@@ -36,13 +30,12 @@ export function createControlBootstrapSurface(args: {
   webApi: Pick<PanelWebApi, "loadDashboardBootstrap" | "loadAuthenticatedDashboard">;
   webSurface: Pick<PanelWebSurface, "requestListener">;
 }): ControlBootstrapSurface {
+  const session = createControlSessionSurface(args.apiSurface.auth);
+
   return {
     apiSurface: args.apiSurface,
     auth: args.apiSurface.auth,
-    session: {
-      resolve: (token) => resolveControlSession(token, args.apiSurface.auth),
-      require: (token) => requireControlSession(token, args.apiSurface.auth)
-    },
+    session,
     dashboard: {
       loadBootstrap: (token) => args.webApi.loadDashboardBootstrap(token),
       loadAuthenticated: (token) =>

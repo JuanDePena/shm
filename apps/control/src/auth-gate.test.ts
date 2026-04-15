@@ -44,7 +44,8 @@ test("combined auth gate caches session and dashboard bootstrap lookups", async 
         require: async () => {
           requireCalls += 1;
           return authenticatedSession;
-        }
+        },
+        isAuthenticated: async () => true
       },
       dashboard: {
         loadBootstrap: async () => authenticatedDashboard.dashboard,

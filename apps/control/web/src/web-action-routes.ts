@@ -23,10 +23,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
 }) => {
   if (request.method === "GET" && url.pathname === "/inventory/export") {
     const token = await requireSessionToken({ requireSession });
-    const yaml = await api.request<string>("/v1/inventory/export", {
-      token,
-      responseType: "text"
-    });
+    const yaml = await api.exportInventory(token);
     response.writeHead(200, {
       "content-type": "text/yaml; charset=utf-8",
       "content-disposition": 'attachment; filename="simplehost-desired-state.yaml"'
@@ -39,13 +36,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
     const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const pathValue = form.get("path")?.trim() || config.inventory.importPath;
-    const result = await api.request<InventoryImportSummary>("/v1/inventory/import", {
-      method: "POST",
-      token,
-      body: {
-        path: pathValue
-      }
-    });
+    const result = await api.importInventory(token, pathValue);
     redirect(
       response,
       noticeLocation(
@@ -58,13 +49,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
 
   if (request.method === "POST" && url.pathname === "/actions/reconcile-run") {
     const token = await requireSessionToken({ requireSession });
-    const result = await api.request<{ generatedJobCount: number; skippedJobCount: number }>(
-      "/v1/reconcile/run",
-      {
-        method: "POST",
-        token
-      }
-    );
+    const result = await api.runReconciliation(token);
     redirect(
       response,
       noticeLocation(
@@ -79,13 +64,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
     const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const zoneName = form.get("zoneName")?.trim() ?? "";
-    const result = await api.request<JobDispatchResponse>(
-      `/v1/zones/${encodeURIComponent(zoneName)}/sync`,
-      {
-        method: "POST",
-        token
-      }
-    );
+    const result = await api.syncZone(token, zoneName);
     redirect(
       response,
       noticeLocation(`Queued ${result.jobs.length} dns.sync job(s) for ${zoneName}.`, "success")
@@ -103,14 +82,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
       includeProxy: true,
       includeStandbyProxy: true
     };
-    const result = await api.request<JobDispatchResponse>(
-      `/v1/apps/${encodeURIComponent(slug)}/reconcile`,
-      {
-        method: "POST",
-        token,
-        body: requestBody
-      }
-    );
+    const result = await api.reconcileApp(token, slug, requestBody);
     redirect(
       response,
       noticeLocation(`Queued ${result.jobs.length} job(s) for app ${slug}.`, "success")
@@ -122,13 +94,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
     const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const slug = form.get("slug")?.trim() ?? "";
-    const result = await api.request<JobDispatchResponse>(
-      `/v1/apps/${encodeURIComponent(slug)}/render-proxy`,
-      {
-        method: "POST",
-        token
-      }
-    );
+    const result = await api.renderAppProxy(token, slug);
     redirect(
       response,
       noticeLocation(`Queued ${result.jobs.length} proxy.render job(s) for ${slug}.`, "success")
@@ -147,14 +113,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
       requestBody.password = password;
     }
 
-    const result = await api.request<JobDispatchResponse>(
-      `/v1/databases/${encodeURIComponent(appSlug)}/reconcile`,
-      {
-        method: "POST",
-        token,
-        body: requestBody
-      }
-    );
+    const result = await api.reconcileDatabase(token, appSlug, requestBody);
     redirect(
       response,
       noticeLocation(
@@ -181,11 +140,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
       requestBody.nodeIds = [targetScope];
     }
 
-    const result = await api.request<JobDispatchResponse>("/v1/code-server/update", {
-      method: "POST",
-      token,
-      body: requestBody
-    });
+    const result = await api.updateCodeServer(token, requestBody);
 
     redirect(
       response,
@@ -207,11 +162,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
       nodeIds: nodeIds.length > 0 ? nodeIds : undefined
     };
 
-    const result = await api.request<JobDispatchResponse>("/v1/packages/refresh", {
-      method: "POST",
-      token,
-      body: requestBody
-    });
+    const result = await api.refreshPackageInventory(token, requestBody);
 
     redirect(
       response,
@@ -244,11 +195,7 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
       allowReinstall
     };
 
-    const result = await api.request<JobDispatchResponse>("/v1/packages/install", {
-      method: "POST",
-      token,
-      body: requestBody
-    });
+    const result = await api.installPackages(token, requestBody);
 
     redirect(
       response,
