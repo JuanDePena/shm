@@ -72,7 +72,8 @@ Current checkpoint on 2026-04-14:
 - `apps/control/src/release-sandbox-bundle.ts` now defines a persistent bundle contract and human-readable bundle summary for the sandboxed candidate
 - `apps/control/src/release-sandbox-bundle-parity.test.ts` now validates that the packed sandbox bundle stays aligned with the direct combined candidate metadata
 - `apps/control/src/release-sandbox-activation.ts` plus `release-sandbox-activation.test.ts` now model release inventory, activation metadata, version switching, and rollback inside one workspace-local sandbox
-- the sandbox now models `releases/<version>`, `current` as a symlink, `shared/meta`, and `shared/{tmp,logs,run}` inside `.tmp/control-release-sandbox`, making it a closer rehearsal for a future real release layout
+- `apps/control/src/release-sandbox-promotion.ts` plus `release-sandbox-promotion.test.ts` now model release-like promotion manifests and promotion history inside the workspace-local sandbox
+- the sandbox now models `releases/<version>`, `current` as a symlink, `shared/meta`, promotion history, and `shared/{tmp,logs,run}` inside `.tmp/control-release-sandbox`, making it a closer rehearsal for a future real release layout
 - `pnpm test:control:candidate` now acts as the shortest canonical test command for the combined candidate before any runtime promotion work
 - `pnpm test:control:runtime-parity` now acts as the canonical process-level parity check between split and combined candidate servers
 - `pnpm check:control:preflight` now acts as the canonical source-level pre-promotion check for the combined candidate
@@ -80,6 +81,7 @@ Current checkpoint on 2026-04-14:
 - `pnpm check:control:bundle-parity` now acts as the canonical bundle-contract check for the sandboxed candidate
 - `pnpm check:control:release-sandbox` now acts as the canonical source-level release-sandbox check for the combined candidate
 - `pnpm activate:control:release-sandbox -- <version> [sandboxId]` now acts as the canonical source-level release switching command inside the sandbox
+- `pnpm promote:control:release-sandbox -- <version> [sandboxId]` now acts as the canonical source-level release promotion command inside the sandbox
 - `pnpm inspect:control:release-sandbox -- [sandboxId]` now acts as the canonical source-level inspection command for sandbox inventory and active release state
 - `pnpm audit:legacy-roots` now guards against reintroducing functional references to legacy repo roots or retired package names outside docs/build output
 - clean-room validation passed from the unified tree: `pnpm install --frozen-lockfile`, `pnpm build:clean-room`, `pnpm typecheck`, `pnpm build:panel-runtime`, `pnpm build:manager-runtime`, `pnpm typecheck:panel-runtime`, `pnpm typecheck:manager-runtime`, and `git diff --check`
@@ -124,6 +126,7 @@ Promotion language at the current checkpoint:
 - `candidate sandbox-ready`: the candidate can be packed and booted from a workspace-local release-sandbox with smoke and parity checks green
 - `candidate release-layout-ready`: the sandboxed candidate now exercises versioned releases, a `current` symlink, and shared writable roots inside the workspace
 - `candidate release-switch-ready`: the sandboxed candidate now supports inventory-backed version switching and rollback inside the workspace
+- `candidate release-promotion-ready`: the sandboxed candidate now supports promotion manifests and promotion history inside the workspace
 - `release-ready`: still not reached; packaging and deploy flows remain split-first
 
 ## Target layout

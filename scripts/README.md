@@ -14,7 +14,7 @@ Path:
 
 These scripts now resolve the unified source root under `/opt/simplehostman/src`, even when their operational behavior is still product-specific.
 They should continue treating the split control runtime as the operational default until the combined `apps/control` candidate is promoted beyond source-level validation.
-For now, source validation of the candidate combined mode should happen through workspace commands such as `pnpm start:control:combined:dev`, `pnpm dev:control:combined`, `pnpm test:control:parity`, `pnpm test:control:runtime-parity`, `pnpm test:control:combined-smoke`, `pnpm test:control:combined:e2e`, `pnpm check:control:preflight`, `pnpm check:control:release-candidate`, `pnpm check:control:bundle-parity`, `pnpm check:control:release-sandbox`, `pnpm activate:control:release-sandbox -- <version> [sandboxId]`, and `pnpm inspect:control:release-sandbox -- [sandboxId]`, not through production deploy scripts.
+For now, source validation of the candidate combined mode should happen through workspace commands such as `pnpm start:control:combined:dev`, `pnpm dev:control:combined`, `pnpm test:control:parity`, `pnpm test:control:runtime-parity`, `pnpm test:control:combined-smoke`, `pnpm test:control:combined:e2e`, `pnpm check:control:preflight`, `pnpm check:control:release-candidate`, `pnpm check:control:bundle-parity`, `pnpm check:control:release-sandbox`, `pnpm activate:control:release-sandbox -- <version> [sandboxId]`, `pnpm promote:control:release-sandbox -- <version> [sandboxId]`, and `pnpm inspect:control:release-sandbox -- [sandboxId]`, not through production deploy scripts.
 `pnpm check:control:candidate` is now the shortest canonical command for validating the combined candidate boundary from source.
 
 Current language:
@@ -26,6 +26,7 @@ Current language:
 - `combined bundle-parity`: source-level guarantee that the packed sandbox bundle still mirrors the direct combined candidate metadata
 - `combined release-sandbox`: source-level candidate packed into a workspace-local release-shaped filesystem sandbox, still below deploy/release promotion
 - `combined release-switch`: source-level release-sandbox candidate with inventory-backed version switching and rollback, still below deploy/release promotion
+- `combined release-promotion`: source-level release-sandbox candidate with promotion manifests and history, still below deploy/release promotion
 
 The current sandbox shape now mirrors a future release layout more closely by using:
 

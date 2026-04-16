@@ -35,6 +35,9 @@ export interface CombinedControlReleaseSandboxBundlePaths {
   readonly releasesInventoryFile: string;
   readonly activationManifestFile: string;
   readonly activationSummaryFile: string;
+  readonly promotionManifestFile: string;
+  readonly promotionSummaryFile: string;
+  readonly promotionHistoryFile: string;
   readonly logsDir: string;
   readonly runDir: string;
 }
@@ -91,7 +94,8 @@ export function createCombinedControlReleaseSandboxBundle(args: {
         "healthz reachable over HTTP",
         "startup manifest origin matches the booted runtime",
         "env file resolves combined release-sandbox mode",
-        "current symlink points at the active versioned release"
+        "current symlink points at the active versioned release",
+        "promotion metadata can describe the active release as a release-like promotion"
       ],
       parity: [
         "representative routes match direct combined candidate",

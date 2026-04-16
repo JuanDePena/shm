@@ -26,6 +26,7 @@
     "start:control:release-sandbox": "pnpm --dir apps/control start:release-sandbox",
     "activate:control:release-sandbox": "pnpm --dir apps/control activate:release-sandbox",
     "inspect:control:release-sandbox": "pnpm --dir apps/control inspect:release-sandbox",
+    "promote:control:release-sandbox": "pnpm --dir apps/control promote:release-sandbox",
     "start:worker": "pnpm --filter @simplehost/panel-worker start",
     "start:agent": "pnpm --filter @simplehost/manager-agent start",
     "start:cli": "pnpm --filter @simplehost/manager-cli start",

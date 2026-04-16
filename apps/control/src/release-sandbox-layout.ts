@@ -31,6 +31,9 @@ export interface CombinedControlReleaseSandboxLayout {
   readonly releasesInventoryFile: string;
   readonly activationManifestFile: string;
   readonly activationSummaryFile: string;
+  readonly promotionManifestFile: string;
+  readonly promotionSummaryFile: string;
+  readonly promotionHistoryFile: string;
   readonly logsDir: string;
   readonly runDir: string;
   readonly version: string;
@@ -148,6 +151,9 @@ export function createCombinedControlReleaseSandboxLayout(args: {
     releasesInventoryFile: join(sharedMetaDir, "releases.json"),
     activationManifestFile: join(sharedMetaDir, "activation.json"),
     activationSummaryFile: join(sharedMetaDir, "activation-summary.txt"),
+    promotionManifestFile: join(sharedMetaDir, "promotion.json"),
+    promotionSummaryFile: join(sharedMetaDir, "promotion-summary.txt"),
+    promotionHistoryFile: join(sharedMetaDir, "promotion-history.json"),
     logsDir,
     runDir,
     version

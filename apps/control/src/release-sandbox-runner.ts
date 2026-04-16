@@ -7,6 +7,7 @@ import {
   resolveActiveCombinedControlReleaseSandbox,
   type CombinedControlReleaseSandboxActivationManifest
 } from "./release-sandbox-activation.js";
+import type { CombinedControlReleaseSandboxPromotionManifest } from "./release-sandbox-promotion.js";
 import {
   packCombinedControlReleaseSandbox,
   type PackCombinedControlReleaseSandboxResult
@@ -20,6 +21,7 @@ export interface CombinedControlReleaseSandboxRuntime {
   readonly manifest: CombinedControlStartupManifest;
   readonly bundle: CombinedControlReleaseSandboxBundle;
   readonly activation: CombinedControlReleaseSandboxActivationManifest;
+  readonly promotion: CombinedControlReleaseSandboxPromotionManifest | null;
   readonly env: Readonly<Record<string, string>>;
   readonly startupSummary: string;
   readonly bundleSummary: string;
@@ -105,6 +107,7 @@ function validateSandboxArtifacts(args: {
   manifest: CombinedControlStartupManifest;
   bundle: CombinedControlReleaseSandboxBundle;
   activation: CombinedControlReleaseSandboxActivationManifest;
+  promotion: CombinedControlReleaseSandboxPromotionManifest | null;
   env: Record<string, string>;
   startupSummary: string;
   bundleSummary: string;
@@ -114,6 +117,7 @@ function validateSandboxArtifacts(args: {
     manifest,
     bundle,
     activation,
+    promotion,
     env,
     startupSummary,
     bundleSummary
@@ -143,6 +147,15 @@ function validateSandboxArtifacts(args: {
   if (!existsSync(bundle.paths.activationSummaryFile)) {
     throw new Error(`Sandbox activation summary missing: ${bundle.paths.activationSummaryFile}`);
   }
+  if (promotion && !existsSync(bundle.paths.promotionManifestFile)) {
+    throw new Error(`Sandbox promotion manifest missing: ${bundle.paths.promotionManifestFile}`);
+  }
+  if (promotion && !existsSync(bundle.paths.promotionSummaryFile)) {
+    throw new Error(`Sandbox promotion summary missing: ${bundle.paths.promotionSummaryFile}`);
+  }
+  if (promotion && !existsSync(bundle.paths.promotionHistoryFile)) {
+    throw new Error(`Sandbox promotion history missing: ${bundle.paths.promotionHistoryFile}`);
+  }
   if (!lstatSync(bundle.paths.currentRoot).isSymbolicLink()) {
     throw new Error(`Sandbox current root is not a symlink: ${bundle.paths.currentRoot}`);
   }
@@ -154,6 +167,9 @@ function validateSandboxArtifacts(args: {
   }
   if (activation.currentEntrypoint !== bundle.paths.currentEntrypoint) {
     throw new Error("Sandbox activation entrypoint does not match the current entrypoint");
+  }
+  if (promotion && promotion.activeVersion !== activation.activeVersion) {
+    throw new Error("Sandbox promotion manifest does not match the active version");
   }
   if (bundle.startup.origin !== manifest.origin) {
     throw new Error(
@@ -192,6 +208,11 @@ async function startPackedCombinedControlReleaseSandbox(args: {
   const manifest = JSON.parse(
     await readFile(active.bundle.paths.startupManifestFile, "utf8")
   ) as CombinedControlStartupManifest;
+  const promotion = existsSync(active.layout.promotionManifestFile)
+    ? (JSON.parse(
+        await readFile(active.layout.promotionManifestFile, "utf8")
+      ) as CombinedControlReleaseSandboxPromotionManifest)
+    : null;
   const startupSummary = await readFile(active.layout.startupSummaryFile, "utf8");
   const bundleSummary = await readFile(active.layout.bundleSummaryFile, "utf8");
   validateSandboxArtifacts({
@@ -199,6 +220,7 @@ async function startPackedCombinedControlReleaseSandbox(args: {
     manifest,
     bundle: active.bundle,
     activation: active.activation,
+    promotion,
     env: envFromFile,
     startupSummary,
     bundleSummary
@@ -229,6 +251,7 @@ async function startPackedCombinedControlReleaseSandbox(args: {
     manifest,
     bundle: active.bundle,
     activation: active.activation,
+    promotion,
     env: envFromFile,
     startupSummary,
     bundleSummary,
