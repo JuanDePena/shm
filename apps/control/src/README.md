@@ -34,7 +34,10 @@ Current role:
 - expose a workspace-local release-sandbox layout in `release-sandbox-layout.ts`
 - expose a persistent release-sandbox bundle contract in `release-sandbox-bundle.ts`
 - expose a release-sandbox packer in `release-sandbox-pack.ts`
+- expose release inventory and activation helpers in `release-sandbox-activation.ts`
 - expose a CLI entrypoint for packing the release-sandbox in `release-sandbox-pack-cli.ts`
+- expose a CLI entrypoint for activating a packed release-sandbox in `release-sandbox-activate-cli.ts`
+- expose a CLI entrypoint for inspecting packed release-sandbox state in `release-sandbox-inspect-cli.ts`
 - expose a runtime entrypoint used inside the sandbox in `release-sandbox-entrypoint.ts`
 - expose a release-sandbox runner in `release-sandbox-runner.ts`
 - expose a CLI entrypoint for starting the release-sandbox in `release-sandbox-start-cli.ts`
@@ -47,6 +50,7 @@ Current role:
 - keep a release-sandbox smoke test in `release-sandbox-smoke.test.ts` for the packed sandbox runtime
 - keep a release-sandbox parity test in `release-sandbox-parity.test.ts` to compare direct and sandbox-started combined candidates
 - keep a release-sandbox bundle parity test in `release-sandbox-bundle-parity.test.ts` to lock bundle metadata against the direct combined candidate
+- keep a release-sandbox activation test in `release-sandbox-activation.test.ts` to lock switching and rollback behavior inside the sandbox
 - keep focused request-context coverage in `request-context.test.ts` so per-request cache semantics stay pinned down during convergence
 
 The current checkpoint now distinguishes:
@@ -61,6 +65,7 @@ The current sandbox now simulates a more release-like filesystem shape inside th
 
 - `releases/<version>` for the versioned candidate tree
 - `current` as a symlink to the versioned release directory
+- `shared/meta` for release inventory plus activation metadata
 - `shared/tmp`, `shared/logs`, and `shared/run` for shared writable state
 
 That still stops short of any packaging or release promotion against `/opt/simplehostman/release`.

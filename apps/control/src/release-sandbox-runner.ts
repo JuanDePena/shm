@@ -4,6 +4,10 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:net";
 
 import {
+  resolveActiveCombinedControlReleaseSandbox,
+  type CombinedControlReleaseSandboxActivationManifest
+} from "./release-sandbox-activation.js";
+import {
   packCombinedControlReleaseSandbox,
   type PackCombinedControlReleaseSandboxResult
 } from "./release-sandbox-pack.js";
@@ -15,6 +19,7 @@ export interface CombinedControlReleaseSandboxRuntime {
   readonly origin: string;
   readonly manifest: CombinedControlStartupManifest;
   readonly bundle: CombinedControlReleaseSandboxBundle;
+  readonly activation: CombinedControlReleaseSandboxActivationManifest;
   readonly env: Readonly<Record<string, string>>;
   readonly startupSummary: string;
   readonly bundleSummary: string;
@@ -99,14 +104,23 @@ function validateSandboxArtifacts(args: {
   packed: PackCombinedControlReleaseSandboxResult;
   manifest: CombinedControlStartupManifest;
   bundle: CombinedControlReleaseSandboxBundle;
+  activation: CombinedControlReleaseSandboxActivationManifest;
   env: Record<string, string>;
   startupSummary: string;
   bundleSummary: string;
 }) {
-  const { packed, manifest, bundle, env, startupSummary, bundleSummary } = args;
+  const {
+    packed,
+    manifest,
+    bundle,
+    activation,
+    env,
+    startupSummary,
+    bundleSummary
+  } = args;
 
-  if (!existsSync(bundle.paths.entrypoint)) {
-    throw new Error(`Sandbox entrypoint missing: ${bundle.paths.entrypoint}`);
+  if (!existsSync(bundle.paths.releaseEntrypoint)) {
+    throw new Error(`Sandbox release entrypoint missing: ${bundle.paths.releaseEntrypoint}`);
   }
   if (!existsSync(bundle.paths.envFile)) {
     throw new Error(`Sandbox env file missing: ${bundle.paths.envFile}`);
@@ -120,19 +134,34 @@ function validateSandboxArtifacts(args: {
   if (!existsSync(bundle.paths.bundleSummaryFile)) {
     throw new Error(`Sandbox bundle summary missing: ${bundle.paths.bundleSummaryFile}`);
   }
+  if (!existsSync(bundle.paths.releasesInventoryFile)) {
+    throw new Error(`Sandbox releases inventory missing: ${bundle.paths.releasesInventoryFile}`);
+  }
+  if (!existsSync(bundle.paths.activationManifestFile)) {
+    throw new Error(`Sandbox activation manifest missing: ${bundle.paths.activationManifestFile}`);
+  }
+  if (!existsSync(bundle.paths.activationSummaryFile)) {
+    throw new Error(`Sandbox activation summary missing: ${bundle.paths.activationSummaryFile}`);
+  }
   if (!lstatSync(bundle.paths.currentRoot).isSymbolicLink()) {
     throw new Error(`Sandbox current root is not a symlink: ${bundle.paths.currentRoot}`);
   }
   if (realpathSync(bundle.paths.currentRoot) !== realpathSync(bundle.paths.releaseVersionRoot)) {
     throw new Error("Sandbox current root does not point at the versioned release directory");
   }
+  if (activation.activeVersion !== bundle.version) {
+    throw new Error("Sandbox activation manifest does not match the active bundle version");
+  }
+  if (activation.currentEntrypoint !== bundle.paths.currentEntrypoint) {
+    throw new Error("Sandbox activation entrypoint does not match the current entrypoint");
+  }
   if (bundle.startup.origin !== manifest.origin) {
     throw new Error(
       `Sandbox bundle origin mismatch: ${bundle.startup.origin} !== ${manifest.origin}`
     );
   }
-  if (bundle.paths.entrypoint !== packed.bundle.paths.entrypoint) {
-    throw new Error("Sandbox bundle entrypoint does not match packed bundle entrypoint");
+  if (bundle.paths.releaseEntrypoint !== packed.bundle.paths.releaseEntrypoint) {
+    throw new Error("Sandbox release entrypoint does not match packed bundle entrypoint");
   }
   if (env.SIMPLEHOST_CONTROL_SANDBOX_MODE !== "release-sandbox") {
     throw new Error("Sandbox env did not resolve SIMPLEHOST_CONTROL_SANDBOX_MODE=release-sandbox");
@@ -146,44 +175,38 @@ function validateSandboxArtifacts(args: {
   if (!startupSummary.includes(manifest.origin)) {
     throw new Error("Sandbox startup summary does not include runtime origin");
   }
-  if (!bundleSummary.includes(bundle.paths.entrypoint)) {
-    throw new Error("Sandbox bundle summary does not include the packed entrypoint");
+  if (!bundleSummary.includes(bundle.paths.releaseEntrypoint)) {
+    throw new Error("Sandbox bundle summary does not include the packed release entrypoint");
   }
 }
 
-export async function startCombinedControlReleaseSandbox(args: {
-  host?: string;
-  port?: number;
-  sandboxId?: string;
-} = {}): Promise<CombinedControlReleaseSandboxRuntime> {
-  const host = args.host ?? "127.0.0.1";
-  const port = await resolvePort(args.port);
-  const packed = await packCombinedControlReleaseSandbox({
-    ...args,
-    host,
-    port
+async function startPackedCombinedControlReleaseSandbox(args: {
+  packed: PackCombinedControlReleaseSandboxResult;
+}): Promise<CombinedControlReleaseSandboxRuntime> {
+  const { layout } = args.packed;
+  const active = await resolveActiveCombinedControlReleaseSandbox({
+    workspaceRoot: layout.workspaceRoot,
+    sandboxId: layout.sandboxId
   });
-  const envFromFile = parseEnvFile(await readFile(packed.bundle.paths.envFile, "utf8"));
+  const envFromFile = parseEnvFile(await readFile(active.bundle.paths.envFile, "utf8"));
   const manifest = JSON.parse(
-    await readFile(packed.bundle.paths.startupManifestFile, "utf8")
+    await readFile(active.bundle.paths.startupManifestFile, "utf8")
   ) as CombinedControlStartupManifest;
-  const bundle = JSON.parse(
-    await readFile(packed.layout.bundleManifestFile, "utf8")
-  ) as CombinedControlReleaseSandboxBundle;
-  const startupSummary = await readFile(packed.layout.startupSummaryFile, "utf8");
-  const bundleSummary = await readFile(packed.layout.bundleSummaryFile, "utf8");
+  const startupSummary = await readFile(active.layout.startupSummaryFile, "utf8");
+  const bundleSummary = await readFile(active.layout.bundleSummaryFile, "utf8");
   validateSandboxArtifacts({
-    packed,
+    packed: args.packed,
     manifest,
-    bundle,
+    bundle: active.bundle,
+    activation: active.activation,
     env: envFromFile,
     startupSummary,
     bundleSummary
   });
   const stdoutLog: string[] = [];
   const stderrLog: string[] = [];
-  const child = spawn(process.execPath, [packed.bundle.paths.entrypoint], {
-    cwd: packed.layout.currentRoot,
+  const child = spawn(process.execPath, [active.activation.currentEntrypoint], {
+    cwd: active.layout.currentRoot,
     env: {
       ...process.env,
       ...envFromFile
@@ -204,11 +227,12 @@ export async function startCombinedControlReleaseSandbox(args: {
     kind: "combined-release-sandbox" as const,
     origin: manifest.origin,
     manifest,
-    bundle,
+    bundle: active.bundle,
+    activation: active.activation,
     env: envFromFile,
     startupSummary,
     bundleSummary,
-    packed,
+    packed: args.packed,
     child,
     stdoutLog,
     stderrLog,
@@ -234,4 +258,47 @@ export async function startCombinedControlReleaseSandbox(args: {
     await runtime.close().catch(() => {});
     throw error;
   }
+}
+
+export async function startExistingCombinedControlReleaseSandbox(args: {
+  workspaceRoot?: string;
+  sandboxId?: string;
+  host?: string;
+  port?: number;
+} = {}): Promise<CombinedControlReleaseSandboxRuntime> {
+  const active = await resolveActiveCombinedControlReleaseSandbox(args);
+  const originMatch = active.bundle.startup.origin.match(/:(\d+)$/);
+  const port =
+    typeof args.port === "number"
+      ? args.port
+      : originMatch
+        ? Number(originMatch[1])
+        : 0;
+  const packed = await packCombinedControlReleaseSandbox({
+    workspaceRoot: active.layout.workspaceRoot,
+    sandboxId: active.layout.sandboxId,
+    version: active.activation.activeVersion,
+    host: args.host,
+    port,
+    clean: false
+  });
+
+  return startPackedCombinedControlReleaseSandbox({ packed });
+}
+
+export async function startCombinedControlReleaseSandbox(args: {
+  host?: string;
+  port?: number;
+  sandboxId?: string;
+  version?: string;
+} = {}): Promise<CombinedControlReleaseSandboxRuntime> {
+  const host = args.host ?? "127.0.0.1";
+  const port = await resolvePort(args.port);
+  const packed = await packCombinedControlReleaseSandbox({
+    ...args,
+    host,
+    port
+  });
+
+  return startPackedCombinedControlReleaseSandbox({ packed });
 }

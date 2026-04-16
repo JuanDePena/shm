@@ -10,12 +10,15 @@ export interface CombinedControlReleaseSandboxLayout {
   readonly releaseVersionRoot: string;
   readonly currentRoot: string;
   readonly sharedRoot: string;
+  readonly sharedMetaDir: string;
   readonly sharedTmpDir: string;
   readonly sharedLogsDir: string;
   readonly sharedRunDir: string;
   readonly appsRoot: string;
   readonly appsControlRoot: string;
   readonly controlDistRoot: string;
+  readonly releaseEntrypoint: string;
+  readonly currentEntrypoint: string;
   readonly nodeModulesLink: string;
   readonly appsControlNodeModulesLink: string;
   readonly envDir: string;
@@ -25,6 +28,9 @@ export interface CombinedControlReleaseSandboxLayout {
   readonly startupSummaryFile: string;
   readonly bundleManifestFile: string;
   readonly bundleSummaryFile: string;
+  readonly releasesInventoryFile: string;
+  readonly activationManifestFile: string;
+  readonly activationSummaryFile: string;
   readonly logsDir: string;
   readonly runDir: string;
   readonly version: string;
@@ -85,23 +91,29 @@ export function createCombinedControlReleaseSandboxLayout(args: {
   const workspaceRoot = args.workspaceRoot ?? resolveWorkspaceRoot();
   const version = args.version ?? readWorkspaceVersion(workspaceRoot);
   const sandboxId = args.sandboxId ?? "default";
-  const sandboxRoot = join(
-    workspaceRoot,
-    ".tmp",
-    "control-release-sandbox",
-    version,
-    sandboxId
-  );
+  const sandboxRoot = join(workspaceRoot, ".tmp", "control-release-sandbox", sandboxId);
   const releasesRoot = join(sandboxRoot, "releases");
   const releaseVersionRoot = join(releasesRoot, version);
   const currentRoot = join(sandboxRoot, "current");
   const sharedRoot = join(sandboxRoot, "shared");
+  const sharedMetaDir = join(sharedRoot, "meta");
   const sharedTmpDir = join(sharedRoot, "tmp");
   const sharedLogsDir = join(sharedRoot, "logs");
   const sharedRunDir = join(sharedRoot, "run");
   const appsRoot = join(releaseVersionRoot, "apps");
   const appsControlRoot = join(appsRoot, "control");
   const controlDistRoot = join(appsControlRoot, "dist");
+  const releaseEntrypoint = join(
+    controlDistRoot,
+    "release-sandbox-entrypoint.js"
+  );
+  const currentEntrypoint = join(
+    currentRoot,
+    "apps",
+    "control",
+    "dist",
+    "release-sandbox-entrypoint.js"
+  );
   const envDir = join(releaseVersionRoot, "env");
   const metaDir = join(releaseVersionRoot, "meta");
   const runDir = join(sharedRunDir, "control");
@@ -115,12 +127,15 @@ export function createCombinedControlReleaseSandboxLayout(args: {
     releaseVersionRoot,
     currentRoot,
     sharedRoot,
+    sharedMetaDir,
     sharedTmpDir,
     sharedLogsDir,
     sharedRunDir,
     appsRoot,
     appsControlRoot,
     controlDistRoot,
+    releaseEntrypoint,
+    currentEntrypoint,
     nodeModulesLink: join(releaseVersionRoot, "node_modules"),
     appsControlNodeModulesLink: join(appsControlRoot, "node_modules"),
     envDir,
@@ -130,6 +145,9 @@ export function createCombinedControlReleaseSandboxLayout(args: {
     startupSummaryFile: join(metaDir, "startup-summary.txt"),
     bundleManifestFile: join(metaDir, "bundle.json"),
     bundleSummaryFile: join(metaDir, "bundle-summary.txt"),
+    releasesInventoryFile: join(sharedMetaDir, "releases.json"),
+    activationManifestFile: join(sharedMetaDir, "activation.json"),
+    activationSummaryFile: join(sharedMetaDir, "activation-summary.txt"),
     logsDir,
     runDir,
     version

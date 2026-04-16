@@ -67,6 +67,8 @@ From `/opt/simplehostman/src`:
 - `pnpm check:control:bundle-parity`
 - `pnpm check:control:release-sandbox`
 - `pnpm pack:control:release-sandbox`
+- `pnpm activate:control:release-sandbox -- <version> [sandboxId]`
+- `pnpm inspect:control:release-sandbox -- [sandboxId]`
 - `pnpm start:control:release-sandbox`
 
 From this directory:
@@ -106,6 +108,8 @@ From this directory:
 - `pnpm check:release-sandbox:bundle-parity`
 - `pnpm check:release-sandbox`
 - `pnpm pack:release-sandbox`
+- `pnpm activate:release-sandbox -- <version> [sandboxId]`
+- `pnpm inspect:release-sandbox -- [sandboxId]`
 - `pnpm start:release-sandbox`
 
 ## Migration notes
@@ -139,10 +143,12 @@ From this directory:
 - `apps/control/src/release-candidate-runner.test.ts` now validates passing and degraded release-candidate scenarios, including mutation and proxy-preview failures.
 - `apps/control/src/release-sandbox-layout.ts` now defines a workspace-local sandbox layout that simulates a release-shaped filesystem tree without touching `/opt/simplehostman/release`.
 - `apps/control/src/release-sandbox-bundle.ts` now defines the persistent bundle contract and human-readable bundle summary for that sandbox.
+- `apps/control/src/release-sandbox-activation.ts`, `release-sandbox-activate-cli.ts`, and `release-sandbox-inspect-cli.ts` now expose release inventory plus version switching inside that sandbox.
 - `apps/control/src/release-sandbox-pack.ts`, `release-sandbox-pack-cli.ts`, `release-sandbox-entrypoint.ts`, `release-sandbox-runner.ts`, and `release-sandbox-start-cli.ts` now materialize and boot the combined candidate from that sandbox using copied artifacts plus workspace `node_modules` links.
 - `apps/control/src/release-sandbox-smoke.test.ts` and `release-sandbox-parity.test.ts` now validate both HTTP behavior and parity between the direct combined candidate and the sandbox-started candidate.
 - `apps/control/src/release-sandbox-bundle-parity.test.ts` now validates that the packed sandbox bundle stays aligned with the direct combined candidate metadata.
-- the release-sandbox now simulates a more realistic layout with `releases/<version>`, `current` as a symlink, and `shared/{tmp,logs,run}` while remaining fully workspace-local.
+- `apps/control/src/release-sandbox-activation.test.ts` now validates switching and rollback between packed versions within one sandbox.
+- the release-sandbox now simulates a more realistic layout with `releases/<version>`, `current` as a symlink, `shared/meta`, and `shared/{tmp,logs,run}` while remaining fully workspace-local.
 - `apps/control/src/request-context.test.ts` now locks the per-request caching behavior for session resolution, authenticated dashboard bootstrap, and health snapshot reuse.
 - the combined request handler now routes over `PanelApiSurface` and `PanelWebSurface` directly instead of wiring raw request listeners by hand.
 - `apps/control/src/router.test.ts` now locks parity for key split-vs-combined routes such as `/`, `/login`, `/v1/auth/me`, and `/v1/resources/spec`.
@@ -173,10 +179,12 @@ Before `combined` can move beyond source-only validation, all of these still nee
 - `pnpm test:release-sandbox` passes for the workspace-local release-sandbox smoke and parity scenarios
 - `pnpm test:release-sandbox:bundle-parity` passes for the persistent bundle contract and sandbox metadata
 - `pnpm pack:release-sandbox` materializes a release-shaped sandbox bundle without touching `/opt/simplehostman/release`
+- `pnpm activate:release-sandbox -- <version> [sandboxId]` switches `current` between packed versions inside the workspace-local sandbox
+- `pnpm inspect:release-sandbox -- [sandboxId]` prints the inventory plus active release metadata for that sandbox
 - `pnpm start:release-sandbox` boots the sandboxed candidate successfully from copied artifacts and linked dependencies
 - `pnpm check:release-sandbox:bundle-parity` stays green from `apps/control`
 - `pnpm check:release-sandbox` stays green from `apps/control`
 - `pnpm check:candidate` stays green from `apps/control`
 - source-level `release-sandbox` is now the highest promoted state of `combined`
-- the release-sandbox now models `current -> releases/<version>` and shared writable roots closely enough to support a future dry-run against a real release layout
+- the release-sandbox now models `current -> releases/<version>`, release inventory/activation metadata, and shared writable roots closely enough to support a future dry-run against a real release layout
 - split mode remains the documented and packaged runtime default under `scripts/` and `packaging/`

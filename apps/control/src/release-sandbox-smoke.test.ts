@@ -16,13 +16,18 @@ test("release-sandbox candidate serves key HTTP routes over a packed sandbox lay
     assert.equal(healthResponse.status, 200);
     assert.equal(runtime.bundle.kind, "combined-release-sandbox-bundle");
     assert.equal(runtime.bundle.startup.origin, runtime.origin);
+    assert.equal(runtime.activation.activeVersion, runtime.bundle.version);
     assert.match(runtime.startupSummary, /Combined control startup manifest/);
     assert.match(runtime.bundleSummary, /Combined control release-sandbox bundle/);
     assert.ok(lstatSync(runtime.bundle.paths.currentRoot).isSymbolicLink());
     assert.ok(existsSync(runtime.bundle.paths.releaseVersionRoot));
+    assert.ok(existsSync(runtime.bundle.paths.sharedMetaDir));
     assert.ok(existsSync(runtime.bundle.paths.sharedTmpDir));
     assert.ok(existsSync(runtime.bundle.paths.sharedLogsDir));
     assert.ok(existsSync(runtime.bundle.paths.sharedRunDir));
+    assert.ok(existsSync(runtime.bundle.paths.releasesInventoryFile));
+    assert.ok(existsSync(runtime.bundle.paths.activationManifestFile));
+    assert.ok(existsSync(runtime.bundle.paths.activationSummaryFile));
 
     const loginResponse = await fetch(new URL("/auth/login", runtime.origin), {
       method: "POST",

@@ -76,6 +76,8 @@ Useful commands:
 - `pnpm check:control:bundle-parity`
 - `pnpm check:control:release-sandbox`
 - `pnpm pack:control:release-sandbox`
+- `pnpm activate:control:release-sandbox -- <version> [sandboxId]`
+- `pnpm inspect:control:release-sandbox -- [sandboxId]`
 - `pnpm start:control:release-sandbox`
 - `pnpm start:worker`
 - `pnpm start:agent`

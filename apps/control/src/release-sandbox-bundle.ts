@@ -21,15 +21,20 @@ export interface CombinedControlReleaseSandboxBundlePaths {
   readonly releaseVersionRoot: string;
   readonly currentRoot: string;
   readonly sharedRoot: string;
+  readonly sharedMetaDir: string;
   readonly sharedTmpDir: string;
   readonly sharedLogsDir: string;
   readonly sharedRunDir: string;
-  readonly entrypoint: string;
+  readonly releaseEntrypoint: string;
+  readonly currentEntrypoint: string;
   readonly envFile: string;
   readonly startupManifestFile: string;
   readonly startupSummaryFile: string;
   readonly bundleManifestFile: string;
   readonly bundleSummaryFile: string;
+  readonly releasesInventoryFile: string;
+  readonly activationManifestFile: string;
+  readonly activationSummaryFile: string;
   readonly logsDir: string;
   readonly runDir: string;
 }
@@ -74,21 +79,24 @@ export function createCombinedControlReleaseSandboxBundle(args: {
     },
     checks: {
       pack: [
-        "artifact copied to sandbox current/apps/control/dist",
-        "workspace package.json mirrored into sandbox current",
-        "control package.json mirrored into sandbox current/apps/control",
-        "env file written to sandbox current/env/control.env",
-        "startup manifest and summary written to sandbox current/meta"
+        "artifact copied to sandbox releases/<version>/apps/control/dist",
+        "workspace package.json mirrored into sandbox releases/<version>",
+        "control package.json mirrored into sandbox releases/<version>/apps/control",
+        "env file written to sandbox releases/<version>/env/control.env",
+        "startup manifest and summary written to sandbox releases/<version>/meta",
+        "release inventory and activation metadata written under sandbox shared/meta"
       ],
       runtime: [
-        "sandbox runtime boots from copied entrypoint",
+        "sandbox runtime boots from current/apps/control/dist/release-sandbox-entrypoint.js",
         "healthz reachable over HTTP",
         "startup manifest origin matches the booted runtime",
-        "env file resolves combined release-sandbox mode"
+        "env file resolves combined release-sandbox mode",
+        "current symlink points at the active versioned release"
       ],
       parity: [
         "representative routes match direct combined candidate",
-        "startup metadata remains aligned with workspace candidate"
+        "startup metadata remains aligned with workspace candidate",
+        "active release metadata remains aligned after version switching"
       ]
     }
   };
@@ -113,9 +121,11 @@ export function formatCombinedControlReleaseSandboxBundle(
     `Mode: ${bundle.startup.mode}`,
     `Config source: ${bundle.startup.configSource}`,
     `Surfaces: ${bundle.startup.surfaces.join(", ")}`,
-    `Entrypoint: ${bundle.paths.entrypoint}`,
+    `Release entrypoint: ${bundle.paths.releaseEntrypoint}`,
+    `Current entrypoint: ${bundle.paths.currentEntrypoint}`,
     `Env file: ${bundle.paths.envFile}`,
     `Startup manifest: ${bundle.paths.startupManifestFile}`,
-    `Bundle manifest: ${bundle.paths.bundleManifestFile}`
+    `Bundle manifest: ${bundle.paths.bundleManifestFile}`,
+    `Activation manifest: ${bundle.paths.activationManifestFile}`
   ].join("\n");
 }
