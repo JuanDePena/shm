@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { lstatSync, realpathSync } from "node:fs";
 import test from "node:test";
 
 import { startCombinedControlReleaseSandbox } from "./release-sandbox-runner.js";
@@ -16,6 +17,14 @@ test("release-sandbox bundle reflects the combined candidate metadata faithfully
     assert.equal(runtime.bundle.sandboxId, "bundle-parity");
     assert.equal(runtime.bundle.paths.entrypoint, runtime.packed.bundle.paths.entrypoint);
     assert.equal(runtime.bundle.paths.envFile, runtime.packed.bundle.paths.envFile);
+    assert.equal(runtime.bundle.paths.releasesRoot, runtime.packed.layout.releasesRoot);
+    assert.equal(
+      runtime.bundle.paths.releaseVersionRoot,
+      runtime.packed.layout.releaseVersionRoot
+    );
+    assert.equal(runtime.bundle.paths.currentRoot, runtime.packed.layout.currentRoot);
+    assert.equal(runtime.bundle.paths.sharedRoot, runtime.packed.layout.sharedRoot);
+    assert.equal(runtime.bundle.paths.sharedTmpDir, runtime.packed.layout.sharedTmpDir);
     assert.equal(
       runtime.bundle.paths.startupManifestFile,
       runtime.packed.bundle.paths.startupManifestFile
@@ -28,6 +37,11 @@ test("release-sandbox bundle reflects the combined candidate metadata faithfully
     assert.equal(
       runtime.bundle.startup.listener,
       `${runtime.manifest.listener.host}:${runtime.manifest.listener.port}`
+    );
+    assert.ok(lstatSync(runtime.bundle.paths.currentRoot).isSymbolicLink());
+    assert.equal(
+      realpathSync(runtime.bundle.paths.currentRoot),
+      realpathSync(runtime.bundle.paths.releaseVersionRoot)
     );
     assert.deepEqual(runtime.bundle.startup.surfaces, runtime.manifest.surfaces);
     assert.equal(

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { cp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -85,8 +85,20 @@ export async function packCombinedControlReleaseSandbox(args: {
     paths: {
       workspaceRoot: layout.workspaceRoot,
       sandboxRoot: layout.sandboxRoot,
+      releasesRoot: layout.releasesRoot,
+      releaseVersionRoot: layout.releaseVersionRoot,
       currentRoot: layout.currentRoot,
-      entrypoint: join(layout.controlDistRoot, "release-sandbox-entrypoint.js"),
+      sharedRoot: layout.sharedRoot,
+      sharedTmpDir: layout.sharedTmpDir,
+      sharedLogsDir: layout.sharedLogsDir,
+      sharedRunDir: layout.sharedRunDir,
+      entrypoint: join(
+        layout.currentRoot,
+        "apps",
+        "control",
+        "dist",
+        "release-sandbox-entrypoint.js"
+      ),
       envFile: layout.envFile,
       startupManifestFile: layout.startupManifestFile,
       startupSummaryFile: layout.startupSummaryFile,
@@ -102,6 +114,11 @@ export async function packCombinedControlReleaseSandbox(args: {
     await rm(layout.sandboxRoot, { recursive: true, force: true });
   }
 
+  await mkdir(layout.releasesRoot, { recursive: true });
+  await mkdir(layout.releaseVersionRoot, { recursive: true });
+  await mkdir(layout.sharedTmpDir, { recursive: true });
+  await mkdir(layout.sharedLogsDir, { recursive: true });
+  await mkdir(layout.sharedRunDir, { recursive: true });
   await mkdir(layout.controlDistRoot, { recursive: true });
   await mkdir(layout.envDir, { recursive: true });
   await mkdir(layout.metaDir, { recursive: true });
@@ -118,7 +135,7 @@ export async function packCombinedControlReleaseSandbox(args: {
     await readFile(join(layout.workspaceRoot, "apps", "control", "package.json"), "utf8")
   );
   await writeFile(
-    join(layout.currentRoot, "package.json"),
+    join(layout.releaseVersionRoot, "package.json"),
     await readFile(join(layout.workspaceRoot, "package.json"), "utf8")
   );
 
@@ -134,6 +151,15 @@ export async function packCombinedControlReleaseSandbox(args: {
     join(layout.workspaceRoot, "apps", "control", "node_modules"),
     layout.appsControlNodeModulesLink
   );
+  try {
+    const currentStat = await lstat(layout.currentRoot);
+    if (currentStat.isSymbolicLink() || currentStat.isDirectory()) {
+      await rm(layout.currentRoot, { recursive: true, force: true });
+    }
+  } catch {
+    // current link does not exist yet
+  }
+  await symlink(layout.releaseVersionRoot, layout.currentRoot);
   await writeFile(layout.envFile, toEnvFileContent(config));
   await writeFile(
     layout.startupManifestFile,

@@ -6,7 +6,13 @@ export interface CombinedControlReleaseSandboxLayout {
   readonly workspaceRoot: string;
   readonly sandboxRoot: string;
   readonly sandboxId: string;
+  readonly releasesRoot: string;
+  readonly releaseVersionRoot: string;
   readonly currentRoot: string;
+  readonly sharedRoot: string;
+  readonly sharedTmpDir: string;
+  readonly sharedLogsDir: string;
+  readonly sharedRunDir: string;
   readonly appsRoot: string;
   readonly appsControlRoot: string;
   readonly controlDistRoot: string;
@@ -86,24 +92,36 @@ export function createCombinedControlReleaseSandboxLayout(args: {
     version,
     sandboxId
   );
+  const releasesRoot = join(sandboxRoot, "releases");
+  const releaseVersionRoot = join(releasesRoot, version);
   const currentRoot = join(sandboxRoot, "current");
-  const appsRoot = join(currentRoot, "apps");
+  const sharedRoot = join(sandboxRoot, "shared");
+  const sharedTmpDir = join(sharedRoot, "tmp");
+  const sharedLogsDir = join(sharedRoot, "logs");
+  const sharedRunDir = join(sharedRoot, "run");
+  const appsRoot = join(releaseVersionRoot, "apps");
   const appsControlRoot = join(appsRoot, "control");
   const controlDistRoot = join(appsControlRoot, "dist");
-  const envDir = join(currentRoot, "env");
-  const metaDir = join(currentRoot, "meta");
-  const runDir = join(currentRoot, "run");
-  const logsDir = join(currentRoot, "logs");
+  const envDir = join(releaseVersionRoot, "env");
+  const metaDir = join(releaseVersionRoot, "meta");
+  const runDir = join(sharedRunDir, "control");
+  const logsDir = join(sharedLogsDir, "control");
 
   return {
     workspaceRoot,
     sandboxRoot,
     sandboxId,
+    releasesRoot,
+    releaseVersionRoot,
     currentRoot,
+    sharedRoot,
+    sharedTmpDir,
+    sharedLogsDir,
+    sharedRunDir,
     appsRoot,
     appsControlRoot,
     controlDistRoot,
-    nodeModulesLink: join(currentRoot, "node_modules"),
+    nodeModulesLink: join(releaseVersionRoot, "node_modules"),
     appsControlNodeModulesLink: join(appsControlRoot, "node_modules"),
     envDir,
     envFile: join(envDir, "control.env"),

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { existsSync, lstatSync } from "node:fs";
 import test from "node:test";
 
 import { startCombinedControlReleaseSandbox } from "./release-sandbox-runner.js";
@@ -17,6 +18,11 @@ test("release-sandbox candidate serves key HTTP routes over a packed sandbox lay
     assert.equal(runtime.bundle.startup.origin, runtime.origin);
     assert.match(runtime.startupSummary, /Combined control startup manifest/);
     assert.match(runtime.bundleSummary, /Combined control release-sandbox bundle/);
+    assert.ok(lstatSync(runtime.bundle.paths.currentRoot).isSymbolicLink());
+    assert.ok(existsSync(runtime.bundle.paths.releaseVersionRoot));
+    assert.ok(existsSync(runtime.bundle.paths.sharedTmpDir));
+    assert.ok(existsSync(runtime.bundle.paths.sharedLogsDir));
+    assert.ok(existsSync(runtime.bundle.paths.sharedRunDir));
 
     const loginResponse = await fetch(new URL("/auth/login", runtime.origin), {
       method: "POST",

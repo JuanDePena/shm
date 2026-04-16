@@ -17,7 +17,13 @@ export interface CombinedControlReleaseSandboxStartupMetadata {
 export interface CombinedControlReleaseSandboxBundlePaths {
   readonly workspaceRoot: string;
   readonly sandboxRoot: string;
+  readonly releasesRoot: string;
+  readonly releaseVersionRoot: string;
   readonly currentRoot: string;
+  readonly sharedRoot: string;
+  readonly sharedTmpDir: string;
+  readonly sharedLogsDir: string;
+  readonly sharedRunDir: string;
   readonly entrypoint: string;
   readonly envFile: string;
   readonly startupManifestFile: string;
@@ -98,6 +104,10 @@ export function formatCombinedControlReleaseSandboxBundle(
     `Sandbox: ${bundle.sandboxId}`,
     `Source commitish: ${bundle.sourceCommitish}`,
     `Release target: ${bundle.releaseRootTarget}`,
+    `Releases root: ${bundle.paths.releasesRoot}`,
+    `Release version root: ${bundle.paths.releaseVersionRoot}`,
+    `Current: ${bundle.paths.currentRoot}`,
+    `Shared root: ${bundle.paths.sharedRoot}`,
     `Origin: ${bundle.startup.origin}`,
     `Listener: ${bundle.startup.listener}`,
     `Mode: ${bundle.startup.mode}`,

@@ -27,6 +27,12 @@ Current language:
 - `combined bundle-parity`: source-level candidate whose packed sandbox bundle still matches direct candidate metadata, still not packaging-ready
 - `combined release-sandbox`: source-level candidate packed and booted from a workspace-local release-shaped sandbox, still not packaging-ready
 
+That sandbox now models a more realistic release layout with:
+
+- `releases/<version>`
+- `current` symlink
+- `shared/{tmp,logs,run}`
+
 The current runtime normalization target is:
 
 - `/opt/simplehostman/release`

@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, lstatSync, realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:net";
 
@@ -119,6 +119,12 @@ function validateSandboxArtifacts(args: {
   }
   if (!existsSync(bundle.paths.bundleSummaryFile)) {
     throw new Error(`Sandbox bundle summary missing: ${bundle.paths.bundleSummaryFile}`);
+  }
+  if (!lstatSync(bundle.paths.currentRoot).isSymbolicLink()) {
+    throw new Error(`Sandbox current root is not a symlink: ${bundle.paths.currentRoot}`);
+  }
+  if (realpathSync(bundle.paths.currentRoot) !== realpathSync(bundle.paths.releaseVersionRoot)) {
+    throw new Error("Sandbox current root does not point at the versioned release directory");
   }
   if (bundle.startup.origin !== manifest.origin) {
     throw new Error(

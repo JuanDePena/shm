@@ -6,6 +6,10 @@ const packed = await packCombinedControlReleaseSandbox();
 
 console.log("Combined control release-sandbox bundle");
 console.log(`Sandbox root: ${packed.layout.sandboxRoot}`);
+console.log(`Releases root: ${packed.layout.releasesRoot}`);
+console.log(`Release version root: ${packed.layout.releaseVersionRoot}`);
+console.log(`Current: ${packed.layout.currentRoot}`);
+console.log(`Shared root: ${packed.layout.sharedRoot}`);
 console.log(`Entrypoint: ${packed.bundle.paths.entrypoint}`);
 console.log(`Env file: ${packed.bundle.paths.envFile}`);
 console.log("");

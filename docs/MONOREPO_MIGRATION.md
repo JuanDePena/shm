@@ -71,6 +71,7 @@ Current checkpoint on 2026-04-14:
 - `apps/control/src/release-sandbox-smoke.test.ts` and `release-sandbox-parity.test.ts` now validate both the sandboxed candidate itself and parity against the direct combined candidate over real HTTP
 - `apps/control/src/release-sandbox-bundle.ts` now defines a persistent bundle contract and human-readable bundle summary for the sandboxed candidate
 - `apps/control/src/release-sandbox-bundle-parity.test.ts` now validates that the packed sandbox bundle stays aligned with the direct combined candidate metadata
+- the sandbox now models `releases/<version>`, `current` as a symlink, and `shared/{tmp,logs,run}` inside `.tmp/control-release-sandbox`, making it a closer rehearsal for a future real release layout
 - `pnpm test:control:candidate` now acts as the shortest canonical test command for the combined candidate before any runtime promotion work
 - `pnpm test:control:runtime-parity` now acts as the canonical process-level parity check between split and combined candidate servers
 - `pnpm check:control:preflight` now acts as the canonical source-level pre-promotion check for the combined candidate
@@ -118,6 +119,7 @@ Promotion language at the current checkpoint:
 - `candidate release-like-ready`: the release-like startup manifest and smoke report are green inside the workspace
 - `candidate bundle-parity-ready`: the workspace-local release-sandbox bundle stays structurally aligned with the direct combined candidate
 - `candidate sandbox-ready`: the candidate can be packed and booted from a workspace-local release-sandbox with smoke and parity checks green
+- `candidate release-layout-ready`: the sandboxed candidate now exercises versioned releases, a `current` symlink, and shared writable roots inside the workspace
 - `release-ready`: still not reached; packaging and deploy flows remain split-first
 
 ## Target layout

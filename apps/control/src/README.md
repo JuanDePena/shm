@@ -57,6 +57,12 @@ The current checkpoint now distinguishes:
 - source-level release-sandbox (`release-sandbox-layout`, `release-sandbox-pack`, `release-sandbox-runner`)
 - source-level release-sandbox bundle parity (`release-sandbox-bundle`, `release-sandbox-bundle-parity.test.ts`)
 
+The current sandbox now simulates a more release-like filesystem shape inside the workspace:
+
+- `releases/<version>` for the versioned candidate tree
+- `current` as a symlink to the versioned release directory
+- `shared/tmp`, `shared/logs`, and `shared/run` for shared writable state
+
 That still stops short of any packaging or release promotion against `/opt/simplehostman/release`.
 - concentrate semantic auth, dashboard bootstrap, and runtime health in `bootstrap-surface.ts` so the combined candidate depends on higher-level surfaces instead of raw request wiring
 - provide a safe source-level checkpoint before the runtime model is actually unified

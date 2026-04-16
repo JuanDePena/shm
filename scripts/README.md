@@ -26,6 +26,12 @@ Current language:
 - `combined bundle-parity`: source-level guarantee that the packed sandbox bundle still mirrors the direct combined candidate metadata
 - `combined release-sandbox`: source-level candidate packed into a workspace-local release-shaped filesystem sandbox, still below deploy/release promotion
 
+The current sandbox shape now mirrors a future release layout more closely by using:
+
+- `releases/<version>`
+- `current` symlink
+- `shared/{tmp,logs,run}`
+
 ## Shared helpers
 
 - `lib/workspace-paths.sh`: canonical resolver for the workspace root, normalized release root, workspace version, and transitional runtime entrypoint paths
