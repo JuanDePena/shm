@@ -54,6 +54,7 @@ From `/opt/simplehostman/src`:
 - `pnpm test:control`
 - `pnpm test:control:preflight`
 - `pnpm test:control:release-candidate`
+- `pnpm test:control:release-sandbox`
 - `pnpm test:control:candidate`
 - `pnpm test:control:runtime-parity`
 - `pnpm test:control:combined-smoke`
@@ -61,6 +62,10 @@ From `/opt/simplehostman/src`:
 - `pnpm test:control:parity`
 - `pnpm check:control:candidate`
 - `pnpm check:control:release-candidate`
+- `pnpm check:control:preflight`
+- `pnpm check:control:release-sandbox`
+- `pnpm pack:control:release-sandbox`
+- `pnpm start:control:release-sandbox`
 
 From this directory:
 
@@ -86,6 +91,7 @@ From this directory:
 - `pnpm test`
 - `pnpm test:preflight`
 - `pnpm test:release-candidate`
+- `pnpm test:release-sandbox`
 - `pnpm test:candidate`
 - `pnpm test:runtime-parity`
 - `pnpm test:combined-smoke`
@@ -94,6 +100,9 @@ From this directory:
 - `pnpm check:candidate`
 - `pnpm check:preflight`
 - `pnpm check:release-candidate`
+- `pnpm check:release-sandbox`
+- `pnpm pack:release-sandbox`
+- `pnpm start:release-sandbox`
 
 ## Migration notes
 
@@ -124,6 +133,9 @@ From this directory:
 - `apps/control/src/release-candidate-config.ts`, `startup-manifest.ts`, and `release-candidate-surface.ts` now define a release-like config and startup manifest for the combined candidate without touching deploy/runtime.
 - `apps/control/src/release-candidate-runner.ts` and `release-candidate-cli.ts` now execute a more release-like combined candidate smoke pass with a structured startup manifest and human-readable report.
 - `apps/control/src/release-candidate-runner.test.ts` now validates passing and degraded release-candidate scenarios, including mutation and proxy-preview failures.
+- `apps/control/src/release-sandbox-layout.ts` now defines a workspace-local sandbox layout that simulates a release-shaped filesystem tree without touching `/opt/simplehostman/release`.
+- `apps/control/src/release-sandbox-pack.ts`, `release-sandbox-pack-cli.ts`, `release-sandbox-entrypoint.ts`, `release-sandbox-runner.ts`, and `release-sandbox-start-cli.ts` now materialize and boot the combined candidate from that sandbox using copied artifacts plus workspace `node_modules` links.
+- `apps/control/src/release-sandbox-smoke.test.ts` and `release-sandbox-parity.test.ts` now validate both HTTP behavior and parity between the direct combined candidate and the sandbox-started candidate.
 - `apps/control/src/request-context.test.ts` now locks the per-request caching behavior for session resolution, authenticated dashboard bootstrap, and health snapshot reuse.
 - the combined request handler now routes over `PanelApiSurface` and `PanelWebSurface` directly instead of wiring raw request listeners by hand.
 - `apps/control/src/router.test.ts` now locks parity for key split-vs-combined routes such as `/`, `/login`, `/v1/auth/me`, and `/v1/resources/spec`.
@@ -151,6 +163,10 @@ Before `combined` can move beyond source-only validation, all of these still nee
 - `pnpm test:release-candidate` passes for both successful and degraded release-like candidate scenarios
 - `pnpm release-candidate` prints a passing startup manifest plus release-like smoke report for the current candidate
 - `pnpm check:release-candidate` stays green from `apps/control`
+- `pnpm test:release-sandbox` passes for the workspace-local release-sandbox smoke and parity scenarios
+- `pnpm pack:release-sandbox` materializes a release-shaped sandbox bundle without touching `/opt/simplehostman/release`
+- `pnpm start:release-sandbox` boots the sandboxed candidate successfully from copied artifacts and linked dependencies
+- `pnpm check:release-sandbox` stays green from `apps/control`
 - `pnpm check:candidate` stays green from `apps/control`
-- source-level `release-candidate` is now the highest promoted state of `combined`
+- source-level `release-sandbox` is now the highest promoted state of `combined`
 - split mode remains the documented and packaged runtime default under `scripts/` and `packaging/`

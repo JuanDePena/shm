@@ -31,12 +31,20 @@ Current role:
 - expose a source-level release-candidate surface in `release-candidate-surface.ts`
 - expose a release-like smoke runner in `release-candidate-runner.ts`
 - expose a CLI entrypoint for the release-candidate runner in `release-candidate-cli.ts`
+- expose a workspace-local release-sandbox layout in `release-sandbox-layout.ts`
+- expose a release-sandbox packer in `release-sandbox-pack.ts`
+- expose a CLI entrypoint for packing the release-sandbox in `release-sandbox-pack-cli.ts`
+- expose a runtime entrypoint used inside the sandbox in `release-sandbox-entrypoint.ts`
+- expose a release-sandbox runner in `release-sandbox-runner.ts`
+- expose a CLI entrypoint for starting the release-sandbox in `release-sandbox-start-cli.ts`
 - define the candidate runtime shape in `runtime-contract.ts`
 - keep an end-to-endish smoke test in `combined-smoke.test.ts` that compares split and combined behavior over the real web surface
 - keep a real HTTP e2e smoke in `combined-server.test.ts` that boots the candidate on an ephemeral port
 - keep a runtime parity test in `runtime-parity.test.ts` for representative protected routes over split and combined candidate servers
 - keep a preflight runner test in `preflight-runner.test.ts` for both passing and degraded candidate scenarios
 - keep a release-candidate runner test in `release-candidate-runner.test.ts` for passing and degraded release-like scenarios
+- keep a release-sandbox smoke test in `release-sandbox-smoke.test.ts` for the packed sandbox runtime
+- keep a release-sandbox parity test in `release-sandbox-parity.test.ts` to compare direct and sandbox-started combined candidates
 - keep focused request-context coverage in `request-context.test.ts` so per-request cache semantics stay pinned down during convergence
 
 The current checkpoint now distinguishes:
@@ -44,8 +52,9 @@ The current checkpoint now distinguishes:
 - candidate source validation (`combined-smoke`, `runtime-parity`, `combined:e2e`)
 - source-level preflight (`preflight-cli`, `preflight-runner`)
 - source-level release-candidate (`release-candidate-cli`, `release-candidate-runner`)
+- source-level release-sandbox (`release-sandbox-layout`, `release-sandbox-pack`, `release-sandbox-runner`)
 
-That still stops short of any packaging or release promotion.
+That still stops short of any packaging or release promotion against `/opt/simplehostman/release`.
 - concentrate semantic auth, dashboard bootstrap, and runtime health in `bootstrap-surface.ts` so the combined candidate depends on higher-level surfaces instead of raw request wiring
 - provide a safe source-level checkpoint before the runtime model is actually unified
 

@@ -62,3 +62,23 @@ export function createCombinedControlStartupManifest(
     }
   };
 }
+
+export function formatCombinedControlStartupManifest(
+  manifest: CombinedControlStartupManifest
+): string {
+  return [
+    "Combined control startup manifest",
+    `Service: ${manifest.service}`,
+    `Mode: ${manifest.mode}`,
+    `Origin: ${manifest.origin}`,
+    `Listener: ${manifest.listener.host}:${manifest.listener.port}`,
+    `Environment: ${manifest.environment}`,
+    `Version: ${manifest.version}`,
+    `Inventory: ${manifest.inventoryImportPath}`,
+    `Session TTL: ${manifest.sessionTtlSeconds}s`,
+    `Release root: ${manifest.releaseRoot}`,
+    `Config source: ${manifest.configSource}`,
+    `Surfaces: ${manifest.surfaces.join(", ")}`,
+    `Secrets: databaseUrlConfigured=${manifest.secrets.databaseUrlConfigured}, jobPayloadSecretConfigured=${manifest.secrets.jobPayloadSecretConfigured}, bootstrapEnrollmentTokenConfigured=${manifest.secrets.bootstrapEnrollmentTokenConfigured}, bootstrapAdminConfigured=${manifest.secrets.bootstrapAdminConfigured}`
+  ].join("\n");
+}
