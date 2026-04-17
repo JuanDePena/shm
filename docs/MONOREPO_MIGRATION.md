@@ -76,6 +76,7 @@ Current checkpoint on 2026-04-14:
 - `apps/control/src/release-sandbox-deployment.ts`, `release-sandbox-promotion-ready.ts`, and `release-sandbox-promotion-ready.test.ts` now model deploy/rollback manifests plus a promotion-ready report for the promoted sandbox candidate
 - `apps/control/src/release-shadow-layout.ts`, `release-shadow-manifest.ts`, `release-shadow-pack.ts`, `release-shadow-runner.ts`, `release-shadow-smoke.test.ts`, and `release-shadow-parity.test.ts` now model a workspace-local shadow of `/opt/simplehostman/release` without touching the real release root
 - `apps/control/src/release-shadow-activation.ts`, `release-shadow-promotion.ts`, `release-shadow-deployment.ts`, `release-shadow-inspect-cli.ts`, `release-shadow-promotion-ready.ts`, and `release-shadow-promotion-ready.test.ts` now give that shadow its own inventory, activation/promote state, deploy/rollback manifests, inspection output, and promotion-ready report
+- `apps/control/src/release-rehearsal.ts`, `release-rehearsal-cli.ts`, and `release-rehearsal.test.ts` now validate that a promoted release-shadow remains aligned with the release-sandbox it came from, covering both persisted metadata and representative HTTP behavior
 - the sandbox now models `releases/<version>`, `current` as a symlink, `shared/meta`, promotion history, and `shared/{tmp,logs,run}` inside `.tmp/control-release-sandbox`, making it a closer rehearsal for a future real release layout
 - the sandbox now also materializes `deploy.json`, `deploy-summary.txt`, `rollback.json`, and `rollback-summary.txt` inside `shared/meta`
 - `pnpm test:control:candidate` now acts as the shortest canonical test command for the combined candidate before any runtime promotion work
@@ -86,11 +87,13 @@ Current checkpoint on 2026-04-14:
 - `pnpm check:control:release-sandbox` now acts as the canonical source-level release-sandbox check for the combined candidate
 - `pnpm check:control:promotion-ready` now acts as the canonical source-level promotion-ready check for the promoted sandbox candidate
 - `pnpm check:control:release-shadow` now acts as the canonical source-level release-root-shadow check for the combined candidate
+- `pnpm check:control:release-rehearsal` now acts as the canonical source-level rehearsal check between the release-sandbox candidate and the promoted release-shadow
 - `pnpm activate:control:release-sandbox -- <version> [sandboxId]` now acts as the canonical source-level release switching command inside the sandbox
 - `pnpm promote:control:release-sandbox -- <version> [sandboxId]` now acts as the canonical source-level release promotion command inside the sandbox
 - `pnpm inspect:control:release-sandbox -- [sandboxId]` now acts as the canonical source-level inspection command for sandbox inventory and active release state
 - `pnpm inspect:control:release-shadow -- [sandboxId]` now acts as the canonical source-level inspection command for shadow inventory and active release state
 - `pnpm promotion-ready:control:release-shadow` now acts as the canonical source-level promotion-ready report for the release-root shadow
+- `pnpm rehearse:control:release-shadow -- [sandboxId] [version]` now acts as the canonical source-level rehearsal command between the sandboxed candidate and its promoted release-root shadow
 - `pnpm audit:legacy-roots` now guards against reintroducing functional references to legacy repo roots or retired package names outside docs/build output
 - clean-room validation passed from the unified tree: `pnpm install --frozen-lockfile`, `pnpm build:clean-room`, `pnpm typecheck`, `pnpm build:panel-runtime`, `pnpm build:manager-runtime`, `pnpm typecheck:panel-runtime`, `pnpm typecheck:manager-runtime`, and `git diff --check`
 
@@ -119,6 +122,7 @@ Before `apps/control` can attempt any promotion of `combined` beyond source-leve
 - `pnpm check:control:release-sandbox`
 - `pnpm check:control:promotion-ready`
 - `pnpm check:control:release-shadow`
+- `pnpm check:control:release-rehearsal`
 
 And all of the following should still be true:
 
@@ -140,6 +144,7 @@ Promotion language at the current checkpoint:
 - `candidate promotion-ready`: the sandboxed candidate now also emits deploy/rollback manifests plus a human-readable promotion-ready report inside the workspace
 - `candidate release-shadow-ready`: the candidate now also boots from a workspace-local shadow of `/opt/simplehostman/release`
 - `candidate release-shadow-lifecycle-ready`: that shadow now also maintains its own inventory, activation/promote metadata, deploy/rollback manifests, and promotion-ready checks inside the workspace
+- `candidate release-rehearsal-ready`: the promoted release-shadow now also proves it stays aligned with the release-sandbox it came from before any move toward the real release root
 - `release-ready`: still not reached; packaging and deploy flows remain split-first
 
 ## Target layout

@@ -14,7 +14,7 @@ Path:
 
 These scripts now resolve the unified source root under `/opt/simplehostman/src`, even when their operational behavior is still product-specific.
 They should continue treating the split control runtime as the operational default until the combined `apps/control` candidate is promoted beyond source-level validation.
-For now, source validation of the candidate combined mode should happen through workspace commands such as `pnpm start:control:combined:dev`, `pnpm dev:control:combined`, `pnpm test:control:parity`, `pnpm test:control:runtime-parity`, `pnpm test:control:combined-smoke`, `pnpm test:control:combined:e2e`, `pnpm check:control:preflight`, `pnpm check:control:release-candidate`, `pnpm check:control:bundle-parity`, `pnpm check:control:promotion-ready`, `pnpm check:control:release-sandbox`, `pnpm check:control:release-shadow`, `pnpm activate:control:release-sandbox -- <version> [sandboxId]`, `pnpm promote:control:release-sandbox -- <version> [sandboxId]`, `pnpm promotion-ready:control:release-sandbox`, `pnpm promotion-ready:control:release-shadow`, `pnpm inspect:control:release-shadow -- [sandboxId]`, `pnpm pack:control:release-shadow`, and `pnpm start:control:release-shadow`, not through production deploy scripts.
+For now, source validation of the candidate combined mode should happen through workspace commands such as `pnpm start:control:combined:dev`, `pnpm dev:control:combined`, `pnpm test:control:parity`, `pnpm test:control:runtime-parity`, `pnpm test:control:combined-smoke`, `pnpm test:control:combined:e2e`, `pnpm check:control:preflight`, `pnpm check:control:release-candidate`, `pnpm check:control:bundle-parity`, `pnpm check:control:promotion-ready`, `pnpm check:control:release-sandbox`, `pnpm check:control:release-shadow`, `pnpm check:control:release-rehearsal`, `pnpm activate:control:release-sandbox -- <version> [sandboxId]`, `pnpm promote:control:release-sandbox -- <version> [sandboxId]`, `pnpm promotion-ready:control:release-sandbox`, `pnpm promotion-ready:control:release-shadow`, `pnpm inspect:control:release-shadow -- [sandboxId]`, `pnpm rehearse:control:release-shadow -- [sandboxId] [version]`, `pnpm pack:control:release-shadow`, and `pnpm start:control:release-shadow`, not through production deploy scripts.
 `pnpm check:control:candidate` is now the shortest canonical command for validating the combined candidate boundary from source.
 
 Current language:
@@ -29,6 +29,7 @@ Current language:
 - `combined release-promotion`: source-level release-sandbox candidate with promotion manifests and history, still below deploy/release promotion
 - `combined promotion-ready`: source-level release-sandbox candidate with deploy/rollback manifests plus a human-readable promotion-ready report, still below deploy/release promotion
 - `combined release-shadow`: source-level candidate booted from a workspace-local shadow of `/opt/simplehostman/release`, with its own inventory, activation, deploy/rollback, and promotion-ready checks, still below deploy/release promotion
+- `combined release-rehearsal`: source-level proof that the promoted release-shadow remains aligned with the release-sandbox it came from, still below deploy/release promotion
 
 The current sandbox shape now mirrors a future release layout more closely by using:
 

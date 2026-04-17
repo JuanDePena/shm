@@ -69,6 +69,8 @@ Current role:
 - keep a release-shadow parity test in `release-shadow-parity.test.ts` to compare the shadow release-root candidate against the release-sandbox candidate
 - keep a release-shadow activation test in `release-shadow-activation.test.ts` to lock copied inventory plus version switching inside the shadow
 - keep a release-shadow promotion-ready test in `release-shadow-promotion-ready.test.ts` to lock deploy/rollback manifests and the promotion-ready report inside the shadow
+- expose an end-to-end release rehearsal between the release-sandbox and release-shadow in `release-rehearsal.ts` and `release-rehearsal-cli.ts`
+- keep a release-rehearsal test in `release-rehearsal.test.ts` to lock metadata and representative HTTP parity between the promoted shadow and the sandbox it came from
 - keep focused request-context coverage in `request-context.test.ts` so per-request cache semantics stay pinned down during convergence
 
 The current checkpoint now distinguishes:
@@ -81,6 +83,7 @@ The current checkpoint now distinguishes:
 - source-level release-sandbox promotion-ready (`release-sandbox-deployment`, `release-sandbox-promotion-ready`)
 - source-level release-shadow (`release-shadow-layout`, `release-shadow-pack`, `release-shadow-runner`)
 - source-level release-shadow lifecycle (`release-shadow-activation`, `release-shadow-promotion`, `release-shadow-deployment`)
+- source-level release rehearsal (`release-rehearsal`, `release-rehearsal-cli`, `release-rehearsal.test.ts`)
 
 The current sandbox now simulates a more release-like filesystem shape inside the workspace:
 
