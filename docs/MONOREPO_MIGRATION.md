@@ -136,6 +136,7 @@ Before `apps/control` can attempt any promotion of `combined` beyond source-leve
 - `pnpm check:control:release-root-staging`
 - `pnpm check:control:release-root-promotion`
 - `pnpm check:control:release-root-cutover`
+- `pnpm check:control:release-root-cutover-target`
 - `pnpm promotion-ready:control:release-root-promotion`
 - `pnpm check:control:release-rehearsal`
 
@@ -168,6 +169,7 @@ Promotion language at the current checkpoint:
 - `candidate release-root-cutover-ready`: that emulated live release root can now also produce a plan-only cutover report against the real release root, including rollback-candidate detection from the actual `current` symlink shape, without mutating it
 - `candidate release-root-cutover-target-ready`: that cutover plan can now also be applied into a separate workspace-local emulated actual release root whose runtime still matches `release-root promotion`
 - `candidate release-root-cutover-rollback-ready`: that emulated actual release root now also keeps cutover history and can rehearse rollback back to the previous `current` target when one exists
+- `candidate release-root-cutover-ready-report`: that emulated actual release root now also emits an auditable readiness report covering manifests, cutover history, `current`, `healthz`, and login before any move toward the real release root
 - `candidate release-rehearsal-ready`: the promoted release-shadow now also proves it stays aligned with the release-sandbox it came from before any move toward the real release root
 - `release-ready`: still not reached; packaging and deploy flows remain split-first
 

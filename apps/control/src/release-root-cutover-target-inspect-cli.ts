@@ -70,6 +70,7 @@ for (const filePath of [
   layout.cutoverApplySummaryFile,
   layout.cutoverHistorySummaryFile,
   layout.cutoverRollbackSummaryFile,
+  layout.cutoverReadySummaryFile,
   layout.startupSummaryFile
 ]) {
   try {
