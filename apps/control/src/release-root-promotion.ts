@@ -7,9 +7,16 @@ import {
   type CombinedControlReleaseRootPromotionLayout
 } from "./release-root-promotion-layout.js";
 import {
-  activateCombinedControlReleaseRootPromotionVersion,
   syncCombinedControlReleaseRootPromotionInventory
 } from "./release-root-promotion-activation.js";
+import {
+  promoteCombinedControlReleaseRootPromotionVersion,
+  type CombinedControlReleaseRootPromotionManifest
+} from "./release-root-promotion-promotion.js";
+import type {
+  CombinedControlReleaseRootPromotionDeployManifest,
+  CombinedControlReleaseRootPromotionRollbackManifest
+} from "./release-root-promotion-deployment.js";
 import {
   readCombinedControlReleaseRootStagingApplyManifest,
   type CombinedControlReleaseRootStagingApplyManifest
@@ -118,6 +125,104 @@ function compareFiles(target?: string, source?: string): boolean {
     return false;
   }
   return readFileSync(target, "utf8") === readFileSync(source, "utf8");
+}
+
+function compareStringArrays(left: readonly string[], right: readonly string[]) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function comparePromotionManifestSemantic(args: {
+  targetFile: string;
+  sourceFile: string;
+  layout: CombinedControlReleaseRootPromotionLayout;
+}): boolean {
+  if (!existsSync(args.targetFile) || !existsSync(args.sourceFile)) {
+    return false;
+  }
+  const target = readJsonFile<CombinedControlReleaseRootPromotionManifest>(args.targetFile);
+  const source = readJsonFile<{
+    promotedVersion: string;
+    previousPromotedVersion: string | null;
+    activeVersion: string;
+    origin: string;
+    surfaces: readonly string[];
+    availableVersions: readonly string[];
+  }>(args.sourceFile);
+  return (
+    target.kind === "combined-release-root-promotion" &&
+    target.emulatedReleaseRoot === "/opt/simplehostman/release" &&
+    target.promotedVersion === source.promotedVersion &&
+    target.previousPromotedVersion === source.previousPromotedVersion &&
+    target.activeVersion === source.activeVersion &&
+    target.origin === source.origin &&
+    compareStringArrays(target.surfaces, source.surfaces) &&
+    target.availableVersions.includes(target.promotedVersion) &&
+    target.availableVersions.includes(target.activeVersion) &&
+    target.currentRoot === args.layout.currentRoot &&
+    target.currentEntrypoint === args.layout.currentEntrypoint &&
+    target.applyManifestFile === args.layout.applyManifestFile &&
+    target.startupManifestFile === args.layout.startupManifestFile
+  );
+}
+
+function compareDeployManifestSemantic(args: {
+  targetFile: string;
+  sourceFile: string;
+  layout: CombinedControlReleaseRootPromotionLayout;
+}): boolean {
+  if (!existsSync(args.targetFile) || !existsSync(args.sourceFile)) {
+    return false;
+  }
+  const target = readJsonFile<CombinedControlReleaseRootPromotionDeployManifest>(args.targetFile);
+  const source = readJsonFile<{
+    activeVersion: string;
+    promotedVersion: string;
+    previousVersion: string | null;
+    origin: string;
+    surfaces: readonly string[];
+  }>(args.sourceFile);
+  return (
+    target.kind === "combined-release-root-promotion-deploy" &&
+    target.emulatedReleaseRoot === "/opt/simplehostman/release" &&
+    target.targetService === "control" &&
+    target.activeVersion === source.activeVersion &&
+    target.promotedVersion === source.promotedVersion &&
+    target.previousVersion === source.previousVersion &&
+    target.origin === source.origin &&
+    compareStringArrays(target.surfaces, source.surfaces) &&
+    target.currentRoot === args.layout.currentRoot &&
+    target.currentEntrypoint === args.layout.currentEntrypoint &&
+    target.applyManifestFile === args.layout.applyManifestFile &&
+    target.startupManifestFile === args.layout.startupManifestFile &&
+    target.promotionManifestFile === args.layout.promotionManifestFile
+  );
+}
+
+function compareRollbackManifestSemantic(args: {
+  targetFile: string;
+  sourceFile: string;
+  layout: CombinedControlReleaseRootPromotionLayout;
+}): boolean {
+  if (!existsSync(args.targetFile) || !existsSync(args.sourceFile)) {
+    return false;
+  }
+  const target = readJsonFile<CombinedControlReleaseRootPromotionRollbackManifest>(args.targetFile);
+  const source = readJsonFile<{
+    rollbackVersion: string | null;
+    currentVersion: string;
+    reason: string;
+  }>(args.sourceFile);
+  return (
+    target.kind === "combined-release-root-promotion-rollback" &&
+    target.emulatedReleaseRoot === "/opt/simplehostman/release" &&
+    target.targetService === "control" &&
+    target.rollbackVersion === source.rollbackVersion &&
+    target.currentVersion === source.currentVersion &&
+    target.reason === source.reason &&
+    target.currentRoot === args.layout.currentRoot &&
+    target.currentEntrypoint === args.layout.currentEntrypoint &&
+    target.promotionManifestFile === args.layout.promotionManifestFile
+  );
 }
 
 function readlinkSyncSafe(path: string): string {
@@ -389,7 +494,7 @@ export async function applyCombinedControlReleaseRootPromotion(args: {
     workspaceRoot: planned.layout.workspaceRoot,
     targetId: planned.layout.targetId
   });
-  await activateCombinedControlReleaseRootPromotionVersion({
+  await promoteCombinedControlReleaseRootPromotionVersion({
     workspaceRoot: planned.layout.workspaceRoot,
     targetId: planned.layout.targetId,
     version: planned.layout.version
@@ -526,26 +631,29 @@ export async function diffCombinedControlReleaseRootPromotion(args: {
     ),
     createDiffCheck(
       "promotion-manifest-parity",
-      compareFiles(
-        planned.layout.promotionManifestFile,
-        planned.planManifest.sourcePromotionManifestFile
-      ),
+      comparePromotionManifestSemantic({
+        targetFile: planned.layout.promotionManifestFile,
+        sourceFile: planned.planManifest.sourcePromotionManifestFile,
+        layout: planned.layout
+      }),
       `target=${planned.layout.promotionManifestFile} source=${planned.planManifest.sourcePromotionManifestFile}`
     ),
     createDiffCheck(
       "deploy-manifest-parity",
-      compareFiles(
-        planned.layout.deployManifestFile,
-        planned.planManifest.sourceDeployManifestFile
-      ),
+      compareDeployManifestSemantic({
+        targetFile: planned.layout.deployManifestFile,
+        sourceFile: planned.planManifest.sourceDeployManifestFile,
+        layout: planned.layout
+      }),
       `target=${planned.layout.deployManifestFile} source=${planned.planManifest.sourceDeployManifestFile}`
     ),
     createDiffCheck(
       "rollback-manifest-parity",
-      compareFiles(
-        planned.layout.rollbackManifestFile,
-        planned.planManifest.sourceRollbackManifestFile
-      ),
+      compareRollbackManifestSemantic({
+        targetFile: planned.layout.rollbackManifestFile,
+        sourceFile: planned.planManifest.sourceRollbackManifestFile,
+        layout: planned.layout
+      }),
       `target=${planned.layout.rollbackManifestFile} source=${planned.planManifest.sourceRollbackManifestFile}`
     ),
     createDiffCheck(

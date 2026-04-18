@@ -1,19 +1,21 @@
-import { readFileSync } from "node:fs";
-
 import {
   readCombinedControlReleaseRootPromotionInventory,
   resolveActiveCombinedControlReleaseRootPromotion
 } from "./release-root-promotion-activation.js";
+import {
+  readCombinedControlReleaseRootPromotionDeployManifest,
+  readCombinedControlReleaseRootPromotionRollbackManifest
+} from "./release-root-promotion-deployment.js";
+import { readCombinedControlReleaseRootPromotionManifest } from "./release-root-promotion-promotion.js";
 import { startCombinedControlReleaseRootPromotion } from "./release-root-promotion-runner.js";
-import { applyCombinedControlReleaseRootStaging } from "./release-root-staging.js";
-
-interface PromotionManifestLike {
-  readonly promotedVersion?: string;
-}
-
-interface RollbackManifestLike {
-  readonly rollbackVersion?: string | null;
-}
+import {
+  applyCombinedControlReleaseRootPromotion,
+  readCombinedControlReleaseRootPromotionApplyManifest
+} from "./release-root-promotion.js";
+import {
+  applyCombinedControlReleaseRootStaging,
+  readCombinedControlReleaseRootStagingApplyManifest
+} from "./release-root-staging.js";
 
 export interface CombinedControlReleaseRootPromotionReadyCheck {
   readonly name: string;
@@ -32,14 +34,6 @@ export interface CombinedControlReleaseRootPromotionReadyResult {
 
 function createCheck(name: string, ok: boolean, detail: string) {
   return { name, ok, detail } satisfies CombinedControlReleaseRootPromotionReadyCheck;
-}
-
-function safeReadJson<T>(filePath: string): T | null {
-  try {
-    return JSON.parse(readFileSync(filePath, "utf8")) as T;
-  } catch {
-    return null;
-  }
 }
 
 export function formatCombinedControlReleaseRootPromotionReady(
@@ -66,14 +60,39 @@ export async function runCombinedControlReleaseRootPromotionReady(args: {
   host?: string;
   port?: number;
 } = {}): Promise<CombinedControlReleaseRootPromotionReadyResult> {
-  await applyCombinedControlReleaseRootStaging({
-    workspaceRoot: args.workspaceRoot,
-    sandboxId: args.targetId ? `${args.targetId}-staging` : undefined,
-    version: args.version,
-    host: args.host,
-    port: args.port,
-    clean: false
-  });
+  const existingPromotion =
+    await readCombinedControlReleaseRootPromotionApplyManifest({
+      workspaceRoot: args.workspaceRoot,
+      targetId: args.targetId,
+      version: args.version
+    });
+
+  if (!existingPromotion) {
+    const existingStaging =
+      await readCombinedControlReleaseRootStagingApplyManifest({
+        workspaceRoot: args.workspaceRoot,
+        version: args.version
+      });
+
+    if (!existingStaging) {
+      await applyCombinedControlReleaseRootStaging({
+        workspaceRoot: args.workspaceRoot,
+        sandboxId: args.targetId ? `${args.targetId}-staging` : undefined,
+        version: args.version,
+        host: args.host,
+        port: args.port,
+        clean: false
+      });
+    }
+
+    await applyCombinedControlReleaseRootPromotion({
+      workspaceRoot: args.workspaceRoot,
+      targetId: args.targetId,
+      version: args.version,
+      clean: false
+    });
+  }
+
   const runtime = await startCombinedControlReleaseRootPromotion({
     workspaceRoot: args.workspaceRoot,
     targetId: args.targetId,
@@ -89,15 +108,18 @@ export async function runCombinedControlReleaseRootPromotionReady(args: {
       workspaceRoot: runtime.layout.workspaceRoot,
       targetId: runtime.layout.targetId
     });
-    const promotionManifest = safeReadJson<PromotionManifestLike>(
-      runtime.layout.promotionManifestFile
-    );
-    const deployManifest = safeReadJson<PromotionManifestLike>(
-      runtime.layout.deployManifestFile
-    );
-    const rollbackManifest = safeReadJson<RollbackManifestLike>(
-      runtime.layout.rollbackManifestFile
-    );
+    const promotionManifest = await readCombinedControlReleaseRootPromotionManifest({
+      workspaceRoot: runtime.layout.workspaceRoot,
+      targetId: runtime.layout.targetId
+    });
+    const deployManifest = await readCombinedControlReleaseRootPromotionDeployManifest({
+      workspaceRoot: runtime.layout.workspaceRoot,
+      targetId: runtime.layout.targetId
+    });
+    const rollbackManifest = await readCombinedControlReleaseRootPromotionRollbackManifest({
+      workspaceRoot: runtime.layout.workspaceRoot,
+      targetId: runtime.layout.targetId
+    });
     const health = await fetch(new URL("/healthz", runtime.origin));
     const login = await fetch(new URL("/auth/login", runtime.origin), {
       method: "POST",

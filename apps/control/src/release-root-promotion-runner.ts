@@ -108,6 +108,21 @@ function validateReleaseRootPromotionArtifacts(args: {
       `Release-root promotion activation manifest missing: ${layout.activationManifestFile}`
     );
   }
+  if (!existsSync(layout.promotionManifestFile)) {
+    throw new Error(
+      `Release-root promotion manifest missing: ${layout.promotionManifestFile}`
+    );
+  }
+  if (!existsSync(layout.deployManifestFile)) {
+    throw new Error(
+      `Release-root promotion deploy manifest missing: ${layout.deployManifestFile}`
+    );
+  }
+  if (!existsSync(layout.rollbackManifestFile)) {
+    throw new Error(
+      `Release-root promotion rollback manifest missing: ${layout.rollbackManifestFile}`
+    );
+  }
   if (!existsSync(layout.handoffManifestFile)) {
     throw new Error(
       `Release-root promotion handoff manifest missing: ${layout.handoffManifestFile}`

@@ -7,6 +7,18 @@ import {
   resolveActiveCombinedControlReleaseRootPromotion
 } from "./release-root-promotion-activation.js";
 import {
+  formatCombinedControlReleaseRootPromotionDeployManifest,
+  formatCombinedControlReleaseRootPromotionRollbackManifest,
+  readCombinedControlReleaseRootPromotionDeployManifest,
+  readCombinedControlReleaseRootPromotionRollbackManifest
+} from "./release-root-promotion-deployment.js";
+import {
+  formatCombinedControlReleaseRootPromotionHistory,
+  formatCombinedControlReleaseRootPromotionManifest,
+  readCombinedControlReleaseRootPromotionHistory,
+  readCombinedControlReleaseRootPromotionManifest
+} from "./release-root-promotion-promotion.js";
+import {
   diffCombinedControlReleaseRootPromotion,
   formatCombinedControlReleaseRootPromotionApply,
   formatCombinedControlReleaseRootPromotionDiff,
@@ -17,10 +29,14 @@ import {
 import { createCombinedControlReleaseRootPromotionLayout } from "./release-root-promotion-layout.js";
 
 const layout = createCombinedControlReleaseRootPromotionLayout();
-const [planManifest, applyManifest, inventory] = await Promise.all([
+const [planManifest, applyManifest, inventory, promotionManifest, promotionHistory, deployManifest, rollbackManifest] = await Promise.all([
   readCombinedControlReleaseRootPromotionPlanManifest(),
   readCombinedControlReleaseRootPromotionApplyManifest(),
-  readCombinedControlReleaseRootPromotionInventory()
+  readCombinedControlReleaseRootPromotionInventory(),
+  readCombinedControlReleaseRootPromotionManifest(),
+  readCombinedControlReleaseRootPromotionHistory(),
+  readCombinedControlReleaseRootPromotionDeployManifest(),
+  readCombinedControlReleaseRootPromotionRollbackManifest()
 ]);
 const diffed = await diffCombinedControlReleaseRootPromotion({ persist: true });
 
@@ -52,6 +68,24 @@ try {
   console.log("");
 } catch {
   console.log(`Activation unavailable: ${layout.activationManifestFile}`);
+  console.log("");
+}
+
+if (promotionManifest) {
+  console.log(formatCombinedControlReleaseRootPromotionManifest(promotionManifest));
+  console.log("");
+}
+
+console.log(formatCombinedControlReleaseRootPromotionHistory(promotionHistory));
+console.log("");
+
+if (deployManifest) {
+  console.log(formatCombinedControlReleaseRootPromotionDeployManifest(deployManifest));
+  console.log("");
+}
+
+if (rollbackManifest) {
+  console.log(formatCombinedControlReleaseRootPromotionRollbackManifest(rollbackManifest));
   console.log("");
 }
 

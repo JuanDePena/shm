@@ -40,8 +40,12 @@ export interface CombinedControlReleaseRootPromotionLayout {
   readonly activationManifestFile: string;
   readonly activationSummaryFile: string;
   readonly promotionManifestFile: string;
+  readonly promotionSummaryFile: string;
+  readonly promotionHistoryFile: string;
   readonly deployManifestFile: string;
+  readonly deploySummaryFile: string;
   readonly rollbackManifestFile: string;
+  readonly rollbackSummaryFile: string;
   readonly handoffManifestFile: string;
 }
 
@@ -109,8 +113,12 @@ export function createCombinedControlReleaseRootPromotionLayout(args: {
     activationManifestFile: join(sharedMetaDir, "activation.json"),
     activationSummaryFile: join(sharedMetaDir, "activation-summary.txt"),
     promotionManifestFile: join(sharedMetaDir, "promotion.json"),
+    promotionSummaryFile: join(sharedMetaDir, "promotion-summary.txt"),
+    promotionHistoryFile: join(sharedMetaDir, "promotion-history.json"),
     deployManifestFile: join(sharedMetaDir, "deploy.json"),
+    deploySummaryFile: join(sharedMetaDir, "deploy-summary.txt"),
     rollbackManifestFile: join(sharedMetaDir, "rollback.json"),
+    rollbackSummaryFile: join(sharedMetaDir, "rollback-summary.txt"),
     handoffManifestFile: join(sharedMetaDir, "handoff.json")
   };
 }

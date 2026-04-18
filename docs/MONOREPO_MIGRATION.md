@@ -163,6 +163,7 @@ Promotion language at the current checkpoint:
 - `candidate release-root-staging-ready`: that handoff can now also be materialized under `/opt/simplehostman/release/.staging/control` while keeping the real `current` untouched
 - `candidate release-root-promotion-ready`: that staged bundle can now also be promoted into an emulated live release root sourced from `.staging/control`, still without touching the real `current`
 - `candidate release-root-promotion-lifecycle-ready`: that emulated live release root now also maintains inventory, activation, rollback, and promotion-ready checks sourced from the real staging area
+- `candidate release-root-promotion-cutover-ready`: that emulated live release root now also records promotion history and explicit cutover/rollback semantics before any move toward the real `current`
 - `candidate release-rehearsal-ready`: the promoted release-shadow now also proves it stays aligned with the release-sandbox it came from before any move toward the real release root
 - `release-ready`: still not reached; packaging and deploy flows remain split-first
 
