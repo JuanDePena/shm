@@ -8,9 +8,6 @@ import {
 } from "./release-root-cutover-target.js";
 import { createCombinedControlReleaseRootCutoverTargetLayout } from "./release-root-cutover-target-layout.js";
 import {
-  formatCombinedControlReleaseRootCutoverTargetRollbackManifest
-} from "./release-root-cutover-target-rollback.js";
-import {
   formatCombinedControlReleaseRootCutoverPlan,
   planCombinedControlReleaseRootCutover
 } from "./release-root-cutover.js";
