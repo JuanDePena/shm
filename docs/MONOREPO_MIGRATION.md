@@ -134,6 +134,7 @@ Before `apps/control` can attempt any promotion of `combined` beyond source-leve
 - `pnpm check:control:release-handoff`
 - `pnpm check:control:release-target`
 - `pnpm check:control:release-root-staging`
+- `pnpm check:control:release-root-promotion`
 - `pnpm check:control:release-rehearsal`
 
 And all of the following should still be true:
@@ -159,6 +160,7 @@ Promotion language at the current checkpoint:
 - `candidate release-handoff-ready`: the release-shadow now also emits a dry-run handoff plan that describes how it would be translated into `/opt/simplehostman/release` without touching the real root
 - `candidate release-target-ready`: that handoff can now also be applied into a separate workspace-local emulated release root whose runtime still matches the promoted shadow
 - `candidate release-root-staging-ready`: that handoff can now also be materialized under `/opt/simplehostman/release/.staging/control` while keeping the real `current` untouched
+- `candidate release-root-promotion-ready`: that staged bundle can now also be promoted into an emulated live release root sourced from `.staging/control`, still without touching the real `current`
 - `candidate release-rehearsal-ready`: the promoted release-shadow now also proves it stays aligned with the release-sandbox it came from before any move toward the real release root
 - `release-ready`: still not reached; packaging and deploy flows remain split-first
 
