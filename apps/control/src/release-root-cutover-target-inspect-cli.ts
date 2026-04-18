@@ -1,10 +1,15 @@
 import { readFileSync } from "node:fs";
 
 import {
+  formatCombinedControlReleaseRootCutoverTargetHistory,
   formatCombinedControlReleaseRootCutoverTargetApplyManifest,
-  readCombinedControlReleaseRootCutoverTargetApplyManifest
+  readCombinedControlReleaseRootCutoverTargetApplyManifest,
+  readCombinedControlReleaseRootCutoverTargetHistory
 } from "./release-root-cutover-target.js";
 import { createCombinedControlReleaseRootCutoverTargetLayout } from "./release-root-cutover-target-layout.js";
+import {
+  formatCombinedControlReleaseRootCutoverTargetRollbackManifest
+} from "./release-root-cutover-target-rollback.js";
 import {
   formatCombinedControlReleaseRootCutoverPlan,
   planCombinedControlReleaseRootCutover
@@ -39,6 +44,11 @@ const applyManifest =
     targetId: layout.targetId,
     version: layout.version
   });
+const history = await readCombinedControlReleaseRootCutoverTargetHistory({
+  workspaceRoot: layout.workspaceRoot,
+  targetId: layout.targetId,
+  version: layout.version
+});
 
 console.log("Combined control release-root cutover target inspect");
 console.log(`Target root: ${layout.targetRoot}`);
@@ -53,9 +63,16 @@ if (applyManifest) {
   console.log(formatCombinedControlReleaseRootCutoverTargetApplyManifest(applyManifest));
 }
 
+if (history.records.length > 0) {
+  console.log("");
+  console.log(formatCombinedControlReleaseRootCutoverTargetHistory(history));
+}
+
 for (const filePath of [
   layout.cutoverPlanSummaryFile,
   layout.cutoverApplySummaryFile,
+  layout.cutoverHistorySummaryFile,
+  layout.cutoverRollbackSummaryFile,
   layout.startupSummaryFile
 ]) {
   try {

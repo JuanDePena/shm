@@ -72,6 +72,7 @@ Useful commands:
 - `pnpm test:control:release-root-promotion`
 - `pnpm test:control:release-root-cutover`
 - `pnpm test:control:release-root-cutover-target`
+- `pnpm test:control:release-root-cutover-target:rollback`
 - `pnpm test:control:release-root-promotion:activation`
 - `pnpm test:control:release-root-promotion:promotion`
 - `pnpm test:control:release-root-promotion:ready`

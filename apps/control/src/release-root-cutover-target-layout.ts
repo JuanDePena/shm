@@ -32,6 +32,10 @@ export interface CombinedControlReleaseRootCutoverTargetLayout {
   readonly cutoverPlanSummaryFile: string;
   readonly cutoverApplyManifestFile: string;
   readonly cutoverApplySummaryFile: string;
+  readonly cutoverHistoryFile: string;
+  readonly cutoverHistorySummaryFile: string;
+  readonly cutoverRollbackManifestFile: string;
+  readonly cutoverRollbackSummaryFile: string;
 }
 
 export function createCombinedControlReleaseRootCutoverTargetLayout(args: {
@@ -95,6 +99,10 @@ export function createCombinedControlReleaseRootCutoverTargetLayout(args: {
     cutoverPlanManifestFile: join(sharedMetaDir, "cutover-plan.json"),
     cutoverPlanSummaryFile: join(sharedMetaDir, "cutover-plan-summary.txt"),
     cutoverApplyManifestFile: join(sharedMetaDir, "cutover-apply.json"),
-    cutoverApplySummaryFile: join(sharedMetaDir, "cutover-apply-summary.txt")
+    cutoverApplySummaryFile: join(sharedMetaDir, "cutover-apply-summary.txt"),
+    cutoverHistoryFile: join(sharedMetaDir, "cutover-history.json"),
+    cutoverHistorySummaryFile: join(sharedMetaDir, "cutover-history-summary.txt"),
+    cutoverRollbackManifestFile: join(sharedMetaDir, "cutover-rollback.json"),
+    cutoverRollbackSummaryFile: join(sharedMetaDir, "cutover-rollback-summary.txt")
   };
 }

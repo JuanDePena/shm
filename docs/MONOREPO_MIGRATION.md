@@ -167,6 +167,7 @@ Promotion language at the current checkpoint:
 - `candidate release-root-promotion-cutover-ready`: that emulated live release root now also records promotion history and explicit cutover/rollback semantics before any move toward the real `current`
 - `candidate release-root-cutover-ready`: that emulated live release root can now also produce a plan-only cutover report against the real release root, including rollback-candidate detection from the actual `current` symlink shape, without mutating it
 - `candidate release-root-cutover-target-ready`: that cutover plan can now also be applied into a separate workspace-local emulated actual release root whose runtime still matches `release-root promotion`
+- `candidate release-root-cutover-rollback-ready`: that emulated actual release root now also keeps cutover history and can rehearse rollback back to the previous `current` target when one exists
 - `candidate release-rehearsal-ready`: the promoted release-shadow now also proves it stays aligned with the release-sandbox it came from before any move toward the real release root
 - `release-ready`: still not reached; packaging and deploy flows remain split-first
 

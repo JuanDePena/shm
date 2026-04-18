@@ -34,6 +34,21 @@ export interface CombinedControlReleaseRootCutoverTargetApplyManifest {
   readonly records: readonly CombinedControlReleaseRootCutoverTargetApplyRecord[];
 }
 
+export interface CombinedControlReleaseRootCutoverTargetHistoryRecord {
+  readonly action: "cutover" | "rollback";
+  readonly version: string;
+  readonly previousVersion: string | null;
+  readonly occurredAt: string;
+  readonly currentRoot: string;
+  readonly rollbackCandidateRoot: string | null;
+}
+
+export interface CombinedControlReleaseRootCutoverTargetHistory {
+  readonly kind: "combined-release-root-cutover-target-history";
+  readonly targetId: string;
+  readonly records: readonly CombinedControlReleaseRootCutoverTargetHistoryRecord[];
+}
+
 function readJsonFile<T>(filePath: string): T {
   return JSON.parse(readFileSync(filePath, "utf8")) as T;
 }
@@ -61,6 +76,25 @@ export async function readCombinedControlReleaseRootCutoverTargetApplyManifest(a
   }
 }
 
+export async function readCombinedControlReleaseRootCutoverTargetHistory(args: {
+  workspaceRoot?: string;
+  targetId?: string;
+  version?: string;
+} = {}): Promise<CombinedControlReleaseRootCutoverTargetHistory> {
+  const layout = createCombinedControlReleaseRootCutoverTargetLayout(args);
+  try {
+    return readJsonFile<CombinedControlReleaseRootCutoverTargetHistory>(
+      layout.cutoverHistoryFile
+    );
+  } catch {
+    return {
+      kind: "combined-release-root-cutover-target-history",
+      targetId: layout.targetId,
+      records: []
+    };
+  }
+}
+
 export function formatCombinedControlReleaseRootCutoverTargetApplyManifest(
   manifest: CombinedControlReleaseRootCutoverTargetApplyManifest
 ): string {
@@ -77,6 +111,25 @@ export function formatCombinedControlReleaseRootCutoverTargetApplyManifest(
     "Applied records:",
     ...manifest.records.map((record, index) =>
       `${index + 1}. ${record.kind} ${record.target}${record.source ? ` <= ${record.source}` : ""} :: ${record.detail}`
+    )
+  ].join("\n");
+}
+
+export function formatCombinedControlReleaseRootCutoverTargetHistory(
+  history: CombinedControlReleaseRootCutoverTargetHistory
+): string {
+  return [
+    "Combined control release-root cutover target history",
+    `Target: ${history.targetId}`,
+    ...(
+      history.records.length > 0
+        ? history.records.map(
+            (record, index) =>
+              `${index + 1}. ${record.occurredAt} :: ${record.action} ${record.version} (previous: ${
+                record.previousVersion ?? "none"
+              }, rollback: ${record.rollbackCandidateRoot ?? "none"})`
+          )
+        : ["No cutover history recorded."]
     )
   ].join("\n");
 }
@@ -158,6 +211,26 @@ export async function applyCombinedControlReleaseRootCutoverTarget(args: {
     sourcePlanManifestFile: layout.cutoverPlanManifestFile,
     records
   };
+  const history = await readCombinedControlReleaseRootCutoverTargetHistory({
+    workspaceRoot: layout.workspaceRoot,
+    targetId: layout.targetId,
+    version: layout.version
+  });
+  const nextHistory: CombinedControlReleaseRootCutoverTargetHistory = {
+    kind: "combined-release-root-cutover-target-history",
+    targetId: layout.targetId,
+    records: [
+      ...history.records,
+      {
+        action: "cutover",
+        version: layout.version,
+        previousVersion: planned.planManifest.actualCurrentVersion,
+        occurredAt: applyManifest.generatedAt,
+        currentRoot: layout.currentRoot,
+        rollbackCandidateRoot: planned.planManifest.rollbackCandidateRoot
+      }
+    ]
+  };
 
   await mkdir(layout.sharedMetaDir, { recursive: true });
   await writeFile(
@@ -175,6 +248,14 @@ export async function applyCombinedControlReleaseRootCutoverTarget(args: {
   await writeFile(
     layout.cutoverApplySummaryFile,
     formatCombinedControlReleaseRootCutoverTargetApplyManifest(applyManifest).concat("\n")
+  );
+  await writeFile(
+    layout.cutoverHistoryFile,
+    JSON.stringify(nextHistory, null, 2).concat("\n")
+  );
+  await writeFile(
+    layout.cutoverHistorySummaryFile,
+    formatCombinedControlReleaseRootCutoverTargetHistory(nextHistory).concat("\n")
   );
 
   return {

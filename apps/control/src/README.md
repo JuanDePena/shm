@@ -116,6 +116,7 @@ The current checkpoint now distinguishes:
 - source-level release-root promotion lifecycle (`release-root-promotion-activation`, `release-root-promotion-promotion`, `release-root-promotion-deployment`, `release-root-promotion-ready`)
 - source-level release-root cutover planning (`release-root-cutover-layout`, `release-root-cutover`, `release-root-cutover-ready`)
 - source-level release-root cutover target (`release-root-cutover-target-layout`, `release-root-cutover-target`, `release-root-cutover-target-runner`)
+- source-level release-root cutover rollback rehearsal (`release-root-cutover-target-rollback`)
 - source-level release rehearsal (`release-rehearsal`, `release-rehearsal-cli`, `release-rehearsal.test.ts`)
 
 The current sandbox now simulates a more release-like filesystem shape inside the workspace:
