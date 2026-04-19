@@ -1,6 +1,6 @@
 {
   "name": "@simplehost/manager-contracts",
-  "version": "2604.19.04",
+  "version": "2604.19.05",
   "private": true,
   "type": "module",
   "main": "dist/index.js",

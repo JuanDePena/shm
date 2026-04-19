@@ -141,9 +141,24 @@ function assertSafeDnsLabel(value: string, label: string): void {
     return;
   }
 
-  if (!/^[A-Za-z0-9*]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(value)) {
+  if (!/^[A-Za-z0-9_*]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?$/.test(value)) {
     throw new Error(`${label} ${value} is not a safe DNS label.`);
   }
+}
+
+function normalizeServiceUnitName(value: string): {
+  baseName: string;
+  unitName: string;
+  quadletFileName: string;
+} {
+  const baseName = value.endsWith(".service") ? value.slice(0, -".service".length) : value;
+  assertSafeServiceName(baseName, "Container service");
+
+  return {
+    baseName,
+    unitName: `${baseName}.service`,
+    quadletFileName: `${baseName}.container`
+  };
 }
 
 function assertSafeServiceName(value: string, label: string): void {
@@ -845,7 +860,7 @@ function validateDnsPayload(payload: DnsSyncPayload): void {
 }
 
 function validateContainerPayload(payload: ContainerReconcilePayload): void {
-  assertSafeServiceName(payload.serviceName, "Container service");
+  normalizeServiceUnitName(payload.serviceName);
   assertSafeContainerName(payload.containerName, "Container");
   assertSingleLineValue(payload.image, "Container image");
 
@@ -1269,10 +1284,11 @@ async function executeContainerReconcileJob(
   try {
     validateContainerPayload(payload);
 
-    const serviceFileName = `${payload.serviceName}.container`;
-    const serviceUnitName = `${payload.serviceName}.service`;
+    const serviceName = normalizeServiceUnitName(payload.serviceName);
+    const serviceFileName = serviceName.quadletFileName;
+    const serviceUnitName = serviceName.unitName;
     const envFileName = payload.environment
-      ? payload.envFileName ?? `${payload.serviceName}.env`
+      ? payload.envFileName ?? `${serviceName.baseName}.env`
       : undefined;
     const stagedUnitPath = await writeRenderedFile(
       context.services.containers.stagingDir,
@@ -1669,14 +1685,37 @@ async function executePostgresReconcileJob(
     });
 
     try {
-      await targetDatabasePool.query(
-        `REVOKE ALL ON SCHEMA public FROM PUBLIC`
+      const publicSchemaState = await targetDatabasePool.query<{
+        owner: string;
+        role_has_usage: boolean;
+        role_has_create: boolean;
+      }>(
+        `SELECT
+           pg_catalog.pg_get_userbyid(n.nspowner) AS owner,
+           has_schema_privilege($1, n.oid, 'USAGE') AS role_has_usage,
+           has_schema_privilege($1, n.oid, 'CREATE') AS role_has_create
+         FROM pg_namespace n
+         WHERE n.nspname = 'public'`,
+        [payload.roleName]
       );
-      await targetDatabasePool.query(
-        `GRANT USAGE, CREATE ON SCHEMA public TO ${quotePostgresIdentifier(
-          payload.roleName
-        )}`
-      );
+
+      const publicSchema = publicSchemaState.rows[0];
+
+      if (!publicSchema) {
+        throw new Error(`Schema public does not exist in ${payload.databaseName}.`);
+      }
+
+      if (
+        publicSchema.owner !== payload.roleName &&
+        (!publicSchema.role_has_usage || !publicSchema.role_has_create)
+      ) {
+        await targetDatabasePool.query(`REVOKE ALL ON SCHEMA public FROM PUBLIC`);
+        await targetDatabasePool.query(
+          `GRANT USAGE, CREATE ON SCHEMA public TO ${quotePostgresIdentifier(
+            payload.roleName
+          )}`
+        );
+      }
     } finally {
       await targetDatabasePool.end();
     }
