@@ -6,15 +6,15 @@ Requires=postgresql@shp.service
 
 [Service]
 Type=simple
-User=spanel
-Group=spanel
+User=simplehost
+Group=simplehost
 WorkingDirectory=/opt/simplehostman/release/current
-EnvironmentFile=/etc/spanel/control.env
+EnvironmentFile=/etc/simplehost/control.env
 ExecStart=/usr/bin/node /opt/simplehostman/release/current/apps/control/dist/index.js
 Restart=always
 RestartSec=5
-StateDirectory=spanel
-LogsDirectory=spanel
+StateDirectory=simplehost
+LogsDirectory=simplehost
 
 [Install]
 WantedBy=multi-user.target

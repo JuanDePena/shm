@@ -129,7 +129,7 @@ export function createPanelRuntimeConfig(
     inventory: {
       importPath: readString(
         env.SHP_INVENTORY_PATH,
-        "/etc/spanel/inventory.apps.yaml"
+        "/etc/simplehost/inventory.apps.yaml"
       )
     },
     jobs: {

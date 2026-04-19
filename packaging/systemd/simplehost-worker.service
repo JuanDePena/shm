@@ -1,20 +1,20 @@
 [Unit]
-Description=SimpleHost Panel Worker
+Description=SimpleHost Worker
 After=network-online.target postgresql@shp.service
 Wants=network-online.target
 Requires=postgresql@shp.service
 
 [Service]
 Type=simple
-User=spanel
-Group=spanel
+User=simplehost
+Group=simplehost
 WorkingDirectory=/opt/simplehostman/release/current
-EnvironmentFile=/etc/spanel/worker.env
+EnvironmentFile=/etc/simplehost/worker.env
 ExecStart=/usr/bin/node /opt/simplehostman/release/current/apps/worker/dist/index.js
 Restart=always
 RestartSec=5
-StateDirectory=spanel
-LogsDirectory=spanel
+StateDirectory=simplehost
+LogsDirectory=simplehost
 
 [Install]
 WantedBy=multi-user.target

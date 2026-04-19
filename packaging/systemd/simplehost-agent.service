@@ -1,5 +1,5 @@
 [Unit]
-Description=SimpleHost Manager Agent
+Description=SimpleHost Agent
 After=network-online.target
 Wants=network-online.target
 
@@ -8,12 +8,12 @@ Type=simple
 User=root
 Group=root
 WorkingDirectory=/opt/simplehostman/release/current
-EnvironmentFile=/etc/shm/agent.env
+EnvironmentFile=/etc/simplehost/agent.env
 ExecStart=/usr/bin/node /opt/simplehostman/release/current/apps/agent/dist/index.js
 Restart=always
 RestartSec=5
-StateDirectory=shm
-LogsDirectory=shm
+StateDirectory=simplehost
+LogsDirectory=simplehost
 
 [Install]
 WantedBy=multi-user.target

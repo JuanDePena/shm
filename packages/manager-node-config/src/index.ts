@@ -110,7 +110,7 @@ export function createShmRuntimeConfig(
   env: NodeJS.ProcessEnv = process.env
 ): ShmRuntimeConfig {
   const hostname = readString(env.SHM_HOSTNAME, os.hostname());
-  const stateDir = readString(env.SHM_STATE_DIR, "/var/lib/shm");
+  const stateDir = readString(env.SHM_STATE_DIR, "/var/lib/simplehost");
   const defaultVersion = readPackageVersion("0000.00.00");
 
   return {
@@ -121,9 +121,9 @@ export function createShmRuntimeConfig(
       "http://127.0.0.1:3100"
     ),
     enrollmentToken: readOptionalString(env.SHM_ENROLLMENT_TOKEN),
-    configPath: readString(env.SHM_CONFIG_PATH, "/etc/shm/config.yaml"),
+    configPath: readString(env.SHM_CONFIG_PATH, "/etc/simplehost/agent.config.yaml"),
     stateDir,
-    logDir: readString(env.SHM_LOG_DIR, "/var/log/shm"),
+    logDir: readString(env.SHM_LOG_DIR, "/var/log/simplehost"),
     heartbeatMs: readPositiveInt(env.SHM_HEARTBEAT_MS, 10000),
     version: readString(env.SHM_VERSION, defaultVersion),
     services: {
