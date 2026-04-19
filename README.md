@@ -1,21 +1,93 @@
-# SimpleHost Unified Source Workspace
+# SimpleHostMan
 
-This repository is the canonical source tree for the SimpleHost platform.
+SimpleHostMan is a self-hosted control plane for operating a small but serious multi-service hosting platform without adopting a heavyweight orchestrator.
+
+It is designed for teams that want:
+
+- clear ownership of infrastructure
+- predictable release and rollback flows
+- a real control plane for DNS, apps, databases, mail, backups, and node operations
+- a simpler operating model than Kubernetes or a traditional shared-hosting stack
+
+## What The Product Is
+
+SimpleHostMan combines three product surfaces into one system:
+
+- `control`: the operator-facing control plane, including UI and API
+- `worker`: asynchronous control-plane execution for background tasks and reconciliations
+- `agent`: the node-local execution layer that applies desired state and reports runtime state
+
+Together, they provide a focused platform for managing:
+
+- DNS
+- reverse proxy and ingress
+- application runtimes
+- PostgreSQL and MariaDB workloads
+- host and container services
+- mail infrastructure
+- backups and operational jobs
+
+## Value Proposition
+
+SimpleHostMan is meant to replace ad hoc server administration with an explicit platform model.
+
+Instead of treating each node as a snowflake, it gives operators:
+
+- a declarative resource catalog for the platform
+- an operator UI for state, actions, diagnostics, and history
+- a node agent that turns desired state into actual runtime changes
+- auditable packaging, release, staging, promotion, cutover, and rollback workflows
+
+The goal is not to become a generic cloud. The goal is to run a known stack well, with high operator clarity and low operational ambiguity.
+
+## Why It Exists
+
+The project exists to fill the gap between:
+
+- manual VPS administration
+- legacy shared-hosting control panels
+- and overbuilt orchestration platforms
+
+SimpleHostMan takes the position that many teams need:
+
+- more structure than shell scripts
+- more control than a black-box panel
+- and less complexity than a full cluster orchestrator
+
+## Product Goals
+
+SimpleHostMan is built around a few explicit goals:
+
+1. Keep infrastructure understandable.
+2. Make runtime changes traceable and reversible.
+3. Separate control-plane logic from node-local execution.
+4. Support a two-node production model with explicit failover boundaries.
+5. Keep packaging, release, promotion, cutover, and rollback first-class.
+6. Treat documentation, platform assets, and release flows as part of the product, not as side notes.
+
+## Current Scope
+
+The platform is intentionally opinionated around the current operating stack:
+
+- PowerDNS Authoritative
+- Apache
+- Podman + Quadlet
+- PostgreSQL
+- MariaDB
+- backups
+- mail-domain and mailbox management
+
+This is a focused product for operating that stack reliably. It is not trying to be a universal hosting panel for every workload model.
+
+## Repository Structure
+
+This repository is the canonical source tree for the product.
 
 Root path:
 
 - `/opt/simplehostman/src`
 
-Canonical workspace versioning now uses the UTC format `YYMM.DD.HH`, for example `2604.19.02`.
-Use:
-
-- `pnpm version:set -- 2604.19.02`
-- `pnpm version:set:now`
-
-The workspace is intentionally split into source migration and runtime migration.
-At this stage, source code, packaging material, scripts, bootstrap inventory, and docs are being unified here first. Runtime and release normalization under `/opt/simplehostman/release` remains a later phase.
-
-## Current top-level layout
+High-level structure:
 
 ```text
 /opt/simplehostman/src
@@ -32,151 +104,77 @@ At this stage, source code, packaging material, scripts, bootstrap inventory, an
   /docs
 ```
 
-## App ownership
+What each area means:
 
-- `apps/control`: control-plane UI and API source, currently with transitional `shared/`, `web/`, `api/`, and a combined entrypoint candidate under `src/`
-- `apps/worker`: background and asynchronous control-plane work
-- `apps/agent`: node-local execution agent
-- `apps/cli`: break-glass and operator CLI
+- `apps/control`: the operator-facing control plane, including UI, API, and the ongoing convergence toward a unified control runtime
+- `apps/worker`: background execution for control-plane jobs, reconciliations, and async workflows
+- `apps/agent`: node-local execution and reporting
+- `apps/cli`: operator and break-glass tooling
+- `packages`: shared contracts, config, persistence, renderers, drivers, UI primitives, and test helpers
+- `platform`: host- and service-level templates and managed artifacts
+- `bootstrap`: bootstrap inventory and seed data
+- `packaging`: release artifacts, RPM-related packaging, env examples, and release layout material
+- `scripts`: install, deploy, rollback, bootstrap, and migration helpers
+- `docs`: architecture, runbooks, migration plans, UI guidance, and operational references
 
-## Package ownership
+## Operating Model
 
-- `packages/panel-*`: contracts, config, UI, testing, and persistence originating from `SHP`
-- `packages/manager-*`: contracts, client, drivers, renderers, node config, and testing originating from `SHM`
+SimpleHostMan treats runtime management as part of the product itself.
 
-These package names are still transitional and will be normalized later if needed. The source of truth is already this workspace.
+That means the repository does not stop at application code. It also owns:
 
-## Build and validation
+- packaging
+- staging
+- promotion
+- cutover planning
+- rollback semantics
+- release-root rehearsal
 
-Useful commands:
+The runtime normalization target is:
 
-- `pnpm install`
-- `pnpm build`
-- `pnpm build:clean-room`
-- `pnpm build:control`
-- `pnpm typecheck`
-- `pnpm typecheck:control`
-- `pnpm audit:legacy-roots`
-- `pnpm test`
-- `pnpm start:control`
-- `pnpm start:control:candidate`
-- `pnpm start:control:combined`
-- `pnpm start:control:combined:dev`
-- `pnpm start:control:combined:smoke`
-- `pnpm dev:control:combined`
-- `pnpm start:control:split`
-- `pnpm start:control:api`
-- `pnpm start:control:web`
-- `pnpm test:control`
-- `pnpm test:control:preflight`
-- `pnpm test:control:release-candidate`
-- `pnpm test:control:promotion-ready`
-- `pnpm test:control:bundle-parity`
-- `pnpm test:control:release-sandbox`
-- `pnpm test:control:release-shadow`
-- `pnpm test:control:release-root-staging`
-- `pnpm test:control:release-root-promotion`
-- `pnpm test:control:release-root-cutover`
-- `pnpm test:control:release-root-cutover:handoff`
-- `pnpm test:control:release-root-cutover:rehearsal`
-- `pnpm test:control:release-root-cutover:parity`
-- `pnpm test:control:release-root-cutover:gate`
-- `pnpm test:control:release-root-cutover-target`
-- `pnpm test:control:release-root-cutover-target:rollback`
-- `pnpm test:control:release-root-cutover-target:ready`
-- `pnpm test:control:release-root-cutover-target:rehearsal`
-- `pnpm test:control:release-root-cutover-target:parity`
-- `pnpm test:control:release-root-cutover-target:handoff`
-- `pnpm test:control:release-root-promotion:activation`
-- `pnpm test:control:release-root-promotion:promotion`
-- `pnpm test:control:release-root-promotion:ready`
-- `pnpm test:control:release-root-cutover`
-- `pnpm test:control:release-target`
-- `pnpm test:control:release-handoff`
-- `pnpm test:control:release-shadow:promotion-ready`
-- `pnpm test:control:release-rehearsal`
-- `pnpm test:control:runtime-parity`
-- `pnpm test:control:combined-smoke`
-- `pnpm test:control:combined:e2e`
-- `pnpm test:control:parity`
-- `pnpm check:control:candidate`
-- `pnpm check:control:preflight`
-- `pnpm check:control:release-candidate`
-- `pnpm check:control:promotion-ready`
-- `pnpm check:control:bundle-parity`
-- `pnpm check:control:release-sandbox`
-- `pnpm check:control:release-shadow`
-- `pnpm check:control:release-root-staging`
-- `pnpm check:control:release-root-promotion`
-- `pnpm check:control:release-root-cutover`
-- `pnpm promote:control:release-root-promotion -- <version> [targetId]`
-- `pnpm promotion-ready:control:release-root-promotion`
-- `pnpm check:control:release-target`
-- `pnpm check:control:release-handoff`
-- `pnpm check:control:release-rehearsal`
-- `pnpm inspect:control:release-shadow -- [sandboxId]`
-- `pnpm promotion-ready:control:release-shadow`
-- `pnpm apply:control:release-target -- [sandboxId] [version]`
-- `pnpm plan:control:release-root-staging -- [workspaceRoot] [version]`
-- `pnpm diff:control:release-root-staging -- [workspaceRoot] [version]`
-- `pnpm apply:control:release-root-staging -- [workspaceRoot] [version]`
-- `pnpm inspect:control:release-root-staging -- [workspaceRoot] [version]`
-- `pnpm start:control:release-root-staging -- [workspaceRoot] [version]`
-- `pnpm plan:control:release-root-promotion -- [workspaceRoot] [targetId] [version]`
-- `pnpm diff:control:release-root-promotion -- [workspaceRoot] [targetId] [version]`
-- `pnpm apply:control:release-root-promotion -- [workspaceRoot] [targetId] [version]`
-- `pnpm inspect:control:release-root-promotion -- [workspaceRoot] [targetId] [version]`
-- `pnpm activate:control:release-root-promotion -- <version> [targetId]`
-- `pnpm promote:control:release-root-promotion -- <version> [targetId]`
-- `pnpm start:control:release-root-promotion -- [workspaceRoot] [targetId] [version]`
-- `pnpm plan:control:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot]`
-- `pnpm inspect:control:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot]`
-- `pnpm cutover-ready:control:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot]`
-- `pnpm handoff:control:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot] [previousVersion]`
-- `pnpm rehearse:control:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot] [previousVersion]`
-- `pnpm parity:control:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot] [previousVersion]`
-- `pnpm gate:control:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot] [previousVersion]`
-- `pnpm cutover-ready:control:release-root-cutover-target -- [workspaceRoot] [targetId] [version]`
-- `pnpm rehearse:control:release-root-cutover-target -- [workspaceRoot] [targetId] [version] [previousVersion]`
-- `pnpm parity:control:release-root-cutover-target -- [workspaceRoot] [targetId] [version] [previousVersion] [actualReleaseRoot]`
-- `pnpm handoff:control:release-root-cutover-target -- [workspaceRoot] [targetId] [version] [previousVersion] [actualReleaseRoot]`
-- `pnpm start:control:release-target`
-- `pnpm handoff:control:release-shadow -- [sandboxId] [version]`
-- `pnpm rehearse:control:release-shadow -- [sandboxId] [version]`
-- `pnpm pack:control:release-sandbox`
-- `pnpm activate:control:release-sandbox -- <version> [sandboxId]`
-- `pnpm promote:control:release-sandbox -- <version> [sandboxId]`
-- `pnpm promotion-ready:control:release-sandbox`
-- `pnpm inspect:control:release-sandbox -- [sandboxId]`
-- `pnpm start:control:release-sandbox`
-- `pnpm pack:control:release-shadow`
-- `pnpm start:control:release-shadow`
-- `pnpm inspect:control:release-shadow -- [sandboxId]`
-- `pnpm start:worker`
-- `pnpm start:agent`
-- `pnpm start:cli`
+- `/opt/simplehostman/release`
 
-## Transitional notes
+This keeps the platform closer to an auditable appliance than to a loose collection of apps and scripts.
 
-- the former `simplehost-panel` and `simplehost-manager` source trees have already been absorbed into `/opt/simplehostman/src`.
-- `/opt/simplehostman/release` is the runtime/release root being normalized in a later phase.
-- do not reintroduce legacy source roots as canonical paths.
+## Versioning
 
-## Key references
+Workspace and release versioning use the UTC format:
 
-- [`/opt/simplehostman/src/docs/AGENTS.md`](/opt/simplehostman/src/docs/AGENTS.md)
-- [`/opt/simplehostman/src/docs/REPO_LAYOUT.md`](/opt/simplehostman/src/docs/REPO_LAYOUT.md)
-- [`/opt/simplehostman/src/docs/MONOREPO_MIGRATION.md`](/opt/simplehostman/src/docs/MONOREPO_MIGRATION.md)
-- [`/opt/simplehostman/src/apps/control/README.md`](/opt/simplehostman/src/apps/control/README.md)
-- [`/opt/simplehostman/src/apps/control/api/README.md`](/opt/simplehostman/src/apps/control/api/README.md)
-- [`/opt/simplehostman/src/apps/control/web/README.md`](/opt/simplehostman/src/apps/control/web/README.md)
-- [`/opt/simplehostman/src/apps/control/shared/README.md`](/opt/simplehostman/src/apps/control/shared/README.md)
-- [`/opt/simplehostman/src/apps/control/src/README.md`](/opt/simplehostman/src/apps/control/src/README.md)
-- [`/opt/simplehostman/src/apps/worker/README.md`](/opt/simplehostman/src/apps/worker/README.md)
-- [`/opt/simplehostman/src/apps/agent/README.md`](/opt/simplehostman/src/apps/agent/README.md)
-- [`/opt/simplehostman/src/apps/cli/README.md`](/opt/simplehostman/src/apps/cli/README.md)
-- [`/opt/simplehostman/src/packages/README.md`](/opt/simplehostman/src/packages/README.md)
-- [`/opt/simplehostman/src/platform/README.md`](/opt/simplehostman/src/platform/README.md)
-- [`/opt/simplehostman/src/bootstrap/README.md`](/opt/simplehostman/src/bootstrap/README.md)
-- [`/opt/simplehostman/src/packaging/README.md`](/opt/simplehostman/src/packaging/README.md)
-- [`/opt/simplehostman/src/scripts/README.md`](/opt/simplehostman/src/scripts/README.md)
+- `YYMM.DD.HH`
+
+Example:
+
+- `2604.19.03`
+
+Helper commands:
+
+- `pnpm version:set -- 2604.19.03`
+- `pnpm version:set:now`
+- `pnpm version:print-now`
+
+## Status
+
+This repository already acts as the single source of truth for the platform.
+
+The major ongoing transition is no longer source unification. It is runtime convergence:
+
+- consolidating the control plane into a cleaner runtime model
+- normalizing the release root
+- and promoting the combined control runtime through staged, rehearsed cutover flows
+
+## For Engineers And Operators
+
+If you need implementation details, architecture, or runbooks, start here:
+
+- [Architecture](/opt/simplehostman/src/docs/ARQUITECTURE.md)
+- [Repo Layout](/opt/simplehostman/src/docs/REPO_LAYOUT.md)
+- [Monorepo Migration](/opt/simplehostman/src/docs/MONOREPO_MIGRATION.md)
+- [Workspace Guide](/opt/simplehostman/src/docs/AGENTS.md)
+
+If you need detailed boundaries for the main product surfaces:
+
+- [Control](/opt/simplehostman/src/apps/control/README.md)
+- [Worker](/opt/simplehostman/src/apps/worker/README.md)
+- [Agent](/opt/simplehostman/src/apps/agent/README.md)
+- [Packages](/opt/simplehostman/src/packages/README.md)
+- [Platform](/opt/simplehostman/src/platform/README.md)
