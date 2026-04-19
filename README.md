@@ -158,9 +158,9 @@ Useful commands:
 
 ## Transitional notes
 
-- `/opt/simplehostman/repos/simplehost-panel` and `/opt/simplehostman/repos/simplehost-manager` remain legacy reference trees during the migration.
+- the former `simplehost-panel` and `simplehost-manager` source trees have already been absorbed into `/opt/simplehostman/src`.
 - `/opt/simplehostman/release` is the runtime/release root being normalized in a later phase.
-- Do not treat legacy repos as the canonical source unless a migration task explicitly requires comparing against them.
+- do not reintroduce legacy source roots as canonical paths.
 
 ## Key references
 

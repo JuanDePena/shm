@@ -6,10 +6,10 @@ Target root: `/opt/simplehostman/src`
 
 ## Purpose
 
-This document defines the phased migration from the current split source trees:
+This document defines the phased migration from the former split source trees plus shared docs:
 
-- `/opt/simplehostman/repos/simplehost-panel`
-- `/opt/simplehostman/repos/simplehost-manager`
+- former `simplehost-panel`
+- former `simplehost-manager`
 - `/opt/simplehostman/src/docs`
 
 into a single unified source workspace rooted at `/opt/simplehostman/src`.
@@ -110,7 +110,6 @@ Current checkpoint on 2026-04-14:
 
 The following areas are still transitional even though `src` is now canonical:
 
-- legacy repos under `/opt/simplehostman/repos/*` are still kept for comparison and migration reference
 - imported product packaging under `src/packaging/{panel,manager}` still carries legacy product boundaries
 - imported release scripts under `src/scripts/{panel,manager}` now build from the unified source tree, but still preserve legacy product-specific release flows that must be normalized later
 - imported service names such as `spanel-*` and `shm-agent` remain transitional until release/runtime convergence
@@ -216,33 +215,33 @@ Expected ownership:
 
 ### Apps
 
-- `repos/simplehost-panel/apps/web` -> `src/apps/control`
-- `repos/simplehost-panel/apps/api` -> `src/apps/control`
-- `repos/simplehost-panel/apps/worker` -> `src/apps/worker`
-- `repos/simplehost-manager/apps/agent` -> `src/apps/agent`
-- `repos/simplehost-manager/apps/cli` -> `src/apps/cli`
+- former `simplehost-panel/apps/web` -> `src/apps/control`
+- former `simplehost-panel/apps/api` -> `src/apps/control`
+- former `simplehost-panel/apps/worker` -> `src/apps/worker`
+- former `simplehost-manager/apps/agent` -> `src/apps/agent`
+- former `simplehost-manager/apps/cli` -> `src/apps/cli`
 
 ### Packages
 
-- `repos/simplehost-panel/packages/*` -> `src/packages/*`
-- `repos/simplehost-manager/packages/*` -> `src/packages/*`
+- former `simplehost-panel/packages/*` -> `src/packages/*`
+- former `simplehost-manager/packages/*` -> `src/packages/*`
 
 ### Platform and bootstrap
 
-- `repos/simplehost-manager/platform` -> `src/platform`
-- `repos/simplehost-panel/bootstrap` -> `src/bootstrap`
+- former `simplehost-manager/platform` -> `src/platform`
+- former `simplehost-panel/bootstrap` -> `src/bootstrap`
 
 ### Packaging and scripts
 
-- `repos/simplehost-panel/packaging` -> `src/packaging/panel` during transition, then normalized under `src/packaging/*`
-- `repos/simplehost-manager/packaging` -> `src/packaging/manager` during transition, then normalized under `src/packaging/*`
-- `repos/simplehost-panel/scripts` -> `src/scripts/panel` during transition, then normalized under `src/scripts/*`
-- `repos/simplehost-manager/scripts` -> `src/scripts/manager` during transition, then normalized under `src/scripts/*`
+- former `simplehost-panel/packaging` -> `src/packaging/panel` during transition, then normalized under `src/packaging/*`
+- former `simplehost-manager/packaging` -> `src/packaging/manager` during transition, then normalized under `src/packaging/*`
+- former `simplehost-panel/scripts` -> `src/scripts/panel` during transition, then normalized under `src/scripts/*`
+- former `simplehost-manager/scripts` -> `src/scripts/manager` during transition, then normalized under `src/scripts/*`
 
 ### Documentation
 
 - `src/docs` remains the canonical shared docs tree
-- `repos/simplehost-panel/docs/MIGRATIONS` has already been absorbed into `src/docs/MIGRATIONS`
+- the former `simplehost-panel/docs/MIGRATIONS` content has already been absorbed into `src/docs/MIGRATIONS`
 - any future app-local docs should stay next to the app only if they describe behavior unique to `apps/control` or `apps/worker`
 
 ## Migration principles
@@ -278,10 +277,10 @@ Unify the trees that are least risky and most structural.
 
 Work:
 - keep `src/docs` as the shared documentation root
-- migrate `repos/simplehost-manager/platform` into `src/platform`
-- migrate `repos/simplehost-panel/bootstrap` into `src/bootstrap`
-- migrate `repos/simplehost-panel/packaging` and `repos/simplehost-manager/packaging` into transition paths under `src/packaging`
-- migrate `repos/simplehost-panel/scripts` and `repos/simplehost-manager/scripts` into transition paths under `src/scripts`
+- migrate former `simplehost-manager/platform` into `src/platform`
+- migrate former `simplehost-panel/bootstrap` into `src/bootstrap`
+- migrate former `simplehost-panel/packaging` and former `simplehost-manager/packaging` into transition paths under `src/packaging`
+- migrate former `simplehost-panel/scripts` and former `simplehost-manager/scripts` into transition paths under `src/scripts`
 
 Acceptance criteria:
 - non-runtime structure is unified under `src`
@@ -333,8 +332,8 @@ Goal:
 Unify `web` and `api` into one source tree before unifying them into one process.
 
 Work:
-- move `repos/simplehost-panel/apps/web` into `src/apps/control`
-- move `repos/simplehost-panel/apps/api` into `src/apps/control`
+- move former `simplehost-panel/apps/web` into `src/apps/control`
+- move former `simplehost-panel/apps/api` into `src/apps/control`
 - keep temporary internal separation such as `src/apps/control/shared/*`, `src/apps/control/web/*`, and `src/apps/control/api/*`
 - share route wiring, auth context, config loading, and contracts where appropriate
 - keep `/v1/*` compatibility intact

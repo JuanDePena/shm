@@ -217,20 +217,11 @@ Contains:
 - shared UI guidance
 - TODO tracking
 
-## Legacy repos
+## Former split roots
 
-Legacy repos still present during migration:
+The former `simplehost-panel` and `simplehost-manager` source trees have already been absorbed into `/opt/simplehostman/src`.
 
-- `/opt/simplehostman/repos/simplehost-panel`
-- `/opt/simplehostman/repos/simplehost-manager`
-
-They are retained for:
-
-- migration comparison
-- history lookup
-- verifying that source content has been imported into `src`
-
-They are not the canonical source tree anymore.
+Historical references may still appear in migration notes, but they are no longer live workspace inputs.
 
 ## Runtime and release direction
 
@@ -253,7 +244,7 @@ Notes:
 
 - Keep canonical source in `/opt/simplehostman/src`.
 - Keep shared docs in `/opt/simplehostman/src/docs`.
-- Use `/opt/simplehostman/repos/*` only as transitional reference material.
+- Do not reintroduce repo-era source roots as active inputs.
 - Do not reintroduce `/opt/simplehostman/spanel` or `/opt/simplehostman/shm` as canonical paths.
 - Keep mutable runtime state outside the source tree.
 - Keep runtime migration separate from source migration.

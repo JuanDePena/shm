@@ -16,18 +16,13 @@ Current canonical paths:
 - bootstrap inventory: `/opt/simplehostman/src/bootstrap/apps.bootstrap.yaml`
 - runtime and release root: `/opt/simplehostman/release`
 
-Legacy source trees still present during migration:
-
-- `/opt/simplehostman/repos/simplehost-panel`
-- `/opt/simplehostman/repos/simplehost-manager`
-
 Do not reintroduce `/home/server`, `/opt/server`, or `/opt/simplehost`.
 
 ## Current source-of-truth rules
 
 - `/opt/simplehostman/src` is the canonical source tree.
 - `/opt/simplehostman/src/docs` is the canonical shared documentation tree.
-- `/opt/simplehostman/repos/*` is transitional legacy source material only.
+- the former split source trees are now historical only and should not be treated as live inputs.
 - runtime and release normalization under `/opt/simplehostman/release` is a later migration phase.
 
 ## Product direction

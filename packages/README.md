@@ -31,5 +31,5 @@ These names remain transitional. The source of truth is already this tree.
 
 - keep shared logic here, not in `apps/*`
 - prefer explicit product-neutral boundaries where possible
-- do not reintroduce dependencies on `/opt/simplehostman/repos/*`
+- do not reintroduce dependencies on legacy source roots or retired repo-era paths
 - keep UI primitives, contracts, persistence, renderers, drivers, config, and testing helpers buildable from this workspace alone
