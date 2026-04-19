@@ -70,7 +70,8 @@ Current role:
 - expose CLI entrypoints for planning, diffing, applying, inspecting, activating, promoting, starting, and promotion-ready checks for that promotion target in `release-root-promotion-plan-cli.ts`, `release-root-promotion-diff-cli.ts`, `release-root-promotion-apply-cli.ts`, `release-root-promotion-inspect-cli.ts`, `release-root-promotion-activate-cli.ts`, `release-root-promotion-promote-cli.ts`, `release-root-promotion-start-cli.ts`, and `release-root-promotion-ready-cli.ts`
 - expose a release-root cutover layout aimed at the real release root, still in plan-only mode, in `release-root-cutover-layout.ts`
 - expose cutover planning and readiness helpers for that real release root in `release-root-cutover.ts` and `release-root-cutover-ready.ts`
-- expose CLI entrypoints for planning, inspecting, and readiness checks for that cutover layer in `release-root-cutover-plan-cli.ts`, `release-root-cutover-inspect-cli.ts`, and `release-root-cutover-ready-cli.ts`
+- expose a cutover handoff runner that consolidates the real cutover plan/ready layer with the emulated target handoff in `release-root-cutover-handoff.ts`
+- expose CLI entrypoints for planning, inspecting, readiness checks, and handoff checks for that cutover layer in `release-root-cutover-plan-cli.ts`, `release-root-cutover-inspect-cli.ts`, `release-root-cutover-ready-cli.ts`, and `release-root-cutover-handoff-cli.ts`
 - expose a cutover-target readiness runner for the emulated actual release root in `release-root-cutover-target-ready.ts`
 - expose a CLI entrypoint for that cutover-target readiness runner in `release-root-cutover-target-ready-cli.ts`
 - expose an end-to-end cutover rehearsal runner for the emulated actual release root in `release-root-cutover-target-rehearsal.ts`
@@ -103,6 +104,7 @@ Current role:
 - keep a release-root promotion cutover test in `release-root-promotion-promotion.test.ts` to lock promotion history plus rollback semantics inside that emulated live root
 - keep a release-root promotion ready test in `release-root-promotion-ready.test.ts` to lock health/login plus manifest readiness inside that emulated live root
 - keep a release-root cutover test in `release-root-cutover.test.ts` to lock plan and readiness checks against a fake actual release root before touching `/opt/simplehostman/release/current`
+- keep a release-root cutover handoff test in `release-root-cutover-handoff.test.ts` to lock the consolidated actual-root cutover handoff artifact before touching `/opt/simplehostman/release/current`
 - keep a release-root cutover target ready test in `release-root-cutover-target-ready.test.ts` to lock manifest, history, `current`, and runtime health/login checks for the emulated actual release root
 - keep a release-root cutover target rehearsal test in `release-root-cutover-target-rehearsal.test.ts` to lock the cutover -> ready -> rollback cycle on the emulated actual release root
 - keep a release-root cutover target parity test in `release-root-cutover-target-parity.test.ts` to lock agreement between the actual cutover plan and the emulated target rehearsal
@@ -127,6 +129,7 @@ The current checkpoint now distinguishes:
 - source-level release-root promotion (`release-root-promotion-layout`, `release-root-promotion`, `release-root-promotion-runner`)
 - source-level release-root promotion lifecycle (`release-root-promotion-activation`, `release-root-promotion-promotion`, `release-root-promotion-deployment`, `release-root-promotion-ready`)
 - source-level release-root cutover planning (`release-root-cutover-layout`, `release-root-cutover`, `release-root-cutover-ready`)
+- source-level release-root cutover handoff (`release-root-cutover-handoff`)
 - source-level release-root cutover target (`release-root-cutover-target-layout`, `release-root-cutover-target`, `release-root-cutover-target-runner`)
 - source-level release-root cutover rollback rehearsal (`release-root-cutover-target-rollback`)
 - source-level release-root cutover target ready (`release-root-cutover-target-ready`)

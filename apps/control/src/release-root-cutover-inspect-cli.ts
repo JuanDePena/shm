@@ -53,6 +53,14 @@ try {
 
 try {
   console.log(readFileSync(layout.readySummaryFile, "utf8").trim());
+  console.log("");
 } catch {
   console.log(`Ready summary unavailable: ${layout.readySummaryFile}`);
+  console.log("");
+}
+
+try {
+  console.log(readFileSync(layout.handoffSummaryFile, "utf8").trim());
+} catch {
+  console.log(`Handoff summary unavailable: ${layout.handoffSummaryFile}`);
 }
