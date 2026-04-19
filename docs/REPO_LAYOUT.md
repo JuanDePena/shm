@@ -6,7 +6,7 @@ Target OS: AlmaLinux 10.1
 
 ## Scope
 
-This document defines the canonical source layout for the unified SimpleHost workspace and the current transition boundaries around legacy repos and runtime material.
+This document defines the canonical source layout for the unified SimpleHost workspace and the current boundaries around source, runtime, and packaging material.
 
 ## Canonical paths
 
@@ -30,9 +30,6 @@ The current canonical top-level layout is:
     /packaging
     /scripts
     /docs
-  /repos
-    /simplehost-panel
-    /simplehost-manager
   /release
     /releases
     /shared
@@ -41,7 +38,6 @@ The current canonical top-level layout is:
 Meaning:
 
 - `src/` is the canonical source workspace
-- `repos/` contains transitional legacy source trees retained for migration reference
 - `release/` is the neutral runtime root reserved for the later runtime/release migration phase
 
 ## Canonical source layout
@@ -70,8 +66,11 @@ Meaning:
   /platform
   /bootstrap
   /packaging
-    /panel
-    /manager
+    /env
+    /systemd
+    /httpd
+    /postgresql
+    /rpm
   /scripts
     /panel
     /manager
@@ -183,12 +182,15 @@ Path:
 
 - `/opt/simplehostman/src/packaging`
 
-Current transitional split:
+Current structure:
 
-- `/opt/simplehostman/src/packaging/panel`
-- `/opt/simplehostman/src/packaging/manager`
+- `/opt/simplehostman/src/packaging/env`
+- `/opt/simplehostman/src/packaging/systemd`
+- `/opt/simplehostman/src/packaging/httpd`
+- `/opt/simplehostman/src/packaging/postgresql`
+- `/opt/simplehostman/src/packaging/rpm`
 
-This split is preserved only to avoid mixing source migration with runtime/release migration.
+Legacy product-facing names such as `spanel-*`, `shm-agent`, `simplehost-panel.spec`, and `simplehost-manager.spec` are still preserved where runtime compatibility depends on them, but the directory layout is now unified by artifact type.
 
 ### `scripts`
 
@@ -219,7 +221,7 @@ Contains:
 
 ## Former split roots
 
-The former `simplehost-panel` and `simplehost-manager` source trees have already been absorbed into `/opt/simplehostman/src`.
+The former `simplehost-panel` and `simplehost-manager` source trees have already been absorbed into `/opt/simplehostman/src` and removed from the live workspace.
 
 Historical references may still appear in migration notes, but they are no longer live workspace inputs.
 

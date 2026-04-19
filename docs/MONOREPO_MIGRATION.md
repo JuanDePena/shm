@@ -30,6 +30,7 @@ Current checkpoint on 2026-04-14:
 - root and app READMEs now live inside `src` and replace the old repo-level README references for architecture work
 - imported release scripts now resolve the unified source root correctly from `src/scripts/*`
 - imported panel and manager service templates now point at `/opt/simplehostman/release/current` and the current app paths under `apps/control`, `apps/worker`, and `apps/agent`
+- packaging is now normalized under shared artifact-type paths such as `src/packaging/env`, `src/packaging/systemd`, `src/packaging/httpd`, `src/packaging/postgresql`, and `src/packaging/rpm`
 - canonical README files now exist for `apps/*`, `packages`, `platform`, `bootstrap`, `packaging`, and `scripts` inside `src`
 - `apps/control/tsconfig.json` now acts as the composite source boundary for the transitional `control-shared`, `control-api`, `control-web`, and combined entrypoint candidate
 - root workspace build slices now exist for `panel-runtime` and `manager-runtime` through `tsconfig.panel.json`, `tsconfig.manager.json`, and matching root scripts
@@ -233,8 +234,8 @@ Expected ownership:
 
 ### Packaging and scripts
 
-- former `simplehost-panel/packaging` -> `src/packaging/panel` during transition, then normalized under `src/packaging/*`
-- former `simplehost-manager/packaging` -> `src/packaging/manager` during transition, then normalized under `src/packaging/*`
+- former `simplehost-panel/packaging` -> shared artifact-type subtrees under `src/packaging/*`
+- former `simplehost-manager/packaging` -> shared artifact-type subtrees under `src/packaging/*`
 - former `simplehost-panel/scripts` -> `src/scripts/panel` during transition, then normalized under `src/scripts/*`
 - former `simplehost-manager/scripts` -> `src/scripts/manager` during transition, then normalized under `src/scripts/*`
 
@@ -279,7 +280,7 @@ Work:
 - keep `src/docs` as the shared documentation root
 - migrate former `simplehost-manager/platform` into `src/platform`
 - migrate former `simplehost-panel/bootstrap` into `src/bootstrap`
-- migrate former `simplehost-panel/packaging` and former `simplehost-manager/packaging` into transition paths under `src/packaging`
+- migrate former `simplehost-panel/packaging` and former `simplehost-manager/packaging` into unified artifact-type subtrees under `src/packaging/*`
 - migrate former `simplehost-panel/scripts` and former `simplehost-manager/scripts` into transition paths under `src/scripts`
 
 Acceptance criteria:
@@ -413,8 +414,9 @@ Control:
 ### Risk: packaging ownership becomes blurry
 
 Control:
-- use transition paths such as `src/packaging/panel` and `src/packaging/manager`
-- normalize only after ownership and runtime shape are stable
+- keep packaging grouped by artifact family under `src/packaging/*`
+- preserve runtime-facing names only where compatibility depends on them
+- normalize layout separately from service and release semantics
 
 ### Risk: documentation diverges from the actual migration state
 

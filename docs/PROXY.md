@@ -20,7 +20,7 @@ Ingress platform:
 ## Status on 2026-03-14
 
 - Apache is currently deployed from AlmaLinux packages and reports `2.4.63` on the live nodes.
-- `SHP` public-web tooling is now owned by [`/opt/simplehostman/src/packaging/panel/httpd`](/opt/simplehostman/src/packaging/panel/httpd) and [`/opt/simplehostman/src/scripts/panel/configure-public-web.sh`](/opt/simplehostman/src/scripts/panel/configure-public-web.sh).
+- `SHP` public-web tooling is now owned by [`/opt/simplehostman/src/packaging/httpd`](/opt/simplehostman/src/packaging/httpd) and [`/opt/simplehostman/src/scripts/panel/configure-public-web.sh`](/opt/simplehostman/src/scripts/panel/configure-public-web.sh).
 - The primary operator hostname `vps-prd.pyrosa.com.do` currently maps:
   - `https://vps-prd.pyrosa.com.do/` to the reserved default document root `/var/www/html`
   - `https://vps-prd.pyrosa.com.do:3200/` to `SHP` web on `127.0.0.1:3200`
@@ -88,9 +88,9 @@ Source-controlled proxy artifacts:
 - [`/opt/simplehostman/src/platform/httpd/conf.d/20-proxy-defaults.conf`](/opt/simplehostman/src/platform/httpd/conf.d/20-proxy-defaults.conf)
 - [`/opt/simplehostman/src/platform/httpd/vhosts/app-vhost.conf.template`](/opt/simplehostman/src/platform/httpd/vhosts/app-vhost.conf.template)
 - [`/opt/simplehostman/src/platform/httpd/vhosts/redirect-vhost.conf.template`](/opt/simplehostman/src/platform/httpd/vhosts/redirect-vhost.conf.template)
-- [`/opt/simplehostman/src/packaging/panel/httpd/spanel-web-http.conf.template`](/opt/simplehostman/src/packaging/panel/httpd/spanel-web-http.conf.template)
-- [`/opt/simplehostman/src/packaging/panel/httpd/spanel-web-https.conf.template`](/opt/simplehostman/src/packaging/panel/httpd/spanel-web-https.conf.template)
-- [`/opt/simplehostman/src/packaging/panel/httpd/spanel-ssl-listen.conf`](/opt/simplehostman/src/packaging/panel/httpd/spanel-ssl-listen.conf)
+- [`/opt/simplehostman/src/packaging/httpd/spanel-web-http.conf.template`](/opt/simplehostman/src/packaging/httpd/spanel-web-http.conf.template)
+- [`/opt/simplehostman/src/packaging/httpd/spanel-web-https.conf.template`](/opt/simplehostman/src/packaging/httpd/spanel-web-https.conf.template)
+- [`/opt/simplehostman/src/packaging/httpd/spanel-ssl-listen.conf`](/opt/simplehostman/src/packaging/httpd/spanel-ssl-listen.conf)
 - [`/opt/simplehostman/src/scripts/panel/configure-public-web.sh`](/opt/simplehostman/src/scripts/panel/configure-public-web.sh)
 
 ## Recommended Apache modules

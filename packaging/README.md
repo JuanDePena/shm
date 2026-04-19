@@ -1,6 +1,6 @@
 # Packaging
 
-This directory contains imported packaging material for the unified source workspace.
+This directory contains packaging material for the unified source workspace.
 
 Path:
 
@@ -12,12 +12,22 @@ Use:
 - `pnpm version:set <YYMM.DD.HH>`
 - `pnpm version:set:now`
 
-## Current transitional split
+## Layout
 
-- `panel/`: packaging imported from the former `SHP` repository
-- `manager/`: packaging imported from the former `SHM` repository
+- `env/`: environment examples for `control`, `worker`, `agent`, and retained legacy unit names
+- `systemd/`: service units for the runtime services shipped from this workspace
+- `httpd/`: Apache-facing control-plane templates
+- `postgresql/`: PostgreSQL support templates that still belong with packaging rather than platform
+- `rpm/`: RPM specs for the shipped release bundles
 
-This split is transitional and exists to avoid mixing source migration with runtime/release convergence.
+The old `panel/` and `manager/` subtree split has been removed.
+Packaging is now organized by artifact type while still preserving the current runtime-facing names where compatibility matters, such as:
+
+- `spanel-*` service units
+- `shm-agent.service`
+- `simplehost-panel.spec`
+- `simplehost-manager.spec`
+
 For now, packaging should keep assuming the deployed control plane remains in split mode even though `apps/control` already has a validated combined candidate in source.
 Source-level combined-mode validation currently lives in workspace scripts and tests only; packaging should not yet promote that candidate to the default runtime.
 That validation now explicitly includes runtime parity checks (`pnpm test:control:runtime-parity`) in addition to handler-level parity and combined-server smoke coverage.
