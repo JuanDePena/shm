@@ -31,6 +31,11 @@ ln -sfn "${release_dir}" "${runtime_root}/current"
 
 install -m 0644 "${repo_root}/packaging/systemd/simplehost-control.service" /etc/systemd/system/simplehost-control.service
 install -m 0644 "${repo_root}/packaging/systemd/simplehost-worker.service" /etc/systemd/system/simplehost-worker.service
+install -d /etc/systemd/system/postgresql@control.service.d /etc/systemd/system/postgresql@apps.service.d
+install -m 0644 "${repo_root}/packaging/systemd/postgresql@control.service.d/30-postgresql-setup.conf" /etc/systemd/system/postgresql@control.service.d/30-postgresql-setup.conf
+install -m 0644 "${repo_root}/packaging/systemd/postgresql@control.service.d/40-pgdg18-binary.conf" /etc/systemd/system/postgresql@control.service.d/40-pgdg18-binary.conf
+install -m 0644 "${repo_root}/packaging/systemd/postgresql@apps.service.d/30-postgresql-setup.conf" /etc/systemd/system/postgresql@apps.service.d/30-postgresql-setup.conf
+install -m 0644 "${repo_root}/packaging/systemd/postgresql@apps.service.d/40-pgdg18-binary.conf" /etc/systemd/system/postgresql@apps.service.d/40-pgdg18-binary.conf
 install -m 0644 "${repo_root}/packaging/env/simplehost-control.env.example" /etc/simplehost/control.env.example
 install -m 0644 "${repo_root}/packaging/env/simplehost-worker.env.example" /etc/simplehost/worker.env.example
 bash "${release_dir}/scripts/control/normalize-api-env.sh" /etc/simplehost/control.env.example

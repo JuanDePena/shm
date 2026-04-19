@@ -15,7 +15,7 @@ Use:
 ## Layout
 
 - `env/`: environment examples for `control`, `worker`, and `agent`
-- `systemd/`: service units for the runtime services shipped from this workspace
+- `systemd/`: service units for the runtime services plus PostgreSQL host-native drop-ins shipped from this workspace
 - `httpd/`: Apache-facing control-plane templates
 - `postgresql/`: PostgreSQL support templates that still belong with packaging rather than platform
 - `rpm/`: RPM specs for the shipped release bundles
@@ -26,6 +26,8 @@ Packaging is now organized by artifact type and aligned to the unified runtime n
 - `simplehost-control.service`
 - `simplehost-worker.service`
 - `simplehost-agent.service`
+- `postgresql@control.service.d/*.conf`
+- `postgresql@apps.service.d/*.conf`
 - `simplehost-control.env.example`
 - `simplehost-worker.env.example`
 - `simplehost-agent.env.example`
@@ -80,3 +82,14 @@ That sandbox now models a more realistic release layout with:
 The current runtime normalization target is:
 
 - `/opt/simplehostman/release`
+
+For host-native PostgreSQL, packaging now also carries the canonical systemd
+drop-ins that were validated during the PostgreSQL `18.3` upgrade:
+
+- `postgresql@control.service.d/30-postgresql-setup.conf`
+- `postgresql@control.service.d/40-pgdg18-binary.conf`
+- `postgresql@apps.service.d/30-postgresql-setup.conf`
+- `postgresql@apps.service.d/40-pgdg18-binary.conf`
+
+That keeps the canonical `PGDATA` paths and the PGDG 18 `ExecStartPre` and
+`ExecStart` wiring in source control instead of only on the hosts.

@@ -18,16 +18,20 @@ For the multi-domain platform, the default isolation unit is one database plus o
 Primary node: `vps-3dbbfb0b.vps.ovh.ca`
 Secondary node: `vps-16535090.vps.ovh.ca`
 
-## Status on 2026-03-14
+## Status on 2026-04-19
 
 - Public operator aliases are `vps-prd.pyrosa.com.do` for the primary and `vps-des.pyrosa.com.do` for the secondary.
-- The currently deployed host-native PostgreSQL runtime on these nodes is `16.13`.
-- The target policy in this runbook still points at PostgreSQL `18.x`; upgrading to that track remains a planned follow-up, not a completed step.
+- The currently deployed host-native PostgreSQL runtime on these nodes is `18.3`.
+- The PostgreSQL major upgrade from `16.13` to `18.3` has already been executed on both nodes, including standby rebuilds for `postgresql@control` and `postgresql@apps`.
 - `postgresql-apps` and `postgresql-control` are already live over WireGuard.
 - `SimpleHost Control` API and workers use `127.0.0.1:5433` locally on the active node.
 - `SimpleHost Agent` already executes real `postgres.reconcile` and `mariadb.reconcile` jobs against the live engines.
 
 ## Version policy
+
+Major-version execution planning now lives in:
+
+- [POSTGRESQL_UPGRADE.md](/opt/simplehostman/src/docs/POSTGRESQL_UPGRADE.md)
 
 ### PostgreSQL
 
@@ -39,8 +43,8 @@ Target version:
 
 Current deployed runtime snapshot:
 
-- host-native PostgreSQL `16.13` is what is currently installed and operating on the two nodes
-- treat `18.x` as the upgrade target policy, not as the already-applied runtime state
+- host-native PostgreSQL `18.3` is what is currently installed and operating on the two nodes
+- the deployed runtime now matches the current PostgreSQL target policy
 
 Source policy:
 
@@ -234,15 +238,18 @@ Primary node bootstrap:
    - `postgresql-new-systemd-unit --unit postgresql@control --datadir /var/lib/pgsql/control/data`
 3. Initialize the cluster:
    - `postgresql-setup --initdb --unit postgresql@control --port 5433`
-4. Install these rendered artifacts into the cluster data directory:
+4. Install the systemd drop-ins for the host-native unit:
+   - [`/opt/simplehostman/src/packaging/systemd/postgresql@control.service.d/30-postgresql-setup.conf`](/opt/simplehostman/src/packaging/systemd/postgresql@control.service.d/30-postgresql-setup.conf)
+   - [`/opt/simplehostman/src/packaging/systemd/postgresql@control.service.d/40-pgdg18-binary.conf`](/opt/simplehostman/src/packaging/systemd/postgresql@control.service.d/40-pgdg18-binary.conf)
+5. Install these rendered artifacts into the cluster data directory:
    - [`/opt/simplehostman/src/packaging/postgresql/control/conf/postgresql.control.primary.conf`](/opt/simplehostman/src/packaging/postgresql/control/conf/postgresql.control.primary.conf) as `postgresql.conf`
    - [`/opt/simplehostman/src/packaging/postgresql/control/conf/pg_hba.control.conf`](/opt/simplehostman/src/packaging/postgresql/control/conf/pg_hba.control.conf) as `pg_hba.conf`
-5. Ensure `5433/tcp` is labeled for PostgreSQL under SELinux:
+6. Ensure `5433/tcp` is labeled for PostgreSQL under SELinux:
    - `semanage port -a -t postgresql_port_t -p tcp 5433`
-6. Reload SELinux policy if needed and start the service:
+7. Reload SELinux policy if needed and start the service:
    - `semodule -B`
    - `systemctl enable --now postgresql@control`
-7. Create the `SimpleHost Control` database and role from [`/opt/simplehostman/src/packaging/postgresql/control/sql/create-control-database.sql.template`](/opt/simplehostman/src/packaging/postgresql/control/sql/create-control-database.sql.template).
+8. Create the `SimpleHost Control` database and role from [`/opt/simplehostman/src/packaging/postgresql/control/sql/create-control-database.sql.template`](/opt/simplehostman/src/packaging/postgresql/control/sql/create-control-database.sql.template).
 
 Secondary node bootstrap:
 
@@ -252,12 +259,15 @@ Secondary node bootstrap:
 2. Create the host-native cluster unit:
    - `postgresql-new-systemd-unit --unit postgresql@control --datadir /var/lib/pgsql/control/data`
 3. Bootstrap the standby data directory from the primary with [`/opt/simplehostman/src/scripts/control/bootstrap-control-standby.sh`](/opt/simplehostman/src/scripts/control/bootstrap-control-standby.sh).
-4. Install these rendered artifacts into the cluster data directory:
+4. Install the systemd drop-ins for the host-native unit:
+   - [`/opt/simplehostman/src/packaging/systemd/postgresql@control.service.d/30-postgresql-setup.conf`](/opt/simplehostman/src/packaging/systemd/postgresql@control.service.d/30-postgresql-setup.conf)
+   - [`/opt/simplehostman/src/packaging/systemd/postgresql@control.service.d/40-pgdg18-binary.conf`](/opt/simplehostman/src/packaging/systemd/postgresql@control.service.d/40-pgdg18-binary.conf)
+5. Install these rendered artifacts into the cluster data directory:
    - [`/opt/simplehostman/src/packaging/postgresql/control/conf/postgresql.control.standby.conf`](/opt/simplehostman/src/packaging/postgresql/control/conf/postgresql.control.standby.conf) as `postgresql.conf`
    - [`/opt/simplehostman/src/packaging/postgresql/control/conf/pg_hba.control.conf`](/opt/simplehostman/src/packaging/postgresql/control/conf/pg_hba.control.conf) as `pg_hba.conf`
-5. Ensure `5433/tcp` is labeled for PostgreSQL under SELinux:
+6. Ensure `5433/tcp` is labeled for PostgreSQL under SELinux:
    - `semanage port -a -t postgresql_port_t -p tcp 5433`
-6. Reload SELinux policy if needed and start the standby service:
+7. Reload SELinux policy if needed and start the standby service:
    - `semodule -B`
    - `systemctl enable --now postgresql@control`
 
@@ -336,10 +346,14 @@ Preferred tooling:
 ## Operational guardrails
 
 - Do not upgrade PostgreSQL and MariaDB on the same maintenance window unless there is a strong reason.
-- Upgrade replicas first where possible.
+- Upgrade replicas first where possible for minor engine maintenance, not for
+  PostgreSQL major-version upgrades that require standby rebuilds.
 - Verify backup freshness before every engine update.
 - Keep database major upgrades separate from operating system upgrades.
 - Keep DNS, proxy, and application maintenance independent from database maintenance wherever possible.
+- For PostgreSQL major upgrades specifically, use the dedicated runbook in
+  [POSTGRESQL_UPGRADE.md](/opt/simplehostman/src/docs/POSTGRESQL_UPGRADE.md),
+  because physical replication does not remain valid across major versions.
 
 ## Validation
 

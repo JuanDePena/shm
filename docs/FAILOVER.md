@@ -3,6 +3,10 @@
 This runbook documents the current manual failover path for `SimpleHost Control` in the
 two-node layout.
 
+It does not apply during a PostgreSQL major-version upgrade window. For that case,
+use [POSTGRESQL_UPGRADE.md](/opt/simplehostman/src/docs/POSTGRESQL_UPGRADE.md),
+because the standby must be rebuilt after the primary major changes.
+
 ## Current runtime model
 
 - Primary host: `vps-3dbbfb0b.vps.ovh.ca`

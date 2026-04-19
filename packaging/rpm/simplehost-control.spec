@@ -25,6 +25,12 @@ cp -a . %{buildroot}/opt/simplehostman/release/releases/%{version}
 mkdir -p %{buildroot}/etc/systemd/system
 cp packaging/systemd/simplehost-control.service %{buildroot}/etc/systemd/system/
 cp packaging/systemd/simplehost-worker.service %{buildroot}/etc/systemd/system/
+mkdir -p %{buildroot}/etc/systemd/system/postgresql@control.service.d
+mkdir -p %{buildroot}/etc/systemd/system/postgresql@apps.service.d
+cp packaging/systemd/postgresql@control.service.d/30-postgresql-setup.conf %{buildroot}/etc/systemd/system/postgresql@control.service.d/
+cp packaging/systemd/postgresql@control.service.d/40-pgdg18-binary.conf %{buildroot}/etc/systemd/system/postgresql@control.service.d/
+cp packaging/systemd/postgresql@apps.service.d/30-postgresql-setup.conf %{buildroot}/etc/systemd/system/postgresql@apps.service.d/
+cp packaging/systemd/postgresql@apps.service.d/40-pgdg18-binary.conf %{buildroot}/etc/systemd/system/postgresql@apps.service.d/
 mkdir -p %{buildroot}/etc/simplehost
 cp packaging/env/simplehost-control.env.example %{buildroot}/etc/simplehost/
 cp packaging/env/simplehost-worker.env.example %{buildroot}/etc/simplehost/
@@ -42,5 +48,9 @@ ln -sfn /opt/simplehostman/release/releases/%{version} /opt/simplehostman/releas
 /opt/simplehostman/release/releases/%{version}
 /etc/systemd/system/simplehost-control.service
 /etc/systemd/system/simplehost-worker.service
+/etc/systemd/system/postgresql@control.service.d/30-postgresql-setup.conf
+/etc/systemd/system/postgresql@control.service.d/40-pgdg18-binary.conf
+/etc/systemd/system/postgresql@apps.service.d/30-postgresql-setup.conf
+/etc/systemd/system/postgresql@apps.service.d/40-pgdg18-binary.conf
 /etc/simplehost/simplehost-control.env.example
 /etc/simplehost/simplehost-worker.env.example
