@@ -40,6 +40,7 @@ Current language:
 - `combined release-root cutover handoff`: source-level consolidated handoff artifact over the actual release-root cutover layer, still not packaging-ready
 - `combined release-root cutover rehearsal`: source-level consolidated rehearsal artifact over the actual release-root cutover layer, still not packaging-ready
 - `combined release-root cutover parity`: source-level consolidated parity artifact over the actual release-root cutover layer, still not packaging-ready
+- `combined release-root cutover gate`: source-level consolidated gate artifact over the actual release-root cutover layer, still not packaging-ready
 - `combined release-root cutover target`: source-level application of that cutover plan into a separate workspace-local emulated actual release root, still not packaging-ready
 - `combined release-root cutover rollback`: source-level rollback rehearsal and cutover history on top of that emulated actual release root, still not packaging-ready
 - `combined release-root cutover ready`: source-level readiness report for that emulated actual release root, still not packaging-ready

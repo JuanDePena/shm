@@ -73,7 +73,8 @@ Current role:
 - expose a cutover handoff runner that consolidates the real cutover plan/ready layer with the emulated target handoff in `release-root-cutover-handoff.ts`
 - expose a cutover rehearsal runner that persists a single actual-root rehearsal artifact over the real cutover plan/ready layer in `release-root-cutover-rehearsal.ts`
 - expose a cutover parity runner that persists a single actual-root parity artifact over the real cutover layer in `release-root-cutover-parity.ts`
-- expose CLI entrypoints for planning, inspecting, readiness checks, handoff checks, rehearsal checks, and parity checks for that cutover layer in `release-root-cutover-plan-cli.ts`, `release-root-cutover-inspect-cli.ts`, `release-root-cutover-ready-cli.ts`, `release-root-cutover-handoff-cli.ts`, `release-root-cutover-rehearsal-cli.ts`, and `release-root-cutover-parity-cli.ts`
+- expose a cutover gate runner that persists a single actual-root gate artifact over the real cutover layer in `release-root-cutover-gate.ts`
+- expose CLI entrypoints for planning, inspecting, readiness checks, handoff checks, rehearsal checks, parity checks, and gate checks for that cutover layer in `release-root-cutover-plan-cli.ts`, `release-root-cutover-inspect-cli.ts`, `release-root-cutover-ready-cli.ts`, `release-root-cutover-handoff-cli.ts`, `release-root-cutover-rehearsal-cli.ts`, `release-root-cutover-parity-cli.ts`, and `release-root-cutover-gate-cli.ts`
 - expose a cutover-target readiness runner for the emulated actual release root in `release-root-cutover-target-ready.ts`
 - expose a CLI entrypoint for that cutover-target readiness runner in `release-root-cutover-target-ready-cli.ts`
 - expose an end-to-end cutover rehearsal runner for the emulated actual release root in `release-root-cutover-target-rehearsal.ts`
@@ -109,6 +110,7 @@ Current role:
 - keep a release-root cutover handoff test in `release-root-cutover-handoff.test.ts` to lock the consolidated actual-root cutover handoff artifact before touching `/opt/simplehostman/release/current`
 - keep a release-root cutover rehearsal test in `release-root-cutover-rehearsal.test.ts` to lock the consolidated actual-root rehearsal artifact before touching `/opt/simplehostman/release/current`
 - keep a release-root cutover parity test in `release-root-cutover-parity.test.ts` to lock the consolidated actual-root parity artifact before touching `/opt/simplehostman/release/current`
+- keep a release-root cutover gate test in `release-root-cutover-gate.test.ts` to lock the consolidated actual-root gate artifact before touching `/opt/simplehostman/release/current`
 - keep a release-root cutover target ready test in `release-root-cutover-target-ready.test.ts` to lock manifest, history, `current`, and runtime health/login checks for the emulated actual release root
 - keep a release-root cutover target rehearsal test in `release-root-cutover-target-rehearsal.test.ts` to lock the cutover -> ready -> rollback cycle on the emulated actual release root
 - keep a release-root cutover target parity test in `release-root-cutover-target-parity.test.ts` to lock agreement between the actual cutover plan and the emulated target rehearsal
@@ -136,6 +138,7 @@ The current checkpoint now distinguishes:
 - source-level release-root cutover handoff (`release-root-cutover-handoff`)
 - source-level release-root cutover rehearsal (`release-root-cutover-rehearsal`)
 - source-level release-root cutover parity (`release-root-cutover-parity`)
+- source-level release-root cutover gate (`release-root-cutover-gate`)
 - source-level release-root cutover target (`release-root-cutover-target-layout`, `release-root-cutover-target`, `release-root-cutover-target-runner`)
 - source-level release-root cutover rollback rehearsal (`release-root-cutover-target-rollback`)
 - source-level release-root cutover target ready (`release-root-cutover-target-ready`)

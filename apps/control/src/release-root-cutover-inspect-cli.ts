@@ -77,6 +77,14 @@ try {
 
 try {
   console.log(readFileSync(layout.paritySummaryFile, "utf8").trim());
+  console.log("");
 } catch {
   console.log(`Parity summary unavailable: ${layout.paritySummaryFile}`);
+  console.log("");
+}
+
+try {
+  console.log(readFileSync(layout.gateSummaryFile, "utf8").trim());
+} catch {
+  console.log(`Gate summary unavailable: ${layout.gateSummaryFile}`);
 }

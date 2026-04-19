@@ -40,6 +40,8 @@ export interface CombinedControlReleaseRootCutoverLayout {
   readonly rehearsalSummaryFile: string;
   readonly parityManifestFile: string;
   readonly paritySummaryFile: string;
+  readonly gateManifestFile: string;
+  readonly gateSummaryFile: string;
 }
 
 export function createCombinedControlReleaseRootCutoverLayout(args: {
@@ -118,6 +120,8 @@ export function createCombinedControlReleaseRootCutoverLayout(args: {
     rehearsalManifestFile: join(sharedMetaDir, "rehearsal.json"),
     rehearsalSummaryFile: join(sharedMetaDir, "rehearsal-summary.txt"),
     parityManifestFile: join(sharedMetaDir, "parity.json"),
-    paritySummaryFile: join(sharedMetaDir, "parity-summary.txt")
+    paritySummaryFile: join(sharedMetaDir, "parity-summary.txt"),
+    gateManifestFile: join(sharedMetaDir, "gate.json"),
+    gateSummaryFile: join(sharedMetaDir, "gate-summary.txt")
   };
 }
