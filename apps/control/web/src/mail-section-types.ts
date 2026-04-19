@@ -16,7 +16,10 @@ export interface MailSectionCopy {
 export interface MailSectionRenderers {
   renderPill: (value: string, tone?: PillTone) => string;
   renderFocusLink: (label: string, href: string, active: boolean, activeLabel: string) => string;
-  renderDetailGrid: (entries: Array<{ label: string; value: string }>) => string;
+  renderDetailGrid: (
+    entries: Array<{ label: string; value: string; className?: string }>,
+    options?: { className?: string }
+  ) => string;
   renderActionForm: (
     action: string,
     hiddenFields: Record<string, string>,
@@ -46,10 +49,21 @@ export interface LocalizedMailCopy {
   quotasTitle: string;
   formsTitle: string;
   formsDescription: string;
+  modalEditorDescription: string;
+  modalDeleteDescription: string;
   selectedDomainTitle: string;
   selectedMailboxTitle: string;
   selectedAliasTitle: string;
   selectedQuotaTitle: string;
+  createLabel: string;
+  editLabel: string;
+  deleteLabel: string;
+  actionsLabel: string;
+  openEditorLabel: string;
+  deleteSelectedLabel: string;
+  selectedRecordLabel: string;
+  noSelectionLabel: string;
+  closeLabel: string;
   domainNameLabel: string;
   mailHostLabel: string;
   webmailHostnameLabel: string;
@@ -69,6 +83,8 @@ export interface LocalizedMailCopy {
   redisLabel: string;
   managedDomainsLabel: string;
   checkedAtLabel: string;
+  primaryRoleLabel: string;
+  secondaryRoleLabel: string;
   primaryNodeLabel: string;
   standbyNodeLabel: string;
   saveDomainLabel: string;

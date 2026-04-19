@@ -16,8 +16,10 @@ export function renderAdminShellStyleBlock(): string {
         display: grid;
         grid-template-columns: minmax(12.8rem, 14.35rem) minmax(0, 1fr);
         gap: 0.66rem;
+        height: 100vh;
         min-height: 100vh;
         padding: 0.66rem;
+        overflow: hidden;
       }
 
       .admin-sidebar {
@@ -219,8 +221,34 @@ export function renderAdminShellStyleBlock(): string {
       .admin-main {
         min-width: 0;
         display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
         gap: 0.7rem;
+        min-height: 0;
+        height: calc(100vh - 1.32rem);
+        overflow: hidden;
+      }
+
+      .page-body-card {
+        min-height: 0;
+        display: grid;
+        overflow: hidden;
+        border: 1px solid rgba(13, 32, 56, 0.08);
+        border-radius: var(--radius-hero);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(246, 249, 253, 0.74)),
+          linear-gradient(135deg, rgba(13, 32, 56, 0.03), rgba(0, 127, 255, 0.035) 60%, rgba(255, 255, 255, 0.08));
+        backdrop-filter: blur(10px);
+      }
+
+      .page-body-scroll {
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: grid;
         align-content: start;
+        gap: 0.7rem;
+        padding: 0.74rem;
+        scrollbar-gutter: stable;
       }
 
       .page-header-actions {
@@ -422,6 +450,9 @@ export function renderAdminShellStyleBlock(): string {
         padding: 0.92rem 1rem;
         border: 1px solid rgba(13, 32, 56, 0.08);
         border-radius: var(--radius-hero);
+        position: sticky;
+        top: 0;
+        z-index: 12;
         background:
           linear-gradient(180deg, rgba(255, 255, 255, 0.985), rgba(245, 248, 252, 0.97)),
           linear-gradient(135deg, rgba(13, 32, 56, 0.04), rgba(0, 127, 255, 0.045) 58%, rgba(255, 255, 255, 0.08));
@@ -485,6 +516,20 @@ export function renderAdminShellStyleBlock(): string {
         display: grid;
         gap: 0.02rem;
         min-width: 0;
+      }
+
+      .section-head-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 0.42rem;
+      }
+
+      .section-head-actions .toolbar,
+      .section-head-actions form,
+      .section-head-actions .inline-form {
+        margin: 0;
       }
 
       .panel > .section-head {
@@ -898,6 +943,8 @@ export function renderAdminShellStyleBlock(): string {
       @media (max-width: 1100px) {
         .admin-shell {
           grid-template-columns: 1fr;
+          height: auto;
+          overflow: visible;
         }
 
         .admin-sidebar {
@@ -909,6 +956,12 @@ export function renderAdminShellStyleBlock(): string {
         .sidebar-body {
           overflow: visible;
           padding-right: 0;
+          scrollbar-gutter: auto;
+        }
+
+        .admin-main {
+          height: auto;
+          overflow: visible;
           scrollbar-gutter: auto;
         }
       }

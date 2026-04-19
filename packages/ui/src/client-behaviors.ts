@@ -246,13 +246,108 @@ export function renderAdminShellClientScript(): string {
           const rows = Array.from(root.querySelectorAll("[data-table-row]"));
           const emptyRow = root.querySelector("[data-table-empty]");
           const tableId = root.getAttribute("data-table-id") ?? "";
+          const restoreSelectionHref =
+            root.getAttribute("data-restore-selection-href") === "true";
           const pageSizeStorageKey = tableId
             ? "simplehost:data-table:" + tableId + ":page-size"
             : "";
+          const selectionStorageKey = tableId
+            ? "simplehost:data-table:" + tableId + ":selected-row"
+            : "";
           let currentPage = 1;
+          let selectedRowKey = "";
+          let restoreSavedSelection = false;
+          let pendingSelectionNavigation = restoreSelectionHref;
 
           if (!(filterInput instanceof HTMLInputElement) || !(pageSizeSelect instanceof HTMLSelectElement) || !(countNode instanceof HTMLElement) || !(body instanceof HTMLTableSectionElement)) {
             return;
+          }
+
+          const getRowSelectionKey = (row, index) => {
+            const explicitKey = row.getAttribute("data-selection-key");
+
+            if (explicitKey) {
+              return explicitKey;
+            }
+
+            const primaryLink = row.querySelector("a[href]");
+
+            if (primaryLink instanceof HTMLAnchorElement) {
+              return primaryLink.getAttribute("href") ?? primaryLink.href;
+            }
+
+            const searchKey = row.getAttribute("data-search");
+
+            if (searchKey) {
+              return searchKey;
+            }
+
+            const rowIndex = row.getAttribute("data-row-index");
+
+            return rowIndex ? "row:" + rowIndex : "row:" + String(index);
+          };
+          const rowSelectionKeyMap = new Map(
+            rows.map((row, index) => [row, getRowSelectionKey(row, index)])
+          );
+          const persistSelectedRowKey = (nextKey) => {
+            if (!selectionStorageKey || !nextKey) {
+              return;
+            }
+
+            try {
+              window.localStorage.setItem(selectionStorageKey, nextKey);
+            } catch (_error) {
+              // Ignore storage failures and keep the current in-memory selection.
+            }
+          };
+          const clearVisibleSelection = () => {
+            rows.forEach((row) => {
+              row.classList.remove("data-table-row-selected");
+            });
+          };
+          const applySelectedRow = (selectedRow) => {
+            rows.forEach((row) => {
+              row.classList.toggle("data-table-row-selected", row === selectedRow);
+            });
+
+            if (!selectedRow) {
+              return;
+            }
+
+            selectedRowKey = rowSelectionKeyMap.get(selectedRow) ?? "";
+
+            if (selectedRowKey) {
+              persistSelectedRowKey(selectedRowKey);
+            }
+          };
+          const findRowBySelectionKey = (selectionKey, targetRows) => {
+            if (!selectionKey) {
+              return null;
+            }
+
+            return (
+              targetRows.find((row) => rowSelectionKeyMap.get(row) === selectionKey) ?? null
+            );
+          };
+
+          const serverSelectedRow =
+            rows.find((row) => row.classList.contains("data-table-row-selected")) ?? null;
+          const serverSelectedRowKey = serverSelectedRow
+            ? rowSelectionKeyMap.get(serverSelectedRow) ?? ""
+            : "";
+
+          if (serverSelectedRow) {
+            selectedRowKey = serverSelectedRowKey;
+          } else if (selectionStorageKey) {
+            try {
+              const savedSelectionKey = window.localStorage.getItem(selectionStorageKey);
+              if (savedSelectionKey) {
+                selectedRowKey = savedSelectionKey;
+                restoreSavedSelection = true;
+              }
+            } catch (_error) {
+              // Ignore storage failures and keep the server-provided selection.
+            }
           }
 
           if (pageSizeStorageKey) {
@@ -278,17 +373,57 @@ export function renderAdminShellClientScript(): string {
             });
             const total = filteredRows.length;
             const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+            if (restoreSavedSelection && selectedRowKey) {
+              const restoredIndex = filteredRows.findIndex(
+                (row) => rowSelectionKeyMap.get(row) === selectedRowKey
+              );
+
+              if (restoredIndex >= 0) {
+                currentPage = Math.floor(restoredIndex / pageSize) + 1;
+              }
+
+              restoreSavedSelection = false;
+            }
+
             currentPage = Math.min(currentPage, pageCount);
             const startIndex = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
             const endIndex = Math.min(currentPage * pageSize, total);
+            const visibleRows = filteredRows.slice(startIndex > 0 ? startIndex - 1 : 0, endIndex);
 
             rows.forEach((row) => {
               row.hidden = true;
             });
 
-            filteredRows.slice(startIndex > 0 ? startIndex - 1 : 0, endIndex).forEach((row) => {
+            visibleRows.forEach((row) => {
               row.hidden = false;
             });
+
+            if (visibleRows.length === 0) {
+              clearVisibleSelection();
+            } else {
+              const nextSelectedRow =
+                findRowBySelectionKey(selectedRowKey, visibleRows) ?? visibleRows[0] ?? null;
+
+              applySelectedRow(nextSelectedRow);
+
+              if (pendingSelectionNavigation) {
+                pendingSelectionNavigation = false;
+
+                if (nextSelectedRow) {
+                  const nextSelectedRowKey = rowSelectionKeyMap.get(nextSelectedRow) ?? "";
+
+                  if (nextSelectedRowKey && nextSelectedRowKey !== serverSelectedRowKey) {
+                    const primaryLink = nextSelectedRow.querySelector("a[href]");
+
+                    if (primaryLink instanceof HTMLAnchorElement) {
+                      window.location.replace(primaryLink.href);
+                      return;
+                    }
+                  }
+                }
+              }
+            }
 
             if (emptyRow instanceof HTMLElement) {
               emptyRow.hidden = total !== 0;
@@ -374,12 +509,47 @@ export function renderAdminShellClientScript(): string {
           }
 
           const primaryLink = row.querySelector("a[href]");
+          const selectRow = () => {
+            const tableRoot = row.closest("[data-data-table]");
 
-          if (!(primaryLink instanceof HTMLAnchorElement)) {
-            return;
+            if (!(tableRoot instanceof HTMLElement)) {
+              row.classList.add("data-table-row-selected");
+              return;
+            }
+
+            tableRoot.querySelectorAll("[data-table-row]").forEach((tableRow) => {
+              tableRow.classList.toggle("data-table-row-selected", tableRow === row);
+            });
+
+            const tableId = tableRoot.getAttribute("data-table-id") ?? "";
+            const selectionStorageKey = tableId
+              ? "simplehost:data-table:" + tableId + ":selected-row"
+              : "";
+            const selectionKey =
+              row.getAttribute("data-selection-key") ||
+              (primaryLink instanceof HTMLAnchorElement
+                ? primaryLink.getAttribute("href") ?? primaryLink.href
+                : row.getAttribute("data-search") ??
+                  row.getAttribute("data-row-index") ??
+                  "");
+
+            if (!selectionStorageKey || !selectionKey) {
+              return;
+            }
+
+            try {
+              window.localStorage.setItem(selectionStorageKey, selectionKey);
+            } catch (_error) {
+              // Ignore storage failures and still keep the in-memory highlight.
+            }
+          };
+
+          if (primaryLink instanceof HTMLAnchorElement) {
+            row.classList.add("is-clickable");
+            primaryLink.addEventListener("click", () => {
+              selectRow();
+            });
           }
-
-          row.classList.add("is-clickable");
 
           row.addEventListener("click", (event) => {
             const target = event.target;
@@ -393,6 +563,12 @@ export function renderAdminShellClientScript(): string {
                 "a, button, input, select, textarea, label, summary, [role='button'], [role='link']"
               )
             ) {
+              return;
+            }
+
+            selectRow();
+
+            if (!(primaryLink instanceof HTMLAnchorElement)) {
               return;
             }
 
@@ -936,6 +1112,49 @@ export function renderAdminShellClientScript(): string {
               window.requestAnimationFrame(() => {
                 recordsInput.focus();
                 recordsInput.setSelectionRange(recordsInput.value.length, recordsInput.value.length);
+              });
+            }
+          });
+        });
+
+        document.querySelectorAll("[data-overlay-modal]").forEach((modal) => {
+          if (!(modal instanceof HTMLElement)) {
+            return;
+          }
+
+          modal.querySelectorAll("[data-overlay-close]").forEach((button) => {
+            button.addEventListener("click", (event) => {
+              event.preventDefault();
+              closeOverlayModal(modal);
+            });
+          });
+        });
+
+        document.querySelectorAll("[data-overlay-trigger]").forEach((button) => {
+          if (!(button instanceof HTMLElement)) {
+            return;
+          }
+
+          button.addEventListener("click", (event) => {
+            const modalId = button.getAttribute("data-modal-id");
+            const modal = modalId ? document.getElementById(modalId) : null;
+
+            if (!(modal instanceof HTMLElement)) {
+              return;
+            }
+
+            event.preventDefault();
+            openOverlayModal(modal);
+
+            const autofocusTarget = modal.querySelector("[data-overlay-autofocus]");
+            if (
+              autofocusTarget instanceof HTMLInputElement ||
+              autofocusTarget instanceof HTMLTextAreaElement ||
+              autofocusTarget instanceof HTMLSelectElement ||
+              autofocusTarget instanceof HTMLButtonElement
+            ) {
+              window.requestAnimationFrame(() => {
+                autofocusTarget.focus();
               });
             }
           });

@@ -390,6 +390,15 @@ export function renderBaseStyleBlock(): string {
         width: min(56rem, calc(100vw - 2rem));
       }
 
+      .overlay-form-modal-dialog {
+        width: min(46rem, calc(100vw - 2rem));
+      }
+
+      .overlay-form-modal-panel {
+        max-height: calc(100vh - 2rem);
+        overflow: auto;
+      }
+
       .zone-records-modal-editor {
         min-height: 18rem;
       }
@@ -724,6 +733,10 @@ export function renderBaseStyleBlock(): string {
         grid-template-columns: repeat(4, minmax(0, 1fr));
       }
 
+      .detail-grid-three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
       .detail-grid-compact {
         gap: 0.4rem;
       }
@@ -883,6 +896,34 @@ export function renderBaseStyleBlock(): string {
         border: 1px solid rgba(13, 32, 56, 0.08);
         border-radius: var(--radius-card);
         background: rgba(255, 255, 255, 0.72);
+      }
+
+      .table-row-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.35rem;
+      }
+
+      .table-row-actions > button {
+        min-width: 4.5rem;
+      }
+
+      .mail-node-runtime-cell {
+        display: grid;
+        gap: 0.22rem;
+        min-width: 0;
+      }
+
+      .mail-node-runtime-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.32rem;
+      }
+
+      .mail-node-runtime-head > strong {
+        color: var(--ink);
       }
 
       table {
@@ -1048,6 +1089,7 @@ export function renderBaseStyleBlock(): string {
           grid-column: auto;
         }
 
+        .detail-grid-three,
         .detail-grid-four {
           grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
         }

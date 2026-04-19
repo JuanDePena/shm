@@ -21,6 +21,7 @@ export function buildJobHistoryRows<Copy extends JobsCopy>(
   } = args;
 
   return filteredJobHistory.map((job) => ({
+    selectionKey: job.jobId,
     selected: selectedJob?.jobId === job.jobId,
     cells: [
       renderFocusLink(
@@ -69,6 +70,7 @@ export function renderJobHistoryTable<Copy extends JobsCopy>(
     heading: copy.jobHistoryTitle,
     description: copy.jobHistoryDescription,
     headingBadgeClassName: "section-badge-lime",
+    restoreSelectionHref: true,
     columns: [
       { label: copy.jobColJob, className: "mono" },
       { label: copy.jobColKind },

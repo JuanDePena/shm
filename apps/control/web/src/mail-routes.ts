@@ -56,6 +56,18 @@ export const handleMailRoute: WebRouteHandler = async ({
     const form = await readFormBody(request);
     const next = parseMailboxForm(form);
     await api.upsertMailbox(token, next);
+
+    const storageBytesRaw = form.get("storageBytes")?.trim() ?? "";
+
+    if (storageBytesRaw.length > 0) {
+      const quotaForm = new URLSearchParams();
+      quotaForm.set("mailboxAddress", next.address);
+      quotaForm.set("storageBytes", storageBytesRaw);
+      await api.upsertMailboxQuota(token, parseMailboxQuotaForm(quotaForm));
+    } else {
+      await api.deleteMailboxQuota(token, next.address);
+    }
+
     redirect(
       response,
       noticeReturnTo(

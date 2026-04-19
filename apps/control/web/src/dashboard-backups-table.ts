@@ -28,6 +28,7 @@ export function buildBackupRows<Copy extends BackupCopy>(
   } = args;
 
   return filteredBackupRuns.map((run) => ({
+    selectionKey: run.runId,
     selected: selectedBackupViewRun?.policySlug === run.policySlug,
     cells: [
       renderFocusLink(
@@ -64,6 +65,7 @@ export function renderBackupsTable<Copy extends BackupCopy>(
     heading: copy.backupsTitle,
     description: copy.backupsDescription,
     headingBadgeClassName: "section-badge-lime",
+    restoreSelectionHref: true,
     columns: [
       { label: copy.backupColPolicy, className: "mono" },
       { label: copy.backupColNode, className: "mono" },

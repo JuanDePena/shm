@@ -82,12 +82,16 @@ ${renderAdminShellStyleBlock()}
             ${
               props.headerActionsHtml
                 ? `<div class="page-header-actions">${props.headerActionsHtml}</div>`
-                : ""
+              : ""
             }
           </div>
         </section>
-        ${noticeHtml}
-        ${props.body}
+        <section class="page-body-card">
+          <div class="page-body-scroll">
+            ${noticeHtml}
+            ${props.body}
+          </div>
+        </section>
       </div>
     </div>
     <script>

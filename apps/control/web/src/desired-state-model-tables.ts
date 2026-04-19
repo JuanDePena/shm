@@ -35,6 +35,7 @@ export function buildDesiredStateTableModel<Copy extends DesiredStateModelCopy>(
   };
 
   const tenantTableRows = data.desiredState.spec.tenants.map((tenant) => ({
+    selectionKey: tenant.slug,
     selected: selections.selectedTenant?.slug === tenant.slug,
     cells: [
       renderFocusLink(
@@ -48,6 +49,7 @@ export function buildDesiredStateTableModel<Copy extends DesiredStateModelCopy>(
     searchText: `${tenant.slug} ${tenant.displayName}`.toLowerCase()
   }));
   const nodeTableRows = data.desiredState.spec.nodes.map((node) => ({
+    selectionKey: node.nodeId,
     selected: selections.selectedNode?.nodeId === node.nodeId,
     cells: [
       renderFocusLink(
@@ -65,6 +67,7 @@ export function buildDesiredStateTableModel<Copy extends DesiredStateModelCopy>(
       .toLowerCase()
   }));
   const zoneTableRows = data.desiredState.spec.zones.map((zone) => ({
+    selectionKey: zone.zoneName,
     selected: selections.selectedZone?.zoneName === zone.zoneName,
     cells: [
       renderFocusLink(
@@ -87,6 +90,7 @@ export function buildDesiredStateTableModel<Copy extends DesiredStateModelCopy>(
       .toLowerCase()
   }));
   const appTableRows = data.desiredState.spec.apps.map((app) => ({
+    selectionKey: app.slug,
     selected: selections.selectedApp?.slug === app.slug,
     cells: [
       renderFocusLink(
@@ -116,6 +120,7 @@ export function buildDesiredStateTableModel<Copy extends DesiredStateModelCopy>(
       .toLowerCase()
   }));
   const proxyTableRows = data.desiredState.spec.apps.map((app) => ({
+    selectionKey: app.slug,
     selected: selections.selectedApp?.slug === app.slug,
     cells: [
       renderFocusLink(
@@ -145,6 +150,7 @@ export function buildDesiredStateTableModel<Copy extends DesiredStateModelCopy>(
       .toLowerCase()
   }));
   const databaseTableRows = data.desiredState.spec.databases.map((database) => ({
+    selectionKey: `${database.engine}:${database.databaseName}`,
     selected: selections.selectedDatabase?.appSlug === database.appSlug,
     cells: [
       renderFocusLink(
@@ -178,6 +184,7 @@ export function buildDesiredStateTableModel<Copy extends DesiredStateModelCopy>(
       .toLowerCase()
   }));
   const backupTableRows = data.desiredState.spec.backupPolicies.map((policy) => ({
+    selectionKey: policy.policySlug,
     selected: selections.selectedBackupPolicy?.policySlug === policy.policySlug,
     cells: [
       renderFocusLink(

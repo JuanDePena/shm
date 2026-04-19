@@ -26,9 +26,17 @@ export function buildMailSectionModel(
     label: mailbox.address
   }));
 
-  const selectedDomain = data.mail.domains.find((domain) => domain.domainName === focus);
   const selectedMailbox = data.mail.mailboxes.find((mailbox) => mailbox.address === focus);
   const selectedAlias = data.mail.aliases.find((alias) => alias.address === focus);
+  const selectedDomain =
+    data.mail.domains.find((domain) => domain.domainName === focus) ??
+    (selectedMailbox
+      ? data.mail.domains.find((domain) => domain.domainName === selectedMailbox.domainName)
+      : undefined) ??
+    (selectedAlias
+      ? data.mail.domains.find((domain) => domain.domainName === selectedAlias.domainName)
+      : undefined) ??
+    data.mail.domains[0];
   const selectedQuota = data.mail.quotas.find((quota) => quota.mailboxAddress === focus);
   const expectedMailNodeIds = new Set<string>();
 

@@ -251,6 +251,7 @@ export function renderDesiredStateSection<Copy extends DesiredStateWorkspaceCopy
       heading: copy.desiredStateInventoryTitle,
       description: copy.desiredStateInventoryDescription,
       headingBadgeClassName: "section-badge-lime",
+      restoreSelectionHref: true,
       columns,
       rows,
       emptyMessage,

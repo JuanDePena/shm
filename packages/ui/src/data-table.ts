@@ -17,7 +17,7 @@ export function renderDataTable(props: DataTableProps): string {
     .join("");
 
   const rowsHtml = props.rows
-    .map((row) => {
+    .map((row, rowIndex) => {
       const cellsHtml = row.cells
         .map((cell, index) => {
           const className = props.columns[index]?.className;
@@ -27,7 +27,11 @@ export function renderDataTable(props: DataTableProps): string {
 
       return `<tr data-table-row${
         row.selected ? " class=\"data-table-row-selected\"" : ""
-      } data-search="${escapeHtml(row.searchText.toLowerCase())}">${cellsHtml}</tr>`;
+      } data-search="${escapeHtml(row.searchText.toLowerCase())}" data-row-index="${String(
+        rowIndex
+      )}"${
+        row.selectionKey ? ` data-selection-key="${escapeHtml(row.selectionKey)}"` : ""
+      }>${cellsHtml}</tr>`;
     })
     .join("");
 
@@ -52,11 +56,13 @@ export function renderDataTable(props: DataTableProps): string {
             : ""
         }
       </div>
+      ${props.headerActionsHtml ? `<div class="section-head-actions">${props.headerActionsHtml}</div>` : ""}
     </div>
     <div
       class="data-table"
       data-data-table
       data-table-id="${escapeHtml(props.id)}"
+      ${props.restoreSelectionHref ? 'data-restore-selection-href="true"' : ""}
       data-showing-label="${escapeHtml(props.showingLabel)}"
       data-of-label="${escapeHtml(props.ofLabel)}"
       data-records-label="${escapeHtml(props.recordsLabel)}"

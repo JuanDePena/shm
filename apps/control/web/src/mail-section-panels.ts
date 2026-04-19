@@ -22,7 +22,6 @@ export function renderMailSectionContent(args: {
   const { copy, data, locale, mailCopy, model, renderers, returnTo } = args;
   const {
     mailDomainOptions,
-    mailboxOptions,
     healthyMailRuntimeCount,
     mailRuntimeNodes,
     nodeOptions,
@@ -33,11 +32,36 @@ export function renderMailSectionContent(args: {
     selectedDomainDefaults,
     selectedMailbox,
     selectedMailboxDefaults,
-    selectedQuota,
-    selectedQuotaDefaults,
     tenantOptions,
     zoneOptions
   } = model;
+
+  const formatStorageBytes = (value: number | undefined): string => {
+    if (value === undefined || value <= 0) {
+      return copy.none;
+    }
+
+    const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+    let normalized = value;
+    let unitIndex = 0;
+
+    while (normalized >= 1024 && unitIndex < units.length - 1) {
+      normalized /= 1024;
+      unitIndex += 1;
+    }
+
+    return `${new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: normalized >= 10 || unitIndex === 0 ? 0 : 1
+    }).format(normalized)} ${units[unitIndex]}`;
+  };
+
+  const primaryMailNodeIds = new Set(data.mail.domains.map((domain) => domain.primaryNodeId));
+  const standbyMailNodeIds = new Set(
+    data.mail.domains
+      .map((domain) => domain.standbyNodeId)
+      .filter((nodeId): nodeId is string => Boolean(nodeId))
+  );
 
   const renderServiceStatus = (
     snapshot:
@@ -87,6 +111,8 @@ export function renderMailSectionContent(args: {
   };
 
   const domainRows: DataTableRow[] = data.mail.domains.map((domain) => ({
+    selectionKey: domain.domainName,
+    selected: selectedDomain?.domainName === domain.domainName,
     cells: [
       renderers.renderFocusLink(
         domain.domainName,
@@ -105,6 +131,10 @@ export function renderMailSectionContent(args: {
       renderers.renderPill(
         String(domain.aliasCount),
         domain.aliasCount > 0 ? "success" : "muted"
+      ),
+      renderRowActionButtons(
+        `mail-domain-edit-${toModalIdSegment(domain.domainName)}`,
+        `mail-domain-delete-${toModalIdSegment(domain.domainName)}`
       )
     ],
     searchText: [
@@ -119,6 +149,8 @@ export function renderMailSectionContent(args: {
   }));
 
   const mailboxRows: DataTableRow[] = data.mail.mailboxes.map((mailbox) => ({
+    selectionKey: mailbox.address,
+    selected: selectedMailbox?.address === mailbox.address,
     cells: [
       renderers.renderFocusLink(
         mailbox.address,
@@ -132,8 +164,12 @@ export function renderMailSectionContent(args: {
         ? renderers.renderPill(mailCopy.credentialPresent, "success")
         : renderers.renderPill(mailCopy.credentialMissing, "danger"),
       mailbox.quotaBytes
-        ? `<span class="mono">${escapeHtml(String(mailbox.quotaBytes))}</span>`
-        : escapeHtml(copy.none)
+        ? `<span class="mono">${escapeHtml(formatStorageBytes(mailbox.quotaBytes))}</span>`
+        : escapeHtml(copy.none),
+      renderRowActionButtons(
+        `mail-mailbox-edit-${toModalIdSegment(mailbox.address)}`,
+        `mail-mailbox-delete-${toModalIdSegment(mailbox.address)}`
+      )
     ],
     searchText: [
       mailbox.address,
@@ -147,6 +183,8 @@ export function renderMailSectionContent(args: {
   }));
 
   const aliasRows: DataTableRow[] = data.mail.aliases.map((alias) => ({
+    selectionKey: alias.address,
+    selected: selectedAlias?.address === alias.address,
     cells: [
       renderers.renderFocusLink(
         alias.address,
@@ -155,28 +193,33 @@ export function renderMailSectionContent(args: {
         copy.selectedStateLabel
       ),
       escapeHtml(alias.domainName),
-      `<span class="mono">${escapeHtml(alias.destinations.join(", "))}</span>`
+      `<span class="mono">${escapeHtml(alias.destinations.join(", "))}</span>`,
+      renderRowActionButtons(
+        `mail-alias-edit-${toModalIdSegment(alias.address)}`,
+        `mail-alias-delete-${toModalIdSegment(alias.address)}`
+      )
     ],
     searchText: [alias.address, alias.domainName, alias.localPart, ...alias.destinations].join(" ")
   }));
 
-  const quotaRows: DataTableRow[] = data.mail.quotas.map((quota) => ({
-    cells: [
-      renderers.renderFocusLink(
-        quota.mailboxAddress,
-        buildDashboardViewUrl("mail", undefined, quota.mailboxAddress),
-        selectedQuota?.mailboxAddress === quota.mailboxAddress,
-        copy.selectedStateLabel
-      ),
-      escapeHtml(quota.domainName),
-      `<span class="mono">${escapeHtml(String(quota.storageBytes))}</span>`
-    ],
-    searchText: [quota.mailboxAddress, quota.domainName, String(quota.storageBytes)].join(" ")
-  }));
-
   const runtimeRows: DataTableRow[] = mailRuntimeNodes.map((node) => ({
+    selectionKey: node.nodeId,
     cells: [
-      `<span class="mono">${escapeHtml(node.nodeId)}</span><br /><span class="muted">${escapeHtml(node.hostname)}</span>`,
+      `<div class="mail-node-runtime-cell">
+        <div class="mail-node-runtime-head">
+          <strong>${escapeHtml(node.hostname)}</strong>
+          ${
+            primaryMailNodeIds.has(node.nodeId)
+              ? renderers.renderPill(mailCopy.primaryRoleLabel, "success")
+              : ""
+          }
+          ${
+            standbyMailNodeIds.has(node.nodeId)
+              ? renderers.renderPill(mailCopy.secondaryRoleLabel, "muted")
+              : ""
+          }
+        </div>
+      </div>`,
       renderServiceStatus(node.mail, "postfix"),
       renderServiceStatus(node.mail, "dovecot"),
       renderServiceStatus(node.mail, "rspamd"),
@@ -199,60 +242,57 @@ export function renderMailSectionContent(args: {
     ].join(" ")
   }));
 
-  const selectedDomainPanel = selectedDomain
-    ? `<article class="panel detail-shell">
-        <div class="section-head">
-          <div>
-            <h3>${escapeHtml(mailCopy.selectedDomainTitle)}</h3>
-            <p class="muted section-description">${escapeHtml(mailCopy.description)}</p>
-          </div>
+  const selectedDomainPanel = `<article class="panel detail-shell">
+      <div class="section-head">
+        <div>
+          <h3>${escapeHtml(mailCopy.selectedDomainTitle)}</h3>
+          <p class="muted section-description">${escapeHtml(mailCopy.description)}</p>
         </div>
-        ${renderers.renderDetailGrid([
-          {
-            label: mailCopy.domainNameLabel,
-            value: `<span class="mono">${escapeHtml(selectedDomain.domainName)}</span>`
-          },
-          { label: mailCopy.tenantSlugLabel, value: escapeHtml(selectedDomain.tenantSlug) },
-          { label: mailCopy.zoneNameLabel, value: escapeHtml(selectedDomain.zoneName) },
-          {
-            label: mailCopy.mailHostLabel,
-            value: `<span class="mono">${escapeHtml(selectedDomain.mailHost)}</span>`
-          },
-          {
-            label: mailCopy.webmailHostnameLabel,
-            value: `<span class="mono">${escapeHtml(`webmail.${selectedDomain.domainName}`)}</span>`
-          },
-          {
-            label: mailCopy.dkimSelectorLabel,
-            value: `<span class="mono">${escapeHtml(selectedDomain.dkimSelector)}</span>`
-          },
-          {
-            label: mailCopy.primaryNodeLabel,
-            value: `<span class="mono">${escapeHtml(selectedDomain.primaryNodeId)}</span>`
-          },
-          {
-            label: mailCopy.standbyNodeLabel,
-            value: selectedDomain.standbyNodeId
-              ? `<span class="mono">${escapeHtml(selectedDomain.standbyNodeId)}</span>`
-              : escapeHtml(copy.none)
-          },
-          {
-            label: mailCopy.mailboxCountLabel,
-            value: renderers.renderPill(
-              String(selectedDomain.mailboxCount),
-              selectedDomain.mailboxCount > 0 ? "success" : "muted"
-            )
-          },
-          {
-            label: mailCopy.aliasCountLabel,
-            value: renderers.renderPill(
-              String(selectedDomain.aliasCount),
-              selectedDomain.aliasCount > 0 ? "success" : "muted"
-            )
-          }
-        ])}
-      </article>`
-    : "";
+      </div>
+      ${
+        selectedDomain
+          ? renderers.renderDetailGrid([
+              {
+                label: mailCopy.domainNameLabel,
+                value: `<span class="mono">${escapeHtml(selectedDomain.domainName)}</span>`
+              },
+              { label: mailCopy.tenantSlugLabel, value: escapeHtml(selectedDomain.tenantSlug) },
+              { label: mailCopy.zoneNameLabel, value: escapeHtml(selectedDomain.zoneName) },
+              {
+                label: mailCopy.mailHostLabel,
+                value: `<span class="mono">${escapeHtml(selectedDomain.mailHost)}</span>`
+              },
+              {
+                label: mailCopy.webmailHostnameLabel,
+                value: `<span class="mono">${escapeHtml(`webmail.${selectedDomain.domainName}`)}</span>`
+              },
+              {
+                label: mailCopy.dkimSelectorLabel,
+                value: `<span class="mono">${escapeHtml(selectedDomain.dkimSelector)}</span>`
+              },
+              {
+                label: mailCopy.mailboxCountLabel,
+                value: renderers.renderPill(
+                  String(selectedDomain.mailboxCount),
+                  selectedDomain.mailboxCount > 0 ? "success" : "muted"
+                )
+              },
+              {
+                label: mailCopy.aliasCountLabel,
+                value: renderers.renderPill(
+                  String(selectedDomain.aliasCount),
+                  selectedDomain.aliasCount > 0 ? "success" : "muted"
+                )
+              }
+            ], { className: "detail-grid-three" })
+          : `<div class="detail-grid detail-grid-compact">
+              <dl class="detail-item detail-item-span-full">
+                <dt>${escapeHtml(mailCopy.selectedRecordLabel)}</dt>
+                <dd class="muted">${escapeHtml(mailCopy.noSelectionLabel)}</dd>
+              </dl>
+            </div>`
+      }
+    </article>`;
 
   const selectedMailboxPanel = selectedMailbox
     ? `<article class="panel detail-shell">
@@ -291,184 +331,356 @@ export function renderMailSectionContent(args: {
           {
             label: mailCopy.quotaBytesLabel,
             value: selectedMailbox.quotaBytes
-              ? `<span class="mono">${escapeHtml(String(selectedMailbox.quotaBytes))}</span>`
+              ? `<span class="mono">${escapeHtml(formatStorageBytes(selectedMailbox.quotaBytes))}</span>`
               : escapeHtml(copy.none)
           }
         ])}
       </article>`
     : "";
 
-  const formsPanel = `<article class="panel detail-shell">
-    <div class="section-head">
-      <div>
-        <h3>${escapeHtml(mailCopy.formsTitle)}</h3>
-        <p class="muted section-description">${escapeHtml(mailCopy.formsDescription)}</p>
+  const renderModalShell = (
+    modalId: string,
+    title: string,
+    description: string,
+    body: string
+  ): string => `<div class="proxy-vhost-modal" id="${escapeHtml(modalId)}" data-overlay-modal hidden>
+      <div class="proxy-vhost-modal-backdrop" data-overlay-close></div>
+      <div class="proxy-vhost-modal-dialog overlay-form-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="${escapeHtml(modalId)}-title">
+        <article class="panel proxy-vhost-modal-panel overlay-form-modal-panel stack">
+          <div class="proxy-vhost-modal-header">
+            <div class="stack">
+              <h3 id="${escapeHtml(modalId)}-title">${escapeHtml(title)}</h3>
+              <p class="muted section-description">${escapeHtml(description)}</p>
+            </div>
+            <button type="button" class="secondary proxy-vhost-modal-close" data-overlay-close>${escapeHtml(
+              mailCopy.closeLabel
+            )}</button>
+          </div>
+          ${body}
+        </article>
       </div>
-    </div>
-    <div class="grid grid-two">
-      <form method="post" action="/resources/mail/domains/upsert" class="panel panel-nested detail-shell stack">
+    </div>`;
+
+  function toModalIdSegment(value: string): string {
+    return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "item";
+  }
+
+  function renderHeaderCreateButton(modalId: string): string {
+    return `<button type="button" class="secondary" data-overlay-trigger data-modal-id="${escapeHtml(
+      modalId
+    )}">${escapeHtml(mailCopy.createLabel)}</button>`;
+  }
+
+  function renderRowActionButtons(editModalId: string, deleteModalId: string): string {
+    return `<div class="table-row-actions">
+      <button type="button" class="secondary" data-overlay-trigger data-modal-id="${escapeHtml(
+        editModalId
+      )}">${escapeHtml(mailCopy.editLabel)}</button>
+      <button type="button" class="danger" data-overlay-trigger data-modal-id="${escapeHtml(
+        deleteModalId
+      )}">${escapeHtml(mailCopy.deleteLabel)}</button>
+    </div>`;
+  }
+
+  const createDomainDefaults = {
+    domainName: "",
+    tenantSlug: tenantOptions[0]?.value ?? selectedDomainDefaults.tenantSlug,
+    zoneName: zoneOptions[0]?.value ?? selectedDomainDefaults.zoneName,
+    primaryNodeId: nodeOptions[0]?.value ?? selectedDomainDefaults.primaryNodeId,
+    standbyNodeId: "",
+    mailHost: "",
+    dkimSelector: "mail"
+  };
+
+  const createMailboxDefaults = {
+    address: "",
+    domainName: mailDomainOptions[0]?.value ?? selectedMailboxDefaults.domainName,
+    localPart: "",
+    primaryNodeId: nodeOptions[0]?.value ?? selectedMailboxDefaults.primaryNodeId,
+    standbyNodeId: "",
+    quotaBytes: undefined as number | undefined
+  };
+
+  const createAliasDefaults = {
+    address: "",
+    domainName: mailDomainOptions[0]?.value ?? selectedAliasDefaults.domainName,
+    localPart: "",
+    destinations: [] as string[]
+  };
+
+  const renderDomainEditorForm = (
+    defaults: {
+      domainName: string;
+      tenantSlug: string;
+      zoneName: string;
+      primaryNodeId: string;
+      standbyNodeId?: string;
+      mailHost: string;
+      dkimSelector: string;
+    },
+    autofocus = false
+  ): string => `<form method="post" action="/resources/mail/domains/upsert" class="stack">
+      <input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}" />
+      <div class="form-grid">
+        <label>${escapeHtml(mailCopy.domainNameLabel)}
+          <input name="domainName" value="${escapeHtml(defaults.domainName)}" required spellcheck="false"${autofocus ? " data-overlay-autofocus" : ""} />
+        </label>
+        <label>${escapeHtml(mailCopy.tenantSlugLabel)}
+          <select name="tenantSlug" required>${renderers.renderSelectOptions(tenantOptions, defaults.tenantSlug)}</select>
+        </label>
+        <label>${escapeHtml(mailCopy.zoneNameLabel)}
+          <select name="zoneName" required>${renderers.renderSelectOptions(zoneOptions, defaults.zoneName)}</select>
+        </label>
+        <label>${escapeHtml(mailCopy.primaryNodeLabel)}
+          <select name="primaryNodeId" required>${renderers.renderSelectOptions(nodeOptions, defaults.primaryNodeId)}</select>
+        </label>
+        <label>${escapeHtml(mailCopy.standbyNodeLabel)}
+          <select name="standbyNodeId">${renderers.renderSelectOptions(nodeOptions, defaults.standbyNodeId || undefined, { allowBlank: true, blankLabel: "none" })}</select>
+        </label>
+        <label>${escapeHtml(mailCopy.mailHostLabel)}
+          <input name="mailHost" value="${escapeHtml(defaults.mailHost)}" required spellcheck="false" />
+        </label>
+        <label>${escapeHtml(mailCopy.dkimSelectorLabel)}
+          <input name="dkimSelector" value="${escapeHtml(defaults.dkimSelector)}" required spellcheck="false" />
+        </label>
+      </div>
+      <div class="toolbar">
+        <button type="submit">${escapeHtml(mailCopy.saveDomainLabel)}</button>
+      </div>
+    </form>`;
+
+  const renderMailboxEditorForm = (
+    defaults: {
+      address: string;
+      domainName: string;
+      localPart: string;
+      primaryNodeId: string;
+      standbyNodeId?: string;
+      quotaBytes?: number;
+    },
+    autofocus = false
+  ): string => `<form method="post" action="/resources/mail/mailboxes/upsert" class="stack">
+      <input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}" />
+      <div class="form-grid">
+        <label>${escapeHtml(mailCopy.addressLabel)}
+          <input name="address" value="${escapeHtml(defaults.address)}" required spellcheck="false"${autofocus ? " data-overlay-autofocus" : ""} />
+        </label>
+        <label>${escapeHtml(mailCopy.domainNameLabel)}
+          <select name="domainName" required>${renderers.renderSelectOptions(mailDomainOptions, defaults.domainName)}</select>
+        </label>
+        <label>${escapeHtml(mailCopy.localPartLabel)}
+          <input name="localPart" value="${escapeHtml(defaults.localPart)}" required spellcheck="false" />
+        </label>
+        <label>${escapeHtml(mailCopy.primaryNodeLabel)}
+          <select name="primaryNodeId" required>${renderers.renderSelectOptions(nodeOptions, defaults.primaryNodeId)}</select>
+        </label>
+        <label>${escapeHtml(mailCopy.standbyNodeLabel)}
+          <select name="standbyNodeId">${renderers.renderSelectOptions(nodeOptions, defaults.standbyNodeId || undefined, { allowBlank: true, blankLabel: "none" })}</select>
+        </label>
+        <label>${escapeHtml(mailCopy.desiredPasswordLabel)}
+          <input name="desiredPassword" type="password" value="" autocomplete="new-password" />
+        </label>
+        <label>${escapeHtml(mailCopy.quotaBytesLabel)}
+          <input name="storageBytes" type="number" min="1" step="1" inputmode="numeric" value="${escapeHtml(
+            defaults.quotaBytes ? String(defaults.quotaBytes) : ""
+          )}" />
+        </label>
+      </div>
+      <div class="toolbar">
+        <button type="submit">${escapeHtml(mailCopy.saveMailboxLabel)}</button>
+      </div>
+    </form>`;
+
+  const renderAliasEditorForm = (
+    defaults: {
+      address: string;
+      domainName: string;
+      localPart: string;
+      destinations: string[];
+    },
+    autofocus = false
+  ): string => `<form method="post" action="/resources/mail/aliases/upsert" class="stack">
+      <input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}" />
+      <div class="form-grid">
+        <label>${escapeHtml(mailCopy.addressLabel)}
+          <input name="address" value="${escapeHtml(defaults.address)}" required spellcheck="false"${autofocus ? " data-overlay-autofocus" : ""} />
+        </label>
+        <label>${escapeHtml(mailCopy.domainNameLabel)}
+          <select name="domainName" required>${renderers.renderSelectOptions(mailDomainOptions, defaults.domainName)}</select>
+        </label>
+        <label>${escapeHtml(mailCopy.localPartLabel)}
+          <input name="localPart" value="${escapeHtml(defaults.localPart)}" required spellcheck="false" />
+        </label>
+        <label>${escapeHtml(mailCopy.destinationsLabel)}
+          <textarea name="destinations" rows="3">${escapeHtml(defaults.destinations.join(", "))}</textarea>
+        </label>
+      </div>
+      <div class="toolbar">
+        <button type="submit">${escapeHtml(mailCopy.saveAliasLabel)}</button>
+      </div>
+    </form>`;
+
+  const domainCreateModalId = "mail-domain-create-modal";
+  const mailboxCreateModalId = "mail-mailbox-create-modal";
+  const aliasCreateModalId = "mail-alias-create-modal";
+
+  const renderDeleteModal = (
+    modalId: string | undefined,
+    title: string,
+    description: string,
+    action: string,
+    hiddenFieldName: string,
+    hiddenFieldValue: string | undefined,
+    submitLabel: string
+  ): string => {
+    if (!modalId || !hiddenFieldValue) {
+      return "";
+    }
+
+    return renderModalShell(
+      modalId,
+      title,
+      description,
+      `<div class="action-card-context">
+        <span class="action-card-context-title">${escapeHtml(mailCopy.selectedRecordLabel)}</span>
+        <p class="mono">${escapeHtml(hiddenFieldValue)}</p>
+      </div>
+      <form method="post" action="${escapeHtml(action)}" class="stack">
+        <input type="hidden" name="${escapeHtml(hiddenFieldName)}" value="${escapeHtml(hiddenFieldValue)}" />
         <input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}" />
-        <div>
-          <h3>${escapeHtml(mailCopy.domainsTitle)}</h3>
-        </div>
-        <div class="form-grid">
-          <label>${escapeHtml(mailCopy.domainNameLabel)}
-            <input name="domainName" value="${escapeHtml(selectedDomainDefaults.domainName)}" required spellcheck="false" />
-          </label>
-          <label>${escapeHtml(mailCopy.tenantSlugLabel)}
-            <select name="tenantSlug" required>${renderers.renderSelectOptions(tenantOptions, selectedDomainDefaults.tenantSlug)}</select>
-          </label>
-          <label>${escapeHtml(mailCopy.zoneNameLabel)}
-            <select name="zoneName" required>${renderers.renderSelectOptions(zoneOptions, selectedDomainDefaults.zoneName)}</select>
-          </label>
-          <label>${escapeHtml(mailCopy.primaryNodeLabel)}
-            <select name="primaryNodeId" required>${renderers.renderSelectOptions(nodeOptions, selectedDomainDefaults.primaryNodeId)}</select>
-          </label>
-          <label>${escapeHtml(mailCopy.standbyNodeLabel)}
-            <select name="standbyNodeId">${renderers.renderSelectOptions(nodeOptions, selectedDomainDefaults.standbyNodeId || undefined, { allowBlank: true, blankLabel: "none" })}</select>
-          </label>
-          <label>${escapeHtml(mailCopy.mailHostLabel)}
-            <input name="mailHost" value="${escapeHtml(selectedDomainDefaults.mailHost)}" required spellcheck="false" />
-          </label>
-          <label>${escapeHtml(mailCopy.dkimSelectorLabel)}
-            <input name="dkimSelector" value="${escapeHtml(selectedDomainDefaults.dkimSelector)}" required spellcheck="false" />
-          </label>
-        </div>
         <div class="toolbar">
-          <button type="submit">${escapeHtml(mailCopy.saveDomainLabel)}</button>
-          ${
-            selectedDomain
-              ? renderers.renderActionForm(
-                  "/resources/mail/domains/delete",
-                  {
-                    domainName: selectedDomain.domainName,
-                    returnTo
-                  },
-                  mailCopy.deleteDomainLabel,
-                  {
-                    confirmMessage: `Delete mail domain ${selectedDomain.domainName}?`
-                  }
-                )
-              : ""
-          }
+          <button class="danger" type="submit">${escapeHtml(submitLabel)}</button>
         </div>
-      </form>
-      <form method="post" action="/resources/mail/mailboxes/upsert" class="panel panel-nested detail-shell stack">
-        <input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}" />
-        <div>
-          <h3>${escapeHtml(mailCopy.mailboxesTitle)}</h3>
-        </div>
-        <div class="form-grid">
-          <label>${escapeHtml(mailCopy.addressLabel)}
-            <input name="address" value="${escapeHtml(selectedMailboxDefaults.address)}" required spellcheck="false" />
-          </label>
-          <label>${escapeHtml(mailCopy.domainNameLabel)}
-            <select name="domainName" required>${renderers.renderSelectOptions(mailDomainOptions, selectedMailboxDefaults.domainName)}</select>
-          </label>
-          <label>${escapeHtml(mailCopy.localPartLabel)}
-            <input name="localPart" value="${escapeHtml(selectedMailboxDefaults.localPart)}" required spellcheck="false" />
-          </label>
-          <label>${escapeHtml(mailCopy.primaryNodeLabel)}
-            <select name="primaryNodeId" required>${renderers.renderSelectOptions(nodeOptions, selectedMailboxDefaults.primaryNodeId)}</select>
-          </label>
-          <label>${escapeHtml(mailCopy.standbyNodeLabel)}
-            <select name="standbyNodeId">${renderers.renderSelectOptions(nodeOptions, selectedMailboxDefaults.standbyNodeId || undefined, { allowBlank: true, blankLabel: "none" })}</select>
-          </label>
-          <label>${escapeHtml(mailCopy.desiredPasswordLabel)}
-            <input name="desiredPassword" type="password" value="" autocomplete="new-password" />
-          </label>
-        </div>
-        <div class="toolbar">
-          <button type="submit">${escapeHtml(mailCopy.saveMailboxLabel)}</button>
-          ${
-            selectedMailbox
-              ? renderers.renderActionForm(
-                  "/resources/mail/mailboxes/delete",
-                  {
-                    address: selectedMailbox.address,
-                    returnTo
-                  },
-                  mailCopy.deleteMailboxLabel,
-                  {
-                    confirmMessage: `Delete mailbox ${selectedMailbox.address}?`
-                  }
-                )
-              : ""
-          }
-        </div>
-      </form>
-      <form method="post" action="/resources/mail/aliases/upsert" class="panel panel-nested detail-shell stack">
-        <input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}" />
-        <div>
-          <h3>${escapeHtml(mailCopy.aliasesTitle)}</h3>
-        </div>
-        <div class="form-grid">
-          <label>${escapeHtml(mailCopy.addressLabel)}
-            <input name="address" value="${escapeHtml(selectedAliasDefaults.address)}" required spellcheck="false" />
-          </label>
-          <label>${escapeHtml(mailCopy.domainNameLabel)}
-            <select name="domainName" required>${renderers.renderSelectOptions(mailDomainOptions, selectedAliasDefaults.domainName)}</select>
-          </label>
-          <label>${escapeHtml(mailCopy.localPartLabel)}
-            <input name="localPart" value="${escapeHtml(selectedAliasDefaults.localPart)}" required spellcheck="false" />
-          </label>
-          <label>${escapeHtml(mailCopy.destinationsLabel)}
-            <textarea name="destinations" rows="3">${escapeHtml(selectedAliasDefaults.destinations.join(", "))}</textarea>
-          </label>
-        </div>
-        <div class="toolbar">
-          <button type="submit">${escapeHtml(mailCopy.saveAliasLabel)}</button>
-          ${
-            selectedAlias
-              ? renderers.renderActionForm(
-                  "/resources/mail/aliases/delete",
-                  {
-                    address: selectedAlias.address,
-                    returnTo
-                  },
-                  mailCopy.deleteAliasLabel,
-                  {
-                    confirmMessage: `Delete mail alias ${selectedAlias.address}?`
-                  }
-                )
-              : ""
-          }
-        </div>
-      </form>
-      <form method="post" action="/resources/mail/quotas/upsert" class="panel panel-nested detail-shell stack">
-        <input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}" />
-        <div>
-          <h3>${escapeHtml(mailCopy.quotasTitle)}</h3>
-        </div>
-        <div class="form-grid">
-          <label>${escapeHtml(mailCopy.addressLabel)}
-            <select name="mailboxAddress" required>${renderers.renderSelectOptions(mailboxOptions, selectedQuotaDefaults.mailboxAddress)}</select>
-          </label>
-          <label>${escapeHtml(mailCopy.quotaBytesLabel)}
-            <input name="storageBytes" type="number" min="1" value="${escapeHtml(String(selectedQuotaDefaults.storageBytes))}" required />
-          </label>
-        </div>
-        <div class="toolbar">
-          <button type="submit">${escapeHtml(mailCopy.saveQuotaLabel)}</button>
-          ${
-            selectedQuota
-              ? renderers.renderActionForm(
-                  "/resources/mail/quotas/delete",
-                  {
-                    mailboxAddress: selectedQuota.mailboxAddress,
-                    returnTo
-                  },
-                  mailCopy.deleteQuotaLabel,
-                  {
-                    confirmMessage: `Delete mailbox quota for ${selectedQuota.mailboxAddress}?`
-                  }
-                )
-              : ""
-          }
-        </div>
-      </form>
-    </div>
-  </article>`;
+      </form>`
+    );
+  };
+  const domainRowModals = data.mail.domains
+    .map((domain) => {
+      const editModalId = `mail-domain-edit-${toModalIdSegment(domain.domainName)}`;
+      const deleteModalId = `mail-domain-delete-${toModalIdSegment(domain.domainName)}`;
+
+      return [
+        renderModalShell(
+          editModalId,
+          mailCopy.domainsTitle,
+          mailCopy.modalEditorDescription,
+          renderDomainEditorForm(
+            {
+              domainName: domain.domainName,
+              tenantSlug: domain.tenantSlug,
+              zoneName: domain.zoneName,
+              primaryNodeId: domain.primaryNodeId,
+              standbyNodeId: domain.standbyNodeId ?? "",
+              mailHost: domain.mailHost,
+              dkimSelector: domain.dkimSelector
+            },
+            true
+          )
+        ),
+        renderDeleteModal(
+          deleteModalId,
+          mailCopy.deleteDomainLabel,
+          mailCopy.modalDeleteDescription,
+          "/resources/mail/domains/delete",
+          "domainName",
+          domain.domainName,
+          mailCopy.deleteDomainLabel
+        )
+      ].join("");
+    })
+    .join("");
+
+  const mailboxRowModals = data.mail.mailboxes
+    .map((mailbox) => {
+      const editModalId = `mail-mailbox-edit-${toModalIdSegment(mailbox.address)}`;
+      const deleteModalId = `mail-mailbox-delete-${toModalIdSegment(mailbox.address)}`;
+
+      return [
+        renderModalShell(
+          editModalId,
+          mailCopy.mailboxesTitle,
+          mailCopy.modalEditorDescription,
+          renderMailboxEditorForm(
+            {
+              address: mailbox.address,
+              domainName: mailbox.domainName,
+              localPart: mailbox.localPart,
+              primaryNodeId: mailbox.primaryNodeId,
+              standbyNodeId: mailbox.standbyNodeId ?? "",
+              quotaBytes: mailbox.quotaBytes
+            },
+            true
+          )
+        ),
+        renderDeleteModal(
+          deleteModalId,
+          mailCopy.deleteMailboxLabel,
+          mailCopy.modalDeleteDescription,
+          "/resources/mail/mailboxes/delete",
+          "address",
+          mailbox.address,
+          mailCopy.deleteMailboxLabel
+        )
+      ].join("");
+    })
+    .join("");
+
+  const aliasRowModals = data.mail.aliases
+    .map((alias) => {
+      const editModalId = `mail-alias-edit-${toModalIdSegment(alias.address)}`;
+      const deleteModalId = `mail-alias-delete-${toModalIdSegment(alias.address)}`;
+
+      return [
+        renderModalShell(
+          editModalId,
+          mailCopy.aliasesTitle,
+          mailCopy.modalEditorDescription,
+          renderAliasEditorForm(
+            {
+              address: alias.address,
+              domainName: alias.domainName,
+              localPart: alias.localPart,
+              destinations: alias.destinations
+            },
+            true
+          )
+        ),
+        renderDeleteModal(
+          deleteModalId,
+          mailCopy.deleteAliasLabel,
+          mailCopy.modalDeleteDescription,
+          "/resources/mail/aliases/delete",
+          "address",
+          alias.address,
+          mailCopy.deleteAliasLabel
+        )
+      ].join("");
+    })
+    .join("");
+
+  const mailModals = [
+    renderModalShell(
+      domainCreateModalId,
+      mailCopy.domainsTitle,
+      mailCopy.modalEditorDescription,
+      renderDomainEditorForm(createDomainDefaults, true)
+    ),
+    renderModalShell(
+      mailboxCreateModalId,
+      mailCopy.mailboxesTitle,
+      mailCopy.modalEditorDescription,
+      renderMailboxEditorForm(createMailboxDefaults, true)
+    ),
+    renderModalShell(
+      aliasCreateModalId,
+      mailCopy.aliasesTitle,
+      mailCopy.modalEditorDescription,
+      renderAliasEditorForm(createAliasDefaults, true)
+    ),
+    domainRowModals,
+    mailboxRowModals,
+    aliasRowModals
+  ].join("");
 
   return `<section id="section-mail" class="panel section-panel">
     <div class="section-head">
@@ -494,11 +706,6 @@ export function renderMailSectionContent(args: {
         tone: data.mail.aliases.length > 0 ? "success" : "muted"
       },
       {
-        label: mailCopy.quotaTotalLabel,
-        value: String(data.mail.quotas.length),
-        tone: data.mail.quotas.length > 0 ? "success" : "muted"
-      },
-      {
         label: mailCopy.runtimeNodesLabel,
         value: String(reportedMailRuntimeCount),
         tone: reportedMailRuntimeCount > 0 ? "success" : "muted"
@@ -509,38 +716,13 @@ export function renderMailSectionContent(args: {
         tone: healthyMailRuntimeCount > 0 ? "success" : "muted"
       }
     ])}
-    <div class="grid-two-desktop">
-      ${selectedDomainPanel}
-      ${selectedMailboxPanel}
-    </div>
-    ${renderDataTable({
-      id: "section-mail-runtime",
-      heading: mailCopy.runtimeTitle,
-      description: mailCopy.runtimeDescription,
-      headingBadgeClassName: "section-badge-lime",
-      columns: [
-        { label: copy.navNodes, className: "mono" },
-        { label: mailCopy.postfixLabel },
-        { label: mailCopy.dovecotLabel },
-        { label: mailCopy.rspamdLabel },
-        { label: mailCopy.redisLabel },
-        { label: mailCopy.managedDomainsLabel },
-        { label: mailCopy.checkedAtLabel }
-      ],
-      rows: runtimeRows,
-      emptyMessage: mailCopy.noRuntimeNodes,
-      filterPlaceholder: copy.dataFilterPlaceholder,
-      rowsPerPageLabel: copy.rowsPerPage,
-      showingLabel: copy.showing,
-      ofLabel: copy.of,
-      recordsLabel: copy.records,
-      defaultPageSize: 10
-    })}
     ${renderDataTable({
       id: "section-mail-domains",
       heading: mailCopy.domainsTitle,
       description: mailCopy.description,
       headingBadgeClassName: "section-badge-lime",
+      headerActionsHtml: renderHeaderCreateButton(domainCreateModalId),
+      restoreSelectionHref: true,
       columns: [
         { label: mailCopy.domainNameLabel, className: "mono" },
         { label: mailCopy.tenantSlugLabel },
@@ -548,7 +730,8 @@ export function renderMailSectionContent(args: {
         { label: mailCopy.mailHostLabel },
         { label: mailCopy.primaryNodeLabel },
         { label: mailCopy.mailboxCountLabel },
-        { label: mailCopy.aliasCountLabel }
+        { label: mailCopy.aliasCountLabel },
+        { label: mailCopy.actionsLabel }
       ],
       rows: domainRows,
       emptyMessage: mailCopy.noMailDomains,
@@ -559,37 +742,69 @@ export function renderMailSectionContent(args: {
       recordsLabel: copy.records,
       defaultPageSize: 10
     })}
-    ${renderDataTable({
-      id: "section-mail-mailboxes",
-      heading: mailCopy.mailboxesTitle,
-      description: mailCopy.formsDescription,
-      headingBadgeClassName: "section-badge-lime",
-      columns: [
-        { label: mailCopy.addressLabel, className: "mono" },
-        { label: mailCopy.domainNameLabel },
-        { label: mailCopy.primaryNodeLabel },
-        { label: mailCopy.hasCredentialLabel },
-        { label: mailCopy.quotaBytesLabel, className: "mono" }
-      ],
-      rows: mailboxRows,
-      emptyMessage: mailCopy.noMailboxes,
-      filterPlaceholder: copy.dataFilterPlaceholder,
-      rowsPerPageLabel: copy.rowsPerPage,
-      showingLabel: copy.showing,
-      ofLabel: copy.of,
-      recordsLabel: copy.records,
-      defaultPageSize: 10
-    })}
     <div class="grid-two-desktop">
+      ${selectedDomainPanel}
+      ${renderDataTable({
+        id: "section-mail-runtime",
+        heading: mailCopy.runtimeTitle,
+        description: mailCopy.runtimeDescription,
+        headingBadgeClassName: "section-badge-lime",
+        columns: [
+          { label: copy.navNodes, className: "mono" },
+          { label: mailCopy.postfixLabel },
+          { label: mailCopy.dovecotLabel },
+          { label: mailCopy.rspamdLabel },
+          { label: mailCopy.redisLabel },
+          { label: mailCopy.managedDomainsLabel },
+          { label: mailCopy.checkedAtLabel }
+        ],
+        rows: runtimeRows,
+        emptyMessage: mailCopy.noRuntimeNodes,
+        filterPlaceholder: copy.dataFilterPlaceholder,
+        rowsPerPageLabel: copy.rowsPerPage,
+        showingLabel: copy.showing,
+        ofLabel: copy.of,
+        recordsLabel: copy.records,
+        defaultPageSize: 10
+      })}
+    </div>
+    <div class="grid-two-desktop">
+      ${renderDataTable({
+        id: "section-mail-mailboxes",
+        heading: mailCopy.mailboxesTitle,
+        description: mailCopy.formsDescription,
+        headingBadgeClassName: "section-badge-lime",
+        headerActionsHtml: renderHeaderCreateButton(mailboxCreateModalId),
+        restoreSelectionHref: true,
+        columns: [
+          { label: mailCopy.addressLabel, className: "mono" },
+          { label: mailCopy.domainNameLabel },
+          { label: mailCopy.primaryNodeLabel },
+          { label: mailCopy.hasCredentialLabel },
+          { label: mailCopy.quotaBytesLabel, className: "mono" },
+          { label: mailCopy.actionsLabel }
+        ],
+        rows: mailboxRows,
+        emptyMessage: mailCopy.noMailboxes,
+        filterPlaceholder: copy.dataFilterPlaceholder,
+        rowsPerPageLabel: copy.rowsPerPage,
+        showingLabel: copy.showing,
+        ofLabel: copy.of,
+        recordsLabel: copy.records,
+        defaultPageSize: 10
+      })}
       ${renderDataTable({
         id: "section-mail-aliases",
         heading: mailCopy.aliasesTitle,
         description: mailCopy.description,
         headingBadgeClassName: "section-badge-lime",
+        headerActionsHtml: renderHeaderCreateButton(aliasCreateModalId),
+        restoreSelectionHref: true,
         columns: [
           { label: mailCopy.addressLabel, className: "mono" },
           { label: mailCopy.domainNameLabel },
-          { label: mailCopy.destinationsLabel, className: "mono" }
+          { label: mailCopy.destinationsLabel, className: "mono" },
+          { label: mailCopy.actionsLabel }
         ],
         rows: aliasRows,
         emptyMessage: mailCopy.noAliases,
@@ -600,26 +815,8 @@ export function renderMailSectionContent(args: {
         recordsLabel: copy.records,
         defaultPageSize: 10
       })}
-      ${renderDataTable({
-        id: "section-mail-quotas",
-        heading: mailCopy.quotasTitle,
-        description: mailCopy.formsDescription,
-        headingBadgeClassName: "section-badge-lime",
-        columns: [
-          { label: mailCopy.addressLabel, className: "mono" },
-          { label: mailCopy.domainNameLabel },
-          { label: mailCopy.quotaBytesLabel, className: "mono" }
-        ],
-        rows: quotaRows,
-        emptyMessage: mailCopy.noQuotas,
-        filterPlaceholder: copy.dataFilterPlaceholder,
-        rowsPerPageLabel: copy.rowsPerPage,
-        showingLabel: copy.showing,
-        ofLabel: copy.of,
-        recordsLabel: copy.records,
-        defaultPageSize: 10
-      })}
     </div>
-    ${formsPanel}
+    ${selectedMailboxPanel}
+    ${mailModals}
   </section>`;
 }

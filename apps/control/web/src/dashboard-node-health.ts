@@ -40,6 +40,7 @@ type NodeHealthDataTableRenderer = (args: {
   id: string;
   heading: string;
   description: string;
+  restoreSelectionHref?: boolean;
   columns: Array<{ label: string; className?: string }>;
   rows: DataTableRow[];
   emptyMessage: string;
@@ -248,6 +249,7 @@ export function renderNodeHealthWorkspace<Copy extends NodeHealthCopy>(args: {
   };
 
   const nodeHealthRows: DataTableRow[] = data.nodeHealth.map((node) => ({
+    selectionKey: node.nodeId,
     selected: selectedNodeHealth?.nodeId === node.nodeId,
     cells: [
       renderFocusLink(
@@ -471,6 +473,7 @@ export function renderNodeHealthWorkspace<Copy extends NodeHealthCopy>(args: {
       id: "section-node-health-table",
       heading: copy.nodeHealthTitle,
       description: copy.nodeHealthDescription,
+      restoreSelectionHref: true,
       columns: [
         { label: copy.nodeColNode, className: "mono" },
         { label: copy.nodeColHostname },

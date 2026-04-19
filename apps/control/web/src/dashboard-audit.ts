@@ -115,6 +115,7 @@ function buildAuditRows(args: {
   } = args;
 
   return filteredAuditEvents.map((event) => ({
+    selectionKey: event.eventId,
     selected: selectedAuditEvent?.eventId === event.eventId,
     cells: [
       renderFocusLink(
@@ -291,6 +292,7 @@ export function renderAuditWorkspace(args: {
     heading: string;
     description: string;
     headingBadgeClassName?: string;
+    restoreSelectionHref?: boolean;
     columns: Array<{ label: string; className?: string }>;
     rows: DataTableRow[];
     emptyMessage: string;
@@ -465,6 +467,7 @@ export function renderAuditWorkspace(args: {
       heading: copy.auditTrailTitle,
       description: copy.auditTrailDescription,
       headingBadgeClassName: "section-badge-lime",
+      restoreSelectionHref: true,
       columns: [
         { label: copy.filterEventLabel },
         { label: copy.filterActorLabel, className: "mono" },

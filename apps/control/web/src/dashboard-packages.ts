@@ -135,6 +135,7 @@ function buildPackageRows(args: {
     const active = selectedPackage ? buildPackageFocusKey(selectedPackage) === focusKey : false;
 
     return {
+      selectionKey: focusKey,
       selected: active,
       cells: [
         renderFocusLink(
@@ -293,6 +294,7 @@ export function renderPackagesWorkspace(args: {
     heading: copy.packagesInventoryTitle,
     description: copy.packagesInventoryDescription,
     headingBadgeClassName: "section-badge-lime",
+    restoreSelectionHref: true,
     columns: [
       { label: copy.packageColPackage, className: "mono" },
       { label: copy.packageColVersion, className: "mono" },

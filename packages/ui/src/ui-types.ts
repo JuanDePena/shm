@@ -69,6 +69,7 @@ export interface DataTableColumn {
 export interface DataTableRow {
   cells: string[];
   searchText: string;
+  selectionKey?: string;
   selected?: boolean;
 }
 
@@ -77,6 +78,8 @@ export interface DataTableProps {
   heading: string;
   description?: string;
   headingBadgeClassName?: string;
+  headerActionsHtml?: string;
+  restoreSelectionHref?: boolean;
   columns: DataTableColumn[];
   rows: DataTableRow[];
   emptyMessage: string;

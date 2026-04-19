@@ -70,6 +70,7 @@ type DataTableRenderer = (args: {
   id: string;
   heading: string;
   description: string;
+  restoreSelectionHref?: boolean;
   columns: Array<{ label: string; className?: string }>;
   rows: DataTableRow[];
   emptyMessage: string;
@@ -199,6 +200,7 @@ export function renderResourceDriftWorkspace<Copy extends DriftCopy>(args: {
   } = args;
 
   const driftRows: DataTableRow[] = filteredDrift.map((entry) => ({
+    selectionKey: entry.resourceKey,
     selected: selectedDrift?.resourceKey === entry.resourceKey,
     cells: [
       escapeHtml(entry.resourceKind),
@@ -558,6 +560,7 @@ export function renderResourceDriftWorkspace<Copy extends DriftCopy>(args: {
       id: "section-resource-drift-table",
       heading: copy.resourceDriftTitle,
       description: copy.resourceDriftDescription,
+      restoreSelectionHref: true,
       columns: [
         { label: copy.driftColKind },
         { label: copy.driftColResource, className: "mono" },

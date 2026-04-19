@@ -69,6 +69,7 @@ export type JobDataTableRenderer = (args: {
   heading: string;
   description: string;
   headingBadgeClassName?: string;
+  restoreSelectionHref?: boolean;
   columns: Array<{ label: string; className?: string }>;
   rows: DataTableRow[];
   emptyMessage: string;

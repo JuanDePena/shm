@@ -261,6 +261,8 @@ export function renderRustDeskSection(
     const listenerSummary = summarizeRustDeskListeners(node);
 
     return {
+      selectionKey: node.nodeId,
+      selected: selectedRustDeskNode?.nodeId === node.nodeId,
       cells: [
         renderers.renderFocusLink(
           node.nodeId,
@@ -509,6 +511,7 @@ export function renderRustDeskSection(
       id: "section-rustdesk-table",
       heading: copy.navRustDesk,
       description: rustDeskCopy.description,
+      restoreSelectionHref: true,
       columns: [
         { label: copy.nodeColNode, className: "mono" },
         { label: copy.nodeColHostname },
