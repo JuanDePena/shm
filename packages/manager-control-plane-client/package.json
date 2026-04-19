@@ -1,6 +1,6 @@
 {
   "name": "@simplehost/manager-control-plane-client",
-  "version": "2604.19.07",
+  "version": "2604.19.08",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
