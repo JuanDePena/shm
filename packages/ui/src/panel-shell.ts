@@ -6,6 +6,20 @@ import type { PanelShellProps } from "./ui-types.js";
 export function renderPanelShell(props: PanelShellProps): string {
   const noticeHtml = renderNotice(props.notice);
   const actionsHtml = props.actions ? `<div class="hero-actions">${props.actions}</div>` : "";
+  const eyebrowHtml =
+    props.eyebrow !== undefined
+      ? `<p class="hero-eyebrow">${escapeHtml(props.eyebrow)}</p>`
+      : "";
+  const subheadingHtml = props.subheading
+    ? `<p class="hero-subheading">${escapeHtml(props.subheading)}</p>`
+    : "";
+  const pageClassName = ["page", props.pageClassName].filter(Boolean).join(" ");
+  const heroClassName = [
+    "hero",
+    props.heroAlign === "center" ? "hero-center" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return `<!doctype html>
 <html lang="${escapeHtml(props.lang ?? "en")}">
@@ -19,12 +33,13 @@ ${renderPanelShellStyleBlock()}
     </style>
   </head>
   <body>
-    <main class="page">
-      <header class="hero">
+    <main class="${escapeHtml(pageClassName)}">
+      <header class="${escapeHtml(heroClassName)}">
         <div class="hero-row">
           <div class="hero-copy">
-            <p class="hero-eyebrow">${escapeHtml(props.eyebrow ?? "SimpleHost control plane")}</p>
+            ${eyebrowHtml}
             <h1>${escapeHtml(props.heading)}</h1>
+            ${subheadingHtml}
           </div>
           ${actionsHtml}
         </div>

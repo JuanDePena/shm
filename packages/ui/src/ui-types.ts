@@ -8,9 +8,12 @@ export interface PanelShellProps {
   title: string;
   heading: string;
   eyebrow?: string;
+  subheading?: string;
   body: string;
   actions?: string;
   notice?: PanelNotice;
+  pageClassName?: string;
+  heroAlign?: "start" | "center";
 }
 
 export interface AdminNavItem {

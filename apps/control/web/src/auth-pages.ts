@@ -13,12 +13,17 @@ export function renderLoginPage(locale: WebLocale, notice?: PanelNotice): string
   return renderPanelShell({
     lang: locale,
     title: copy.loginTitle,
-    heading: copy.loginHeading,
-    eyebrow: copy.eyebrow,
+    heading: copy.appName,
+    subheading: copy.loginDescription,
     notice,
+    pageClassName: "page-login",
+    heroAlign: "center",
     body: `<section class="grid login-shell">
       <article class="panel login-card">
-        <h2>${escapeHtml(copy.loginAccess)}</h2>
+        <div class="login-card-header">
+          <h2>${escapeHtml(copy.loginAccess)}</h2>
+          <p>${escapeHtml(copy.loginAccessDescription)}</p>
+        </div>
         <form method="post" action="/auth/login" class="stack">
           <label>${escapeHtml(copy.emailLabel)}
             <input type="email" name="email" autocomplete="username" required />
