@@ -1353,12 +1353,6 @@ async function executeContainerReconcileJob(
         encoding: "utf8"
       });
 
-      if (payload.enable !== false) {
-        await execFileAsync("systemctl", ["enable", serviceUnitName], {
-          encoding: "utf8"
-        });
-      }
-
       if (payload.start !== false) {
         await execFileAsync("systemctl", ["restart", serviceUnitName], {
           encoding: "utf8"

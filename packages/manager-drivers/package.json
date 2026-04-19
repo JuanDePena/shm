@@ -1,6 +1,6 @@
 {
   "name": "@simplehost/manager-drivers",
-  "version": "2604.19.05",
+  "version": "2604.19.06",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
