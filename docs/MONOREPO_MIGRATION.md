@@ -174,6 +174,7 @@ Promotion language at the current checkpoint:
 - `candidate release-root-cutover-parity-ready`: that emulated actual release root now also proves the rehearsed cutover cycle stays aligned with the actual cutover plan and readiness checks computed against the real release-root shape
 - `candidate release-root-cutover-handoff-ready`: that emulated actual release root now also emits a single handoff artifact consolidating target-ready, actual cutover ready, rehearsal, and parity before any move toward the real release root
 - `candidate release-root-cutover-actual-handoff-ready`: the actual cutover layer now also emits its own consolidated handoff artifact, combining the real cutover plan/ready state with the emulated target handoff before any move toward the real release root
+- `candidate release-root-cutover-actual-rehearsal-ready`: the actual cutover layer now also emits its own consolidated rehearsal artifact, proving the real cutover plan/ready state remains aligned with the emulated target handoff before any move toward the real release root
 - `candidate release-rehearsal-ready`: the promoted release-shadow now also proves it stays aligned with the release-sandbox it came from before any move toward the real release root
 - `release-ready`: still not reached; packaging and deploy flows remain split-first
 

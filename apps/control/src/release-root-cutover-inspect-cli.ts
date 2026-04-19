@@ -61,6 +61,14 @@ try {
 
 try {
   console.log(readFileSync(layout.handoffSummaryFile, "utf8").trim());
+  console.log("");
 } catch {
   console.log(`Handoff summary unavailable: ${layout.handoffSummaryFile}`);
+  console.log("");
+}
+
+try {
+  console.log(readFileSync(layout.rehearsalSummaryFile, "utf8").trim());
+} catch {
+  console.log(`Rehearsal summary unavailable: ${layout.rehearsalSummaryFile}`);
 }

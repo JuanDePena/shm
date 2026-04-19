@@ -64,6 +64,8 @@ From `/opt/simplehostman/src`:
 - `pnpm test:control:release-root-promotion:promotion`
 - `pnpm test:control:release-root-promotion:ready`
 - `pnpm test:control:release-root-cutover`
+- `pnpm test:control:release-root-cutover:handoff`
+- `pnpm test:control:release-root-cutover:rehearsal`
 - `pnpm test:control:release-root-cutover-target`
 - `pnpm test:control:release-root-cutover-target:rollback`
 - `pnpm test:control:release-target`
@@ -109,6 +111,8 @@ From `/opt/simplehostman/src`:
 - `pnpm plan:control:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot]`
 - `pnpm inspect:control:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot]`
 - `pnpm cutover-ready:control:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot]`
+- `pnpm handoff:control:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot] [previousVersion]`
+- `pnpm rehearse:control:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot] [previousVersion]`
 - `pnpm apply:control:release-root-cutover-target -- [workspaceRoot] [targetId] [version]`
 - `pnpm rollback:control:release-root-cutover-target -- [workspaceRoot] [targetId] [version]`
 - `pnpm inspect:control:release-root-cutover-target -- [workspaceRoot] [targetId] [version]`
@@ -160,6 +164,8 @@ From this directory:
 - `pnpm test:release-root-promotion:promotion`
 - `pnpm test:release-root-promotion:ready`
 - `pnpm test:release-root-cutover`
+- `pnpm test:release-root-cutover:handoff`
+- `pnpm test:release-root-cutover:rehearsal`
 - `pnpm test:release-root-cutover-target`
 - `pnpm test:release-root-cutover-target:rollback`
 - `pnpm test:release-target`
@@ -205,6 +211,8 @@ From this directory:
 - `pnpm plan:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot]`
 - `pnpm inspect:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot]`
 - `pnpm cutover-ready:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot]`
+- `pnpm handoff:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot] [previousVersion]`
+- `pnpm rehearse:release-root-cutover -- [workspaceRoot] [targetId] [version] [actualReleaseRoot] [previousVersion]`
 - `pnpm apply:release-root-cutover-target -- [workspaceRoot] [targetId] [version]`
 - `pnpm cutover-ready:release-root-cutover-target -- [workspaceRoot] [targetId] [version]`
 - `pnpm rehearse:release-root-cutover-target -- [workspaceRoot] [targetId] [version] [previousVersion]`
