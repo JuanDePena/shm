@@ -23,7 +23,7 @@ Secondary node: `vps-16535090.vps.ovh.ca`
 - Public operator aliases are `vps-prd.pyrosa.com.do` for the primary and `vps-des.pyrosa.com.do` for the secondary.
 - The currently deployed host-native PostgreSQL runtime on these nodes is `16.13`.
 - The target policy in this runbook still points at PostgreSQL `18.x`; upgrading to that track remains a planned follow-up, not a completed step.
-- `postgresql-apps` and `postgresql-shp` are already live over WireGuard.
+- `postgresql-apps` and `postgresql-control` are already live over WireGuard.
 - `SHP` API and workers use `127.0.0.1:5433` locally on the active node.
 - `SHM` already executes real `postgres.reconcile` and `mariadb.reconcile` jobs against the live engines.
 
@@ -87,11 +87,11 @@ Source-controlled database artifacts:
 - [`/opt/simplehostman/src/platform/mariadb/conf/replica.cnf`](/opt/simplehostman/src/platform/mariadb/conf/replica.cnf)
 - [`/opt/simplehostman/src/platform/mariadb/sql/create-app-database.sql.template`](/opt/simplehostman/src/platform/mariadb/sql/create-app-database.sql.template)
 - [`/opt/simplehostman/src/platform/mariadb/sql/configure-replica.sql.template`](/opt/simplehostman/src/platform/mariadb/sql/configure-replica.sql.template)
-- [`/opt/simplehostman/src/packaging/postgresql/shp/conf/postgresql.shp.primary.conf`](/opt/simplehostman/src/packaging/postgresql/shp/conf/postgresql.shp.primary.conf)
-- [`/opt/simplehostman/src/packaging/postgresql/shp/conf/postgresql.shp.standby.conf`](/opt/simplehostman/src/packaging/postgresql/shp/conf/postgresql.shp.standby.conf)
-- [`/opt/simplehostman/src/packaging/postgresql/shp/conf/pg_hba.shp.conf`](/opt/simplehostman/src/packaging/postgresql/shp/conf/pg_hba.shp.conf)
-- [`/opt/simplehostman/src/scripts/panel/bootstrap-shp-standby.sh`](/opt/simplehostman/src/scripts/panel/bootstrap-shp-standby.sh)
-- [`/opt/simplehostman/src/packaging/postgresql/shp/sql/create-shp-database.sql.template`](/opt/simplehostman/src/packaging/postgresql/shp/sql/create-shp-database.sql.template)
+- [`/opt/simplehostman/src/packaging/postgresql/control/conf/postgresql.control.primary.conf`](/opt/simplehostman/src/packaging/postgresql/control/conf/postgresql.control.primary.conf)
+- [`/opt/simplehostman/src/packaging/postgresql/control/conf/postgresql.control.standby.conf`](/opt/simplehostman/src/packaging/postgresql/control/conf/postgresql.control.standby.conf)
+- [`/opt/simplehostman/src/packaging/postgresql/control/conf/pg_hba.control.conf`](/opt/simplehostman/src/packaging/postgresql/control/conf/pg_hba.control.conf)
+- [`/opt/simplehostman/src/scripts/panel/bootstrap-control-standby.sh`](/opt/simplehostman/src/scripts/panel/bootstrap-control-standby.sh)
+- [`/opt/simplehostman/src/packaging/postgresql/control/sql/create-control-database.sql.template`](/opt/simplehostman/src/packaging/postgresql/control/sql/create-control-database.sql.template)
 
 ## PostgreSQL applications design
 
@@ -159,13 +159,13 @@ Preferred tooling:
 
 ### Role
 
-`postgresql-shp` is the dedicated control-plane PostgreSQL cluster for `SHP`.
+`postgresql-control` is the dedicated control-plane PostgreSQL cluster for `SHP`.
 
 Do not mix tenant application databases into this cluster.
 
 ### Topology
 
-- Cluster name: `postgresql-shp`
+- Cluster name: `postgresql-control`
 - Primary: `vps-3dbbfb0b.vps.ovh.ca`
 - Physical standby: `vps-16535090.vps.ovh.ca`
 - Listener port: `5433`
@@ -176,12 +176,12 @@ Do not mix tenant application databases into this cluster.
 
 Recommended data path for the PostgreSQL host-native cluster:
 
-- `/var/lib/pgsql/shp/data`
-- `/var/lib/pgsql/shp/wal-archive`
+- `/var/lib/pgsql/control/data`
+- `/var/lib/pgsql/control/wal-archive`
 
 Recommended backup paths:
 
-- `/srv/backups/postgresql-shp/`
+- `/srv/backups/postgresql-control/`
 
 ### Backups
 
@@ -197,13 +197,13 @@ Preferred tooling:
 
 ### Client connectivity
 
-- `SHP` API and workers connect to the current `postgresql-shp` primary only.
+- `SHP` API and workers connect to the current `postgresql-control` primary only.
 - Keep `SHP` database credentials separate from tenant application credentials.
 - Do not use this cluster for tenant application data.
 
 ### 8 GB memory profile
 
-Recommended baseline for `postgresql-shp` on nodes with `8 GB` RAM:
+Recommended baseline for `postgresql-control` on nodes with `8 GB` RAM:
 
 - `max_connections = 100`
 - `shared_buffers = 2GB`
@@ -228,38 +228,38 @@ This profile is intentionally conservative for a control-plane database:
 Primary node bootstrap:
 
 1. Create host paths:
-   - `/var/lib/pgsql/shp/data`
-   - `/var/lib/pgsql/shp/wal-archive`
+   - `/var/lib/pgsql/control/data`
+   - `/var/lib/pgsql/control/wal-archive`
 2. Create the host-native cluster unit:
-   - `postgresql-new-systemd-unit --unit postgresql@shp --datadir /var/lib/pgsql/shp/data`
+   - `postgresql-new-systemd-unit --unit postgresql@control --datadir /var/lib/pgsql/control/data`
 3. Initialize the cluster:
-   - `postgresql-setup --initdb --unit postgresql@shp --port 5433`
+   - `postgresql-setup --initdb --unit postgresql@control --port 5433`
 4. Install these rendered artifacts into the cluster data directory:
-   - [`/opt/simplehostman/src/packaging/postgresql/shp/conf/postgresql.shp.primary.conf`](/opt/simplehostman/src/packaging/postgresql/shp/conf/postgresql.shp.primary.conf) as `postgresql.conf`
-   - [`/opt/simplehostman/src/packaging/postgresql/shp/conf/pg_hba.shp.conf`](/opt/simplehostman/src/packaging/postgresql/shp/conf/pg_hba.shp.conf) as `pg_hba.conf`
+   - [`/opt/simplehostman/src/packaging/postgresql/control/conf/postgresql.control.primary.conf`](/opt/simplehostman/src/packaging/postgresql/control/conf/postgresql.control.primary.conf) as `postgresql.conf`
+   - [`/opt/simplehostman/src/packaging/postgresql/control/conf/pg_hba.control.conf`](/opt/simplehostman/src/packaging/postgresql/control/conf/pg_hba.control.conf) as `pg_hba.conf`
 5. Ensure `5433/tcp` is labeled for PostgreSQL under SELinux:
    - `semanage port -a -t postgresql_port_t -p tcp 5433`
 6. Reload SELinux policy if needed and start the service:
    - `semodule -B`
-   - `systemctl enable --now postgresql@shp`
-7. Create the `SHP` database and role from [`/opt/simplehostman/src/packaging/postgresql/shp/sql/create-shp-database.sql.template`](/opt/simplehostman/src/packaging/postgresql/shp/sql/create-shp-database.sql.template).
+   - `systemctl enable --now postgresql@control`
+7. Create the `SHP` database and role from [`/opt/simplehostman/src/packaging/postgresql/control/sql/create-control-database.sql.template`](/opt/simplehostman/src/packaging/postgresql/control/sql/create-control-database.sql.template).
 
 Secondary node bootstrap:
 
 1. Create host paths:
-   - `/var/lib/pgsql/shp/data`
-   - `/var/lib/pgsql/shp/wal-archive`
+   - `/var/lib/pgsql/control/data`
+   - `/var/lib/pgsql/control/wal-archive`
 2. Create the host-native cluster unit:
-   - `postgresql-new-systemd-unit --unit postgresql@shp --datadir /var/lib/pgsql/shp/data`
-3. Bootstrap the standby data directory from the primary with [`/opt/simplehostman/src/scripts/panel/bootstrap-shp-standby.sh`](/opt/simplehostman/src/scripts/panel/bootstrap-shp-standby.sh).
+   - `postgresql-new-systemd-unit --unit postgresql@control --datadir /var/lib/pgsql/control/data`
+3. Bootstrap the standby data directory from the primary with [`/opt/simplehostman/src/scripts/panel/bootstrap-control-standby.sh`](/opt/simplehostman/src/scripts/panel/bootstrap-control-standby.sh).
 4. Install these rendered artifacts into the cluster data directory:
-   - [`/opt/simplehostman/src/packaging/postgresql/shp/conf/postgresql.shp.standby.conf`](/opt/simplehostman/src/packaging/postgresql/shp/conf/postgresql.shp.standby.conf) as `postgresql.conf`
-   - [`/opt/simplehostman/src/packaging/postgresql/shp/conf/pg_hba.shp.conf`](/opt/simplehostman/src/packaging/postgresql/shp/conf/pg_hba.shp.conf) as `pg_hba.conf`
+   - [`/opt/simplehostman/src/packaging/postgresql/control/conf/postgresql.control.standby.conf`](/opt/simplehostman/src/packaging/postgresql/control/conf/postgresql.control.standby.conf) as `postgresql.conf`
+   - [`/opt/simplehostman/src/packaging/postgresql/control/conf/pg_hba.control.conf`](/opt/simplehostman/src/packaging/postgresql/control/conf/pg_hba.control.conf) as `pg_hba.conf`
 5. Ensure `5433/tcp` is labeled for PostgreSQL under SELinux:
    - `semanage port -a -t postgresql_port_t -p tcp 5433`
 6. Reload SELinux policy if needed and start the standby service:
    - `semodule -B`
-   - `systemctl enable --now postgresql@shp`
+   - `systemctl enable --now postgresql@control`
 
 Minimum validation:
 
@@ -359,7 +359,7 @@ Expected behavior:
 - Standby returns `true` for `pg_is_in_recovery()`
 - Listener is not exposed on a public address
 
-`postgresql-shp` follows the same validation pattern on port `5433`.
+`postgresql-control` follows the same validation pattern on port `5433`.
 
 ### MariaDB
 

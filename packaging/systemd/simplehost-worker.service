@@ -1,8 +1,8 @@
 [Unit]
 Description=SimpleHost Worker
-After=network-online.target postgresql@shp.service
+After=network-online.target postgresql@control.service
 Wants=network-online.target
-Requires=postgresql@shp.service
+Requires=postgresql@control.service
 
 [Service]
 Type=simple

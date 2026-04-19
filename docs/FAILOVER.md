@@ -7,7 +7,7 @@ two-node layout.
 
 - Primary host: `vps-3dbbfb0b.vps.ovh.ca`
 - Secondary host: `vps-16535090.vps.ovh.ca`
-- `postgresql-shp` replicates over WireGuard on `10.89.0.0/24`
+- `postgresql-control` replicates over WireGuard on `10.89.0.0/24`
 - `simplehost-control` and `simplehost-worker` are installed on both nodes
 - On the secondary node, both services stay disabled until promotion
 - `simplehost-control` and `simplehost-worker` must stay stopped on the standby while
@@ -64,12 +64,12 @@ ssh root@vps-16535090.vps.ovh.ca \
    systemctl stop simplehost-control.service simplehost-worker.service"
 ```
 
-While `postgresql-shp` is still in recovery mode, `simplehost-control` and
+While `postgresql-control` is still in recovery mode, `simplehost-control` and
 `simplehost-worker` are expected to stay down on the standby.
 
 ## Manual promotion sequence
 
-1. On the secondary, promote `postgresql-shp`:
+1. On the secondary, promote `postgresql-control`:
 
    ```bash
    sudo -u postgres psql -p 5433 -c 'select pg_promote();'
@@ -117,7 +117,7 @@ happened.
 
 Rebuild the old primary as a fresh standby:
 
-1. re-bootstrap `postgresql-shp` from the new primary
+1. re-bootstrap `postgresql-control` from the new primary
 2. verify streaming replication is back
 3. keep `simplehost-control` and `simplehost-worker` disabled on the rebuilt standby unless you are failing back
 

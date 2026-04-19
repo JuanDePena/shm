@@ -9,7 +9,7 @@ Closed work should stay in the docs as implemented state, not linger here.
 
 - The deployed PostgreSQL runtime is currently `16.13`.
 - The documented target policy is PostgreSQL `18.x`.
-- Plan and document the safe upgrade path for both `postgresql-apps` and `postgresql-shp`.
+- Plan and document the safe upgrade path for both `postgresql-apps` and `postgresql-control`.
 
 ## 2. Finish real per-action diffs in `SHP`
 

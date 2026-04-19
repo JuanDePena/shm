@@ -47,7 +47,7 @@ Product design references:
 - Public operator hostnames are `vps-prd.pyrosa.com.do` and `vps-des.pyrosa.com.do`.
 - Current system hostnames still remain the legacy OVH names `vps-3dbbfb0b.vps.ovh.ca` and `vps-16535090.vps.ovh.ca`.
 - `wg0` is live between the nodes on `10.89.0.1` and `10.89.0.2`.
-- `postgresql-apps` and `postgresql-shp` are already deployed as host-native primary/standby clusters.
+- `postgresql-apps` and `postgresql-control` are already deployed as host-native primary/standby clusters.
 - `SHP` now runs as the combined `simplehost-control` runtime on the primary node; the secondary keeps `simplehost-control` and `simplehost-worker` stopped until promotion.
 - `SHM` is active on both nodes and desired state already lives in `SHP` PostgreSQL.
 - Bootstrap YAML remains for import/export and disaster recovery only.
@@ -189,7 +189,7 @@ State that must be externalized before active/active:
 Two separate PostgreSQL clusters are recommended:
 
 - `postgresql-apps`: customer application databases on `5432/tcp`
-- `postgresql-shp`: the `SHP` control-plane database on `5433/tcp`
+- `postgresql-control`: the `SHP` control-plane database on `5433/tcp`
 
 For both clusters:
 

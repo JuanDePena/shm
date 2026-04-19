@@ -4,7 +4,7 @@ BEGIN
         EXECUTE format(
             'CREATE ROLE %I LOGIN PASSWORD %L',
             'simplehost_panel',
-            '__SHP_DATABASE_PASSWORD__'
+            '__CONTROL_DATABASE_PASSWORD__'
         );
     END IF;
 END
