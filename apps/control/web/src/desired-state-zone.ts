@@ -154,61 +154,6 @@ function renderZoneWorkspacePanel(args: {
   const zoneRecordsModalId = `zone-records-modal-${selectedZone.zoneName.replace(/[^a-z0-9_-]+/gi, "-")}`;
   const closeLabel = locale === "es" ? "Cerrar" : "Close";
   const zoneRecordsValue = formatZoneRecords(selectedZone.records);
-  const linkedResourceCards = [
-    ...selectedZoneApps.slice(0, 4).map(
-      (app) => `<article class="action-card action-card-muted">
-        <p class="action-eyebrow">${escapeHtml(copy.relatedResourcesTitle)}</p>
-        <h3>
-          <a class="detail-link" href="${escapeHtml(
-            buildDashboardViewUrl("apps", undefined, app.slug)
-          )}">${escapeHtml(app.slug)}</a>
-        </h3>
-        <p class="action-card-note">${escapeHtml(app.canonicalDomain)}</p>
-      </article>`
-    ),
-    ...selectedZoneBackupPolicies.slice(0, 2).map(
-      (policy) => `<article class="action-card action-card-muted">
-        <p class="action-eyebrow">${escapeHtml(copy.relatedResourcesTitle)}</p>
-        <h3>
-          <a class="detail-link" href="${escapeHtml(
-            buildDashboardViewUrl("backup-policies", undefined, policy.policySlug)
-          )}">${escapeHtml(policy.policySlug)}</a>
-        </h3>
-        <p class="action-card-note">${escapeHtml(policy.schedule)}</p>
-      </article>`
-    )
-  ].join("");
-  const latestOutcomeCards = `<div class="action-grid">
-    <article class="action-card action-card-muted">
-      <p class="action-eyebrow">${escapeHtml(copy.latestSuccessLabel)}</p>
-      ${
-        selectedZoneLatestSuccess
-          ? `<h3><a class="detail-link mono" href="${escapeHtml(
-              buildDashboardViewUrl("jobs", undefined, selectedZoneLatestSuccess.jobId)
-            )}">${escapeHtml(selectedZoneLatestSuccess.jobId)}</a></h3>
-             <p class="action-card-note">${escapeHtml(
-               selectedZoneLatestSuccess.summary ?? selectedZoneLatestSuccess.status ?? copy.none
-             )}</p>`
-          : `<h3>${escapeHtml(copy.none)}</h3>
-             <p class="action-card-note">${escapeHtml(copy.none)}</p>`
-      }
-    </article>
-    <article class="action-card action-card-muted">
-      <p class="action-eyebrow">${escapeHtml(copy.latestFailureLabel)}</p>
-      ${
-        selectedZoneLatestFailure
-          ? `<h3><a class="detail-link mono" href="${escapeHtml(
-              buildDashboardViewUrl("jobs", undefined, selectedZoneLatestFailure.jobId)
-            )}">${escapeHtml(selectedZoneLatestFailure.jobId)}</a></h3>
-             <p class="action-card-note">${escapeHtml(
-               selectedZoneLatestFailure.summary ?? selectedZoneLatestFailure.status ?? copy.none
-             )}</p>`
-          : `<h3>${escapeHtml(copy.none)}</h3>
-             <p class="action-card-note">${escapeHtml(copy.none)}</p>`
-      }
-    </article>
-  </div>`;
-
   return `<article class="panel detail-shell resource-workspace-panel">
     <div class="section-head">
       <div>
@@ -254,11 +199,28 @@ function renderZoneWorkspacePanel(args: {
                   String(selectedZone.records.length),
                   selectedZone.records.length > 0 ? "success" : "muted"
                 )
+              },
+              {
+                label: copy.latestSuccessLabel,
+                value: selectedZoneLatestSuccess
+                  ? `<a class="detail-link mono" href="${escapeHtml(
+                      buildDashboardViewUrl("jobs", undefined, selectedZoneLatestSuccess.jobId)
+                    )}">${escapeHtml(selectedZoneLatestSuccess.jobId)}</a>`
+                  : renderers.renderPill(copy.none, "muted"),
+                className: "detail-item-span-two-auto"
+              },
+              {
+                label: copy.latestFailureLabel,
+                value: selectedZoneLatestFailure
+                  ? `<a class="detail-link mono" href="${escapeHtml(
+                      buildDashboardViewUrl("jobs", undefined, selectedZoneLatestFailure.jobId)
+                    )}">${escapeHtml(selectedZoneLatestFailure.jobId)}</a>`
+                  : renderers.renderPill(copy.none, "muted"),
+                className: "detail-item-span-two-auto"
               }
             ],
             { className: "detail-grid-compact" }
           )}
-          ${latestOutcomeCards}
           ${
             selectedZone.records.length > 0
               ? `<div class="table-wrap">
@@ -287,11 +249,6 @@ function renderZoneWorkspacePanel(args: {
                   </table>
                 </div>`
               : `<p class="empty">${escapeHtml(copy.noZones)}</p>`
-          }
-          ${
-            linkedResourceCards
-              ? `<div class="action-grid">${linkedResourceCards}</div>`
-              : ""
           }
         </article>
         <article class="panel panel-nested detail-shell">

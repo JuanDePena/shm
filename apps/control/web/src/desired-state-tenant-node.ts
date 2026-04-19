@@ -126,42 +126,6 @@ function renderTenantWorkspacePanel(args: {
     undefined,
     { backupTenant: selectedTenant.slug }
   );
-  const linkedResourceCards = [
-    ...selectedTenantApps.slice(0, 4).map(
-      (app) => `<article class="action-card action-card-muted">
-        <p class="action-eyebrow">${escapeHtml(copy.navApps)}</p>
-        <h3>
-          <a class="detail-link" href="${escapeHtml(
-            buildDashboardViewUrl("apps", undefined, app.slug)
-          )}">${escapeHtml(app.slug)}</a>
-        </h3>
-        <p class="action-card-note">${escapeHtml(app.canonicalDomain)}</p>
-      </article>`
-    ),
-    ...selectedTenantZones.slice(0, 3).map(
-      (zone) => `<article class="action-card action-card-muted">
-        <p class="action-eyebrow">${escapeHtml(copy.navZones)}</p>
-        <h3>
-          <a class="detail-link" href="${escapeHtml(
-            buildDashboardViewUrl("zones", undefined, zone.zoneName)
-          )}">${escapeHtml(zone.zoneName)}</a>
-        </h3>
-        <p class="action-card-note">${escapeHtml(zone.primaryNodeId)}</p>
-      </article>`
-    ),
-    ...selectedTenantBackupPolicies.slice(0, 3).map(
-      (policy) => `<article class="action-card action-card-muted">
-        <p class="action-eyebrow">${escapeHtml(copy.navBackupPolicies)}</p>
-        <h3>
-          <a class="detail-link" href="${escapeHtml(
-            buildDashboardViewUrl("backup-policies", undefined, policy.policySlug)
-          )}">${escapeHtml(policy.policySlug)}</a>
-        </h3>
-        <p class="action-card-note">${escapeHtml(policy.schedule)}</p>
-      </article>`
-    )
-  ].join("");
-
   return `<article class="panel detail-shell resource-workspace-panel">
     <div class="section-head">
       <div>
@@ -223,16 +187,12 @@ function renderTenantWorkspacePanel(args: {
                   ? `<a class="detail-link mono" href="${escapeHtml(
                       buildDashboardViewUrl("jobs", undefined, selectedTenantLatestFailure.jobId)
                     )}">${escapeHtml(selectedTenantLatestFailure.jobId)}</a>`
-                  : renderers.renderPill(copy.none, "muted")
+                  : renderers.renderPill(copy.none, "muted"),
+                className: "detail-item-span-two-auto"
               }
             ],
             { className: "detail-grid-compact" }
           )}
-          ${
-            linkedResourceCards
-              ? `<div class="action-grid">${linkedResourceCards}</div>`
-              : ""
-          }
         </article>
         <article class="panel panel-nested detail-shell">
           <div class="section-head">
@@ -332,42 +292,6 @@ function renderNodeWorkspacePanel(args: {
     { auditEntity: selectedNode.nodeId }
   );
   const nodeHealthHref = buildDashboardViewUrl("node-health", undefined, selectedNode.nodeId);
-  const linkedResourceCards = [
-    ...selectedNodePrimaryApps.slice(0, 4).map(
-      (app) => `<article class="action-card action-card-muted">
-        <p class="action-eyebrow">${escapeHtml(copy.navApps)}</p>
-        <h3>
-          <a class="detail-link" href="${escapeHtml(
-            buildDashboardViewUrl("apps", undefined, app.slug)
-          )}">${escapeHtml(app.slug)}</a>
-        </h3>
-        <p class="action-card-note">${escapeHtml(app.canonicalDomain)}</p>
-      </article>`
-    ),
-    ...selectedNodePrimaryZones.slice(0, 3).map(
-      (zone) => `<article class="action-card action-card-muted">
-        <p class="action-eyebrow">${escapeHtml(copy.navZones)}</p>
-        <h3>
-          <a class="detail-link" href="${escapeHtml(
-            buildDashboardViewUrl("zones", undefined, zone.zoneName)
-          )}">${escapeHtml(zone.zoneName)}</a>
-        </h3>
-        <p class="action-card-note">${escapeHtml(zone.tenantSlug)}</p>
-      </article>`
-    ),
-    ...selectedNodeBackupPolicies.slice(0, 3).map(
-      (policy) => `<article class="action-card action-card-muted">
-        <p class="action-eyebrow">${escapeHtml(copy.navBackupPolicies)}</p>
-        <h3>
-          <a class="detail-link" href="${escapeHtml(
-            buildDashboardViewUrl("backup-policies", undefined, policy.policySlug)
-          )}">${escapeHtml(policy.policySlug)}</a>
-        </h3>
-        <p class="action-card-note">${escapeHtml(policy.schedule)}</p>
-      </article>`
-    )
-  ].join("");
-
   return `<article class="panel detail-shell resource-workspace-panel">
     <div class="section-head">
       <div>
@@ -456,16 +380,12 @@ function renderNodeWorkspacePanel(args: {
                   ? `<a class="detail-link mono" href="${escapeHtml(
                       buildDashboardViewUrl("jobs", undefined, selectedNodeLatestFailure.jobId)
                     )}">${escapeHtml(selectedNodeLatestFailure.jobId)}</a>`
-                  : renderers.renderPill(copy.none, "muted")
+                  : renderers.renderPill(copy.none, "muted"),
+                className: "detail-item-span-two-auto"
               }
             ],
             { className: "detail-grid-compact" }
           )}
-          ${
-            linkedResourceCards
-              ? `<div class="action-grid">${linkedResourceCards}</div>`
-              : ""
-          }
         </article>
         <article class="panel panel-nested detail-shell">
           <div class="section-head">

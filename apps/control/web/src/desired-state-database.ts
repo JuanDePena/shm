@@ -117,7 +117,6 @@ function renderDatabaseWorkspacePanel(args: {
   copy: DesiredStateDatabaseCopy;
   selectedDatabase: Database | undefined;
   selectedDatabaseApp: App | undefined;
-  selectedDatabaseBackupPolicies: BackupPolicy[];
   selectedDatabaseJobs: Job[];
   selectedDatabaseAuditEvents: AuditEvent[];
   selectedDatabasePrimaryNodeHealth: NodeHealth | undefined;
@@ -131,7 +130,6 @@ function renderDatabaseWorkspacePanel(args: {
     copy,
     selectedDatabase,
     selectedDatabaseApp,
-    selectedDatabaseBackupPolicies,
     selectedDatabaseJobs,
     selectedDatabaseAuditEvents,
     selectedDatabasePrimaryNodeHealth,
@@ -164,30 +162,6 @@ function renderDatabaseWorkspacePanel(args: {
     undefined,
     databaseResourceKey
   );
-  const linkedResourceCards = [
-    `<article class="action-card action-card-muted">
-      <p class="action-eyebrow">${escapeHtml(copy.databaseColApp)}</p>
-      <h3>${
-        selectedDatabaseApp
-          ? `<a class="detail-link" href="${escapeHtml(
-              buildDashboardViewUrl("apps", undefined, selectedDatabaseApp.slug)
-            )}">${escapeHtml(selectedDatabaseApp.slug)}</a>`
-          : escapeHtml(selectedDatabase.appSlug)
-      }</h3>
-      <p class="action-card-note">${escapeHtml(selectedDatabaseApp?.canonicalDomain ?? copy.none)}</p>
-    </article>`,
-    ...selectedDatabaseBackupPolicies.slice(0, 3).map(
-      (policy) => `<article class="action-card action-card-muted">
-        <p class="action-eyebrow">${escapeHtml(copy.relatedResourcesTitle)}</p>
-        <h3>
-          <a class="detail-link" href="${escapeHtml(
-            buildDashboardViewUrl("backup-policies", undefined, policy.policySlug)
-          )}">${escapeHtml(policy.policySlug)}</a>
-        </h3>
-        <p class="action-card-note">${escapeHtml(policy.schedule)}</p>
-      </article>`
-    )
-  ].join("");
 
   return `<article class="panel detail-shell resource-workspace-panel">
     <div class="section-head">
@@ -267,12 +241,12 @@ function renderDatabaseWorkspacePanel(args: {
                         selectedDatabaseLatestSuccess.jobId
                       )
                     )}">${escapeHtml(selectedDatabaseLatestSuccess.jobId)}</a>`
-                  : renderers.renderPill(copy.none, "muted")
+                  : renderers.renderPill(copy.none, "muted"),
+                className: "detail-item-span-two"
               }
             ],
             { className: "detail-grid-compact" }
           )}
-          <div class="action-grid">${linkedResourceCards}</div>
         </article>
         <article class="panel panel-nested detail-shell">
           <div class="section-head">
@@ -845,7 +819,6 @@ export function renderDatabaseDesiredStatePanels(args: {
     copy,
     selectedDatabase,
     selectedDatabaseApp,
-    selectedDatabaseBackupPolicies,
     selectedDatabaseJobs,
     selectedDatabaseAuditEvents,
     selectedDatabasePrimaryNodeHealth,

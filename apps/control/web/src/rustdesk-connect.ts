@@ -28,16 +28,16 @@ export function renderRustDeskConnectPage(
       ? {
           title: "Conectar RustDesk",
           heading: "RustDesk Connect",
-          eyebrow: "Acceso remoto SimpleHost",
+          eyebrow: "Acceso remoto SimpleHostMan",
           summary:
-            "Usa estos datos para conectar clientes RustDesk a tu servidor alojado en SimpleHost.",
+            "Usa estos datos para conectar clientes RustDesk a tu servidor alojado en SimpleHostMan.",
           operatorLabel: options.hasSession ? "Abrir vista operativa" : "Login de operador",
           operatorHref: options.hasSession ? "/?view=rustdesk" : "/login",
           languageLabel: "Idioma",
           languageAction: "Cambiar",
           connectionTitle: "Datos de conexión",
           connectionDescription:
-            "Comparte el hostname estable y la clave pública. No necesitas exponer nombres de nodo a los usuarios.",
+            "Comparte el hostname estable y la clave pública. No necesitas exponer nombres de nodo a los usuarios ni cambiar el flujo de acceso del operador.",
           stepsTitle: "Pasos rápidos",
           stepsDescription:
             "Estos son los datos mínimos para que el cliente OSS quede configurado correctamente.",
@@ -74,16 +74,16 @@ export function renderRustDeskConnectPage(
       : {
           title: "RustDesk Connect",
           heading: "RustDesk Connect",
-          eyebrow: "SimpleHost remote access",
+          eyebrow: "SimpleHostMan remote access",
           summary:
-            "Use these values to connect RustDesk clients to your self-hosted SimpleHost server.",
+            "Use these values to connect RustDesk clients to your self-hosted SimpleHostMan server.",
           operatorLabel: options.hasSession ? "Open operator view" : "Operator login",
           operatorHref: options.hasSession ? "/?view=rustdesk" : "/login",
           languageLabel: "Language",
           languageAction: "Switch",
           connectionTitle: "Connection details",
           connectionDescription:
-            "Share the stable hostname and public key. Users do not need node-specific hostnames.",
+            "Share the stable hostname and public key. Users do not need node-specific hostnames or a separate operator flow.",
           stepsTitle: "Quick steps",
           stepsDescription:
             "These are the minimum values needed to configure the OSS client correctly.",
@@ -146,20 +146,31 @@ export function renderRustDeskConnectPage(
       <strong class="connect-meta-badge-value">${escapeHtml(value)}</strong>
     </div>`;
 
-  const actions = `<form method="post" action="/preferences/locale" class="connect-hero-actions">
-      <input type="hidden" name="returnTo" value="/connect/rustdesk" />
-      <label>
-        <span>${escapeHtml(copy.languageLabel)}</span>
-        <select name="locale">
-          <option value="es"${locale === "es" ? " selected" : ""}>Español</option>
-          <option value="en"${locale === "en" ? " selected" : ""}>English</option>
-        </select>
-      </label>
-      <button type="submit" class="secondary">${escapeHtml(copy.languageAction)}</button>
+  const heroActions = `<div class="connect-hero-actions">
+      <div class="locale-switch" role="group" aria-label="${escapeHtml(copy.languageLabel)}">
+        <form method="post" action="/preferences/locale" class="inline-form">
+          <input type="hidden" name="returnTo" value="/connect/rustdesk" />
+          <input type="hidden" name="locale" value="es" />
+          <button
+            type="submit"
+            class="locale-button${locale === "es" ? " active" : ""}"
+            aria-pressed="${locale === "es" ? "true" : "false"}"
+          >ES</button>
+        </form>
+        <form method="post" action="/preferences/locale" class="inline-form">
+          <input type="hidden" name="returnTo" value="/connect/rustdesk" />
+          <input type="hidden" name="locale" value="en" />
+          <button
+            type="submit"
+            class="locale-button${locale === "en" ? " active" : ""}"
+            aria-pressed="${locale === "en" ? "true" : "false"}"
+          >EN</button>
+        </form>
+      </div>
       <a class="button-link" href="${escapeHtml(copy.operatorHref)}">${escapeHtml(
         copy.operatorLabel
       )}</a>
-    </form>`;
+    </div>`;
   const statusTone = connection.status === "ready" ? "success" : "danger";
   const updatedLabel = formatDate(connection.generatedAt, locale);
   const notice =
@@ -175,12 +186,24 @@ export function renderRustDeskConnectPage(
     lang: locale,
     title: copy.title,
     heading: copy.heading,
-    eyebrow: copy.eyebrow,
-    actions,
+    actions: heroActions,
     notice,
+    pageClassName: "page-connect",
     body: `<style>
+        .page.page-connect {
+          margin: 0 auto 0.18rem;
+          padding-top: 0.42rem;
+        }
+
+        .page-connect {
+          display: grid;
+          align-content: start;
+          min-height: calc(100vh - 0.6rem);
+          margin-bottom: 0;
+        }
+
         .connect-shell {
-          margin-top: 0.6rem;
+          margin-top: 0.36rem;
         }
 
         .connect-hero-actions {
@@ -191,18 +214,41 @@ export function renderRustDeskConnectPage(
           gap: 0.28rem;
         }
 
-        .connect-hero-actions label {
+        .connect-hero-actions .locale-switch {
           display: inline-flex;
           align-items: center;
-          gap: 0.35rem;
-          width: auto;
-          font-size: 0.79rem;
-          white-space: nowrap;
+          gap: 0.16rem;
+          padding: 0.12rem;
+          border: 1px solid rgba(13, 32, 56, 0.08);
+          border-radius: var(--radius-control);
+          background: rgba(255, 255, 255, 0.9);
         }
 
-        .connect-hero-actions select {
-          width: auto;
-          min-width: 5.8rem;
+        .connect-hero-actions .inline-form {
+          margin: 0;
+        }
+
+        .connect-hero-actions .locale-button {
+          min-width: 2.95rem;
+          min-height: 1.72rem;
+          padding: 0.24rem 0.5rem;
+          border-radius: var(--radius-control);
+          background: transparent;
+          color: var(--navy-strong);
+          box-shadow: none;
+          border: 1px solid rgba(13, 32, 56, 0.08);
+        }
+
+        .connect-hero-actions .locale-button:hover,
+        .connect-hero-actions .locale-button:focus-visible {
+          background: rgba(16, 39, 68, 0.08);
+        }
+
+        .connect-hero-actions .locale-button.active {
+          background: linear-gradient(135deg, var(--navy-soft), var(--navy-strong));
+          color: #f5fbff;
+          box-shadow: none;
+          border-color: rgba(13, 32, 56, 0.16);
         }
 
         .connect-layout {
@@ -316,6 +362,10 @@ export function renderRustDeskConnectPage(
         }
 
         @media (max-width: 900px) {
+          .page-connect {
+            min-height: auto;
+          }
+
           .connect-layout {
             grid-template-columns: minmax(0, 1fr);
           }
@@ -326,12 +376,9 @@ export function renderRustDeskConnectPage(
             justify-content: flex-start;
           }
 
-          .connect-hero-actions label {
+          .connect-hero-actions .locale-switch {
             width: 100%;
-          }
-
-          .connect-hero-actions select {
-            width: 100%;
+            justify-content: flex-start;
           }
 
           .copy-row {

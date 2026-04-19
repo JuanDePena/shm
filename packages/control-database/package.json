@@ -1,6 +1,6 @@
 {
   "name": "@simplehost/control-database",
-  "version": "2604.19.20",
+  "version": "2604.19.32",
   "private": true,
   "type": "module",
   "main": "dist/index.js",

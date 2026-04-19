@@ -5,6 +5,29 @@ type PillRenderer = (
   tone?: "default" | "success" | "danger" | "muted"
 ) => string;
 
+function stripHtml(value: string): string {
+  return value
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function shouldSpanDetailItem(value: string): boolean {
+  const plain = stripHtml(value);
+
+  if (!plain) {
+    return false;
+  }
+
+  const longestToken = plain
+    .split(/\s+/)
+    .reduce((longest, token) => Math.max(longest, token.length), 0);
+
+  return plain.length >= 42 || longestToken >= 28;
+}
+
 export function renderDetailGrid(
   entries: Array<{ label: string; value: string; className?: string }>,
   options: { className?: string } = {}
@@ -13,14 +36,21 @@ export function renderDetailGrid(
 
   return `<dl class="detail-grid${className}">
     ${entries
-      .map(
-        (entry) => `<div class="detail-item${
-          entry.className ? ` ${escapeHtml(entry.className)}` : ""
+      .map((entry) => {
+        const entryClassNames = [
+          entry.className,
+          shouldSpanDetailItem(entry.value) ? "detail-item-span-two-auto" : undefined
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        return `<div class="detail-item${
+          entryClassNames ? ` ${escapeHtml(entryClassNames)}` : ""
         }">
           <dt>${escapeHtml(entry.label)}</dt>
           <dd>${entry.value}</dd>
-        </div>`
-      )
+        </div>`;
+      })
       .join("")}
   </dl>`;
 }

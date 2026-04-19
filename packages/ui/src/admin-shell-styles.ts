@@ -42,6 +42,8 @@ export function renderAdminShellStyleBlock(): string {
       .sidebar-header {
         display: grid;
         gap: 0.44rem;
+        padding-bottom: 0.52rem;
+        border-bottom: 1px solid rgba(239, 247, 255, 0.08);
       }
 
       .sidebar-brand {
@@ -62,6 +64,12 @@ export function renderAdminShellStyleBlock(): string {
         font-size: var(--font-size-sidebar-title);
         line-height: 1;
         font-weight: 700;
+      }
+
+      .sidebar-search {
+        display: block;
+        margin-top: 0.24rem;
+        margin-bottom: 0.26rem;
       }
 
       .sidebar-search input {
@@ -126,8 +134,12 @@ export function renderAdminShellStyleBlock(): string {
         gap: 0.28rem;
       }
 
+      .sidebar-group + .sidebar-group {
+        margin-top: 0.18rem;
+      }
+
       .sidebar-group-label {
-        margin: 0;
+        margin: 0.08rem 0 0;
         color: rgba(183, 243, 77, 0.82);
         text-transform: uppercase;
         letter-spacing: 0.12em;
@@ -407,7 +419,13 @@ export function renderAdminShellStyleBlock(): string {
       .page-header {
         display: grid;
         gap: 0.25rem;
-        padding: 0.62rem 0.72rem 0;
+        padding: 0.92rem 1rem;
+        border: 1px solid rgba(13, 32, 56, 0.08);
+        border-radius: var(--radius-hero);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.985), rgba(245, 248, 252, 0.97)),
+          linear-gradient(135deg, rgba(13, 32, 56, 0.04), rgba(0, 127, 255, 0.045) 58%, rgba(255, 255, 255, 0.08));
+        box-shadow: none;
       }
 
       .page-header-row {
@@ -425,6 +443,7 @@ export function renderAdminShellStyleBlock(): string {
 
       .page-header p {
         margin: 0;
+        color: var(--text-subtle);
       }
 
       .page-eyebrow {

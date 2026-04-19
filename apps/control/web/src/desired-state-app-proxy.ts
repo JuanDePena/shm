@@ -61,28 +61,6 @@ function renderProxyWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): 
   const proxyVhostHref = `/proxy-vhost?slug=${encodeURIComponent(selectedApp.slug)}`;
   const proxyVhostPreviewHref = `${proxyVhostHref}&format=json`;
   const proxyVhostModalId = `proxy-vhost-modal-${selectedApp.slug}`;
-  const linkedDatabaseCards =
-    selectedAppDatabases.length > 0
-      ? `<div class="action-grid">
-          ${selectedAppDatabases
-            .map(
-              (database) => `<article class="action-card action-card-muted">
-                <p class="action-eyebrow">${escapeHtml(copy.proxyDatabaseTitle)}</p>
-                <h3>
-                  <a class="detail-link" href="${escapeHtml(
-                    buildDashboardViewUrl("databases", undefined, database.appSlug)
-                  )}">${escapeHtml(database.databaseName)}</a>
-                </h3>
-              </article>`
-            )
-            .join("")}
-        </div>`
-      : `<div class="action-grid">
-          <article class="action-card action-card-muted">
-            <p class="action-eyebrow">${escapeHtml(copy.proxyDatabaseTitle)}</p>
-            <p class="action-card-note">${escapeHtml(copy.noRelatedRecords)}</p>
-          </article>
-        </div>`;
   const modePill = renderers.renderPill(
     selectedApp.mode,
     selectedApp.mode === "active-active" ? "success" : "muted"
@@ -151,6 +129,20 @@ function renderProxyWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): 
                 )}</span>`
               },
               {
+                label: copy.proxyDatabaseTitle,
+                value:
+                  selectedAppDatabases.length > 0
+                    ? selectedAppDatabases
+                        .map(
+                          (database) => `<a class="detail-link mono" href="${escapeHtml(
+                            buildDashboardViewUrl("databases", undefined, database.appSlug)
+                          )}">${escapeHtml(database.databaseName)}</a>`
+                        )
+                        .join(", ")
+                    : renderers.renderPill(copy.none, "muted"),
+                className: "detail-item-span-two-auto"
+              },
+              {
                 label: copy.modeHealthLabel,
                 value: `${modePill} ${nodeHealthPill}`
               },
@@ -167,7 +159,6 @@ function renderProxyWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): 
             ],
             { className: "detail-grid-compact" }
           )}
-          ${linkedDatabaseCards}
         </article>
         <article class="panel panel-nested detail-shell">
           <div class="section-head">
@@ -371,28 +362,6 @@ function renderAppWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): st
   const proxyVhostHref = `/proxy-vhost?slug=${encodeURIComponent(selectedApp.slug)}`;
   const proxyVhostPreviewHref = `${proxyVhostHref}&format=json`;
   const proxyVhostModalId = `app-vhost-modal-${selectedApp.slug}`;
-  const linkedDatabaseCards =
-    selectedAppDatabases.length > 0
-      ? `<div class="action-grid">
-          ${selectedAppDatabases
-            .map(
-              (database) => `<article class="action-card action-card-muted">
-                <p class="action-eyebrow">${escapeHtml(copy.proxyDatabaseTitle)}</p>
-                <h3>
-                  <a class="detail-link" href="${escapeHtml(
-                    buildDashboardViewUrl("databases", undefined, database.appSlug)
-                  )}">${escapeHtml(database.databaseName)}</a>
-                </h3>
-              </article>`
-            )
-            .join("")}
-        </div>`
-      : `<div class="action-grid">
-          <article class="action-card action-card-muted">
-            <p class="action-eyebrow">${escapeHtml(copy.proxyDatabaseTitle)}</p>
-            <p class="action-card-note">${escapeHtml(copy.noRelatedRecords)}</p>
-          </article>
-        </div>`;
   const modePill = renderers.renderPill(
     selectedApp.mode,
     selectedApp.mode === "active-active" ? "success" : "muted"
@@ -459,6 +428,20 @@ function renderAppWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): st
                 )}</span>`
               },
               {
+                label: copy.proxyDatabaseTitle,
+                value:
+                  selectedAppDatabases.length > 0
+                    ? selectedAppDatabases
+                        .map(
+                          (database) => `<a class="detail-link mono" href="${escapeHtml(
+                            buildDashboardViewUrl("databases", undefined, database.appSlug)
+                          )}">${escapeHtml(database.databaseName)}</a>`
+                        )
+                        .join(", ")
+                    : renderers.renderPill(copy.none, "muted"),
+                className: "detail-item-span-two-auto"
+              },
+              {
                 label: copy.modeHealthLabel,
                 value: `${modePill} ${nodeHealthPill}`
               },
@@ -475,7 +458,6 @@ function renderAppWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): st
             ],
             { className: "detail-grid-compact" }
           )}
-          ${linkedDatabaseCards}
         </article>
         <article class="panel panel-nested detail-shell">
           <div class="section-head">

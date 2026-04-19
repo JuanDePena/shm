@@ -743,6 +743,14 @@ export function renderBaseStyleBlock(): string {
         grid-column: 1 / -1;
       }
 
+      .detail-item-span-two {
+        grid-column: span 2;
+      }
+
+      .detail-item-span-two-auto {
+        grid-column: span 2;
+      }
+
       .detail-item dt {
         color: var(--muted);
         font-size: 0.69rem;
@@ -764,6 +772,7 @@ export function renderBaseStyleBlock(): string {
       .detail-grid-compact .detail-item dd {
         margin-top: 0.14rem;
         font-size: 0.88rem;
+        overflow-wrap: anywhere;
       }
 
       .detail-link {
@@ -1035,6 +1044,11 @@ export function renderBaseStyleBlock(): string {
 
         .detail-grid-four {
           grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+        }
+
+        .detail-item-span-two,
+        .detail-item-span-two-auto {
+          grid-column: 1 / -1;
         }
 
         .proxy-vhost-modal {

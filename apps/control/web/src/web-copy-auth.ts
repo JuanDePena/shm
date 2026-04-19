@@ -3,12 +3,12 @@ import { type WebCopyDictionary } from "./web-copy-types.js";
 
 export const authCopyByLocale = {
   en: {
-    appName: "SimpleHost",
-    eyebrow: "SimpleHost control plane",
-    loginTitle: "SimpleHost Login",
+    appName: "SimpleHostMan",
+    eyebrow: "SimpleHostMan control plane",
+    loginTitle: "SimpleHostMan Login",
     loginHeading: "Operate your infrastructure from one control plane",
     loginDescription:
-      "SimpleHost keeps DNS, proxying, databases, jobs, drift, and backups visible from a single operator workflow.",
+      "SimpleHostMan keeps DNS, proxying, databases, jobs, drift, and backups visible from a single operator workflow.",
     loginAccess: "Operator access",
     loginAccessDescription:
       "Sign in with your operator account to review changes, dispatch work, and manage the platform safely.",
@@ -21,12 +21,12 @@ export const authCopyByLocale = {
     sidebarSearchPlaceholder: "Search navigation"
   },
   es: {
-    appName: "SimpleHost",
-    eyebrow: "Plano de control SimpleHost",
-    loginTitle: "Acceso a SimpleHost",
+    appName: "SimpleHostMan",
+    eyebrow: "Plano de control SimpleHostMan",
+    loginTitle: "Acceso a SimpleHostMan",
     loginHeading: "Opera tu infraestructura desde un solo plano de control",
     loginDescription:
-      "SimpleHost reúne DNS, proxy, bases de datos, trabajos, drift y backups en un flujo operativo único.",
+      "SimpleHostMan reúne DNS, proxy, bases de datos, trabajos, drift y backups en un flujo operativo único.",
     loginAccess: "Acceso de operador",
     loginAccessDescription:
       "Inicia sesión con tu cuenta de operador para revisar cambios, despachar trabajo y administrar la plataforma con seguridad.",
