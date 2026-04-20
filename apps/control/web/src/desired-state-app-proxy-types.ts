@@ -1,4 +1,5 @@
 import { type DashboardData } from "./api-client.js";
+import { type WebLocale } from "./request.js";
 import {
   type DesiredStateActionFactsRenderer,
   type DesiredStateActionFormRenderer,
@@ -16,6 +17,7 @@ import {
 export type App = DashboardData["desiredState"]["spec"]["apps"][number];
 export type Database = DashboardData["desiredState"]["spec"]["databases"][number];
 export type BackupPolicy = DashboardData["desiredState"]["spec"]["backupPolicies"][number];
+export type BackupRun = DashboardData["backups"]["latestRuns"][number];
 export type Job = DashboardData["jobHistory"][number];
 export type AuditEvent = DashboardData["auditEvents"][number];
 export type NodeHealth = DashboardData["nodeHealth"][number];
@@ -58,10 +60,14 @@ export interface DesiredStateAppProxyCopy {
   latestFailureLabel: string;
   linkedResource: string;
   linkedOperationsTitle: string;
+  backupsTitle: string;
+  backupCoverageDescription: string;
   auditTrailTitle: string;
   actionDispatchProxyRender: string;
   openDriftView: string;
   openAuditHistory: string;
+  openBackupsView: string;
+  openNodeHealth: string;
   desiredAppliedTitle: string;
   desiredAppliedDescription: string;
   fieldDeltaTitle: string;
@@ -97,6 +103,7 @@ export interface DesiredStateAppProxyRenderers {
   renderActionForm: DesiredStateActionFormRenderer;
   renderComparisonTable: DesiredStateComparisonTableRenderer<DesiredStateComparisonRow>;
   createComparisonDeltaItems: DesiredStateComparisonDeltaItemsRenderer<DesiredStateComparisonRow>;
+  formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderDetailGrid: DesiredStateDetailGridRenderer;
   renderPill: DesiredStatePillRenderer;
   renderRelatedPanel: DesiredStateRelatedPanelRenderer<DesiredStateRelatedPanelItem>;
@@ -106,9 +113,11 @@ export interface DesiredStateAppProxyRenderers {
 
 export interface RenderAppProxyDesiredStatePanelsArgs {
   copy: DesiredStateAppProxyCopy;
+  locale: WebLocale;
   selectedApp: App | undefined;
   selectedAppDatabases: Database[];
   selectedAppBackupPolicies: BackupPolicy[];
+  selectedAppBackupRuns: BackupRun[];
   selectedAppJobs: Job[];
   selectedAppAuditEvents: AuditEvent[];
   selectedAppLatestSuccess: Job | undefined;

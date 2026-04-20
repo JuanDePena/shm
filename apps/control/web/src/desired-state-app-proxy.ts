@@ -1,5 +1,6 @@
 import { escapeHtml } from "@simplehost/ui";
 
+import { createBackupScopePanelItems } from "./dashboard-panels.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
 import {
   renderAppEditorPanel,
@@ -19,9 +20,11 @@ export { type DesiredStateAppProxyCopy } from "./desired-state-app-proxy-types.j
 function renderProxyWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): string {
   const {
     copy,
+    locale,
     selectedApp,
     selectedAppDatabases,
     selectedAppBackupPolicies,
+    selectedAppBackupRuns,
     selectedAppJobs,
     selectedAppAuditEvents,
     selectedAppLatestSuccess,
@@ -58,6 +61,20 @@ function renderProxyWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): 
     undefined,
     primaryProxyResourceKey
   );
+  const proxyBackupsHref = buildDashboardViewUrl("backups", undefined, undefined, {
+    backupTenant: selectedApp.tenantSlug
+  });
+  const proxyBackupItems = createBackupScopePanelItems({
+    backupsHref: proxyBackupsHref,
+    backupsLabel: copy.openBackupsView,
+    emptySummary: copy.none,
+    formatDate: renderers.formatDate,
+    latestFailureLabel: copy.latestFailureLabel,
+    latestSuccessLabel: copy.latestSuccessLabel,
+    locale,
+    policyCount: selectedAppBackupPolicies.length,
+    runs: selectedAppBackupRuns
+  });
   const proxyVhostHref = `/proxy-vhost?slug=${encodeURIComponent(selectedApp.slug)}`;
   const proxyVhostPreviewHref = `${proxyVhostHref}&format=json`;
   const proxyVhostModalId = `proxy-vhost-modal-${selectedApp.slug}`;
@@ -195,6 +212,12 @@ function renderProxyWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): 
             <a class="button-link secondary" href="${escapeHtml(proxyDriftHref)}">${escapeHtml(
               copy.openDriftView
             )}</a>
+            <a class="button-link secondary" href="${escapeHtml(proxyBackupsHref)}">${escapeHtml(
+              copy.openBackupsView
+            )}</a>
+            <a class="button-link secondary" href="${escapeHtml(
+              buildDashboardViewUrl("node-health", undefined, selectedApp.primaryNodeId)
+            )}">${escapeHtml(copy.openNodeHealth)}</a>
             <button
               type="button"
               class="button-link secondary"
@@ -204,6 +227,12 @@ function renderProxyWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): 
             >${escapeHtml(copy.viewApacheVhost)}</button>
           </div>
         </article>
+        ${renderers.renderRelatedPanel(
+          copy.backupsTitle,
+          copy.backupCoverageDescription,
+          proxyBackupItems,
+          copy.noRelatedRecords
+        )}
       </div>
       <div class="proxy-workspace-column stack">
         <article class="panel panel-nested detail-shell">
@@ -323,8 +352,11 @@ function renderProxyWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): 
 function renderAppWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): string {
   const {
     copy,
+    locale,
     selectedApp,
     selectedAppDatabases,
+    selectedAppBackupPolicies,
+    selectedAppBackupRuns,
     selectedAppJobs,
     selectedAppAuditEvents,
     selectedAppLatestSuccess,
@@ -359,6 +391,20 @@ function renderAppWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): st
     undefined,
     primaryProxyResourceKey
   );
+  const appBackupsHref = buildDashboardViewUrl("backups", undefined, undefined, {
+    backupTenant: selectedApp.tenantSlug
+  });
+  const appBackupItems = createBackupScopePanelItems({
+    backupsHref: appBackupsHref,
+    backupsLabel: copy.openBackupsView,
+    emptySummary: copy.none,
+    formatDate: renderers.formatDate,
+    latestFailureLabel: copy.latestFailureLabel,
+    latestSuccessLabel: copy.latestSuccessLabel,
+    locale,
+    policyCount: selectedAppBackupPolicies.length,
+    runs: selectedAppBackupRuns
+  });
   const proxyVhostHref = `/proxy-vhost?slug=${encodeURIComponent(selectedApp.slug)}`;
   const proxyVhostPreviewHref = `${proxyVhostHref}&format=json`;
   const proxyVhostModalId = `app-vhost-modal-${selectedApp.slug}`;
@@ -494,6 +540,12 @@ function renderAppWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): st
             <a class="button-link secondary" href="${escapeHtml(appDriftHref)}">${escapeHtml(
               copy.openDriftView
             )}</a>
+            <a class="button-link secondary" href="${escapeHtml(appBackupsHref)}">${escapeHtml(
+              copy.openBackupsView
+            )}</a>
+            <a class="button-link secondary" href="${escapeHtml(
+              buildDashboardViewUrl("node-health", undefined, selectedApp.primaryNodeId)
+            )}">${escapeHtml(copy.openNodeHealth)}</a>
             <button
               type="button"
               class="button-link secondary"
@@ -503,6 +555,12 @@ function renderAppWorkspacePanel(args: RenderAppProxyDesiredStatePanelsArgs): st
             >${escapeHtml(copy.viewApacheVhost)}</button>
           </div>
         </article>
+        ${renderers.renderRelatedPanel(
+          copy.backupsTitle,
+          copy.backupCoverageDescription,
+          appBackupItems,
+          copy.noRelatedRecords
+        )}
       </div>
       <div class="resource-workspace-column stack">
         <article class="panel panel-nested detail-shell">

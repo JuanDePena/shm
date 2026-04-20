@@ -334,13 +334,19 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
               : escapeHtml(copy.never)
         },
         {
+          label: copy.latestExport,
+          value: data.inventory.latestExport
+            ? escapeHtml(formatDate(data.inventory.latestExport.exportedAt, locale))
+            : escapeHtml(copy.never)
+        },
+        {
           label: copy.records,
           value: escapeHtml(
             interpolateCopy(copy.latestImportCounts, {
-              nodes: data.inventory.nodes.length,
-              zones: data.inventory.zones.length,
-              apps: data.inventory.apps.length,
-              databases: data.inventory.databases.length
+              nodes: data.desiredState.summary.nodeCount,
+              zones: data.desiredState.summary.zoneCount,
+              apps: data.desiredState.summary.appCount,
+              databases: data.desiredState.summary.databaseCount
             })
           )
         }

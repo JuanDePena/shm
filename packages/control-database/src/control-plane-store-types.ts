@@ -129,6 +129,12 @@ export interface InventoryImportRow {
   imported_at: Date | string;
 }
 
+export interface InventoryExportRow {
+  event_id: string;
+  payload: Record<string, unknown> | null;
+  occurred_at: Date | string;
+}
+
 export interface InventoryNodeRow {
   node_id: string;
   hostname: string;

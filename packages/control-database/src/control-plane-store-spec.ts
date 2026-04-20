@@ -27,6 +27,7 @@ import {
   titleizeSlug,
   toInventoryAppSummary,
   toInventoryDatabaseSummary,
+  toInventoryExportSummary,
   toInventoryImportSummary,
   toInventoryNodeSummary,
   toInventoryZoneSummary
@@ -36,6 +37,7 @@ import type {
   ControlPlaneSpecMethods,
   InventoryAppRow,
   InventoryDatabaseRow,
+  InventoryExportRow,
   InventoryImportRow,
   InventoryNodeRow,
   InventoryRecordRow,
@@ -61,9 +63,24 @@ export async function getLatestInventoryImport(
   return result.rows[0] ? toInventoryImportSummary(result.rows[0]) : null;
 }
 
+export async function getLatestInventoryExport(
+  client: PoolClient
+): Promise<ReturnType<typeof toInventoryExportSummary> | null> {
+  const result = await client.query<InventoryExportRow>(
+    `SELECT event_id, payload, occurred_at
+     FROM shp_audit_events
+     WHERE event_type = 'inventory.exported'
+     ORDER BY occurred_at DESC
+     LIMIT 1`
+  );
+
+  return result.rows[0] ? toInventoryExportSummary(result.rows[0]) : null;
+}
+
 export async function buildInventorySnapshot(client: PoolClient) {
-  const [latestImport, nodeResult, zoneResult, appResult, databaseResult] = await Promise.all([
+  const [latestImport, latestExport, nodeResult, zoneResult, appResult, databaseResult] = await Promise.all([
     getLatestInventoryImport(client),
+    getLatestInventoryExport(client),
     client.query<InventoryNodeRow>(
       `SELECT node_id, hostname, public_ipv4, wireguard_address
        FROM shp_nodes
@@ -126,6 +143,7 @@ export async function buildInventorySnapshot(client: PoolClient) {
 
   return {
     latestImport,
+    latestExport,
     nodes: nodeResult.rows.map(toInventoryNodeSummary),
     zones: zoneResult.rows.map(toInventoryZoneSummary),
     apps: appResult.rows.map(toInventoryAppSummary),
@@ -1914,15 +1932,32 @@ export function createControlPlaneSpecMethods(
 
     async exportDesiredState(presentedToken) {
       return withTransaction(pool, async (client) => {
-        await requireAuthorizedUser(client, presentedToken, [
+        const actor = await requireAuthorizedUser(client, presentedToken, [
           "platform_admin",
           "platform_operator"
         ]);
 
         const spec = await buildDesiredStateSpecFromDatabase(client);
+        const summary = summarizeDesiredStateSpec(spec);
+        const exportedAt = new Date().toISOString();
+        const exportId = `export-${randomUUID()}`;
+
+        await insertAuditEvent(client, {
+          actorType: "user",
+          actorId: actor.userId,
+          eventType: "inventory.exported",
+          entityType: "inventory",
+          entityId: exportId,
+          payload: {
+            sourceKind: "desired_state_postgresql",
+            summary
+          },
+          occurredAt: exportedAt
+        });
 
         return {
-          exportedAt: new Date().toISOString(),
+          exportedAt,
+          summary,
           spec,
           yaml: YAML.stringify(spec)
         };

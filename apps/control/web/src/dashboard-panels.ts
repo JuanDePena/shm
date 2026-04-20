@@ -5,11 +5,14 @@ import {
   type JobHistoryEntry
 } from "@simplehost/control-contracts";
 
+import { type DashboardData } from "./api-client.js";
 import { buildDashboardViewUrl, type DashboardView } from "./dashboard-routing.js";
 import { renderActionFacts } from "./panel-renderers.js";
 import { type WebLocale } from "./request.js";
 import { renderSelectOptions } from "./dashboard-formatters.js";
 import { type WorkspaceFilterField } from "./web-types.js";
+
+type BackupRun = DashboardData["backups"]["latestRuns"][number];
 
 type FeedItem = {
   title: string;
@@ -227,6 +230,80 @@ export function findRelatedAuditEvents(
         )
     )
     .slice(0, limit);
+}
+
+export function findLatestBackupRunWithStatus(
+  runs: BackupRun[],
+  status: BackupRun["status"]
+): BackupRun | undefined {
+  return runs.find((run) => run.status === status);
+}
+
+export function createBackupScopePanelItems(args: {
+  backupsHref: string;
+  backupsLabel: string;
+  emptySummary: string;
+  formatDate: (value: string | undefined, locale: WebLocale) => string;
+  latestFailureLabel: string;
+  latestSuccessLabel: string;
+  locale: WebLocale;
+  policyCount?: number;
+  runs: BackupRun[];
+}): FeedItem[] {
+  const {
+    backupsHref,
+    backupsLabel,
+    emptySummary,
+    formatDate,
+    latestFailureLabel,
+    latestSuccessLabel,
+    locale,
+    policyCount,
+    runs
+  } = args;
+  const latestFailure = findLatestBackupRunWithStatus(runs, "failed");
+  const latestSuccess = findLatestBackupRunWithStatus(runs, "succeeded");
+  const items: FeedItem[] = [];
+
+  if (latestFailure) {
+    items.push({
+      title: `<a class="detail-link" href="${escapeHtml(
+        buildDashboardViewUrl("backups", undefined, latestFailure.runId)
+      )}">${escapeHtml(latestFailureLabel)}</a>`,
+      meta: escapeHtml([latestFailure.runId, formatDate(latestFailure.startedAt, locale)].join(" · ")),
+      summary: escapeHtml(latestFailure.summary),
+      tone: "danger"
+    });
+  }
+
+  if (latestSuccess && latestSuccess.runId !== latestFailure?.runId) {
+    items.push({
+      title: `<a class="detail-link" href="${escapeHtml(
+        buildDashboardViewUrl("backups", undefined, latestSuccess.runId)
+      )}">${escapeHtml(latestSuccessLabel)}</a>`,
+      meta: escapeHtml([latestSuccess.runId, formatDate(latestSuccess.startedAt, locale)].join(" · ")),
+      summary: escapeHtml(latestSuccess.summary),
+      tone: "success"
+    });
+  }
+
+  items.push({
+    title: `<a class="detail-link" href="${escapeHtml(backupsHref)}">${escapeHtml(
+      backupsLabel
+    )}</a>`,
+    meta: escapeHtml(
+      [
+        `${runs.length} run(s)`,
+        typeof policyCount === "number" ? `${policyCount} polic(ies)` : ""
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    ),
+    summary: escapeHtml(latestFailure?.summary ?? latestSuccess?.summary ?? emptySummary),
+    tone: latestFailure ? "danger" : latestSuccess ? "success" : "default"
+  });
+
+  return items;
 }
 
 export function renderRelatedPanel(

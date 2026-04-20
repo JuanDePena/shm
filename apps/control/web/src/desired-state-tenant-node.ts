@@ -1,6 +1,7 @@
 import { escapeHtml } from "@simplehost/ui";
 
 import { type DashboardData } from "./api-client.js";
+import { createBackupScopePanelItems } from "./dashboard-panels.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
 import {
   type DesiredStateDetailGridRenderer,
@@ -15,6 +16,7 @@ type Node = DashboardData["desiredState"]["spec"]["nodes"][number];
 type App = DashboardData["desiredState"]["spec"]["apps"][number];
 type Zone = DashboardData["desiredState"]["spec"]["zones"][number];
 type BackupPolicy = DashboardData["desiredState"]["spec"]["backupPolicies"][number];
+type BackupRun = DashboardData["backups"]["latestRuns"][number];
 type Job = DashboardData["jobHistory"][number];
 type AuditEvent = DashboardData["auditEvents"][number];
 type NodeHealth = DashboardData["nodeHealth"][number];
@@ -35,6 +37,8 @@ export interface DesiredStateTenantNodeCopy {
   latestSuccessLabel: string;
   latestFailureLabel: string;
   none: string;
+  backupsTitle: string;
+  backupCoverageDescription: string;
   effectiveStateTitle: string;
   effectiveStateDescription: string;
   relatedJobsTitle: string;
@@ -76,10 +80,12 @@ interface DesiredStateTenantNodeRenderers {
 
 function renderTenantWorkspacePanel(args: {
   copy: DesiredStateTenantNodeCopy;
+  locale: WebLocale;
   selectedTenant: Tenant | undefined;
   selectedTenantApps: App[];
   selectedTenantZones: Zone[];
   selectedTenantBackupPolicies: BackupPolicy[];
+  selectedTenantBackupRuns: BackupRun[];
   selectedTenantJobs: Job[];
   selectedTenantAuditEvents: AuditEvent[];
   selectedTenantLatestSuccess: Job | undefined;
@@ -93,10 +99,12 @@ function renderTenantWorkspacePanel(args: {
 }): string {
   const {
     copy,
+    locale,
     selectedTenant,
     selectedTenantApps,
     selectedTenantZones,
     selectedTenantBackupPolicies,
+    selectedTenantBackupRuns,
     selectedTenantJobs,
     selectedTenantAuditEvents,
     selectedTenantLatestSuccess,
@@ -126,6 +134,21 @@ function renderTenantWorkspacePanel(args: {
     undefined,
     { backupTenant: selectedTenant.slug }
   );
+  const tenantBackupItems = createBackupScopePanelItems({
+    backupsHref: tenantBackupsHref,
+    backupsLabel: copy.openBackupsView,
+    emptySummary: copy.none,
+    formatDate: renderers.formatDate,
+    latestFailureLabel: copy.latestFailureLabel,
+    latestSuccessLabel: copy.latestSuccessLabel,
+    locale,
+    policyCount: selectedTenantBackupPolicies.length,
+    runs: selectedTenantBackupRuns
+  });
+  const tenantLatestBackupSummary =
+    selectedTenantBackupRuns.find((run) => run.status === "failed")?.summary ??
+    selectedTenantBackupRuns.find((run) => run.status === "succeeded")?.summary ??
+    copy.none;
   return `<article class="panel detail-shell resource-workspace-panel">
     <div class="section-head">
       <div>
@@ -213,6 +236,12 @@ function renderTenantWorkspacePanel(args: {
             )}</a>
           </div>
         </article>
+        ${renderers.renderRelatedPanel(
+          copy.backupsTitle,
+          copy.backupCoverageDescription,
+          tenantBackupItems,
+          copy.noRelatedRecords
+        )}
       </div>
       <div class="resource-workspace-column stack">
         <article class="panel panel-nested detail-shell">
@@ -244,10 +273,12 @@ function renderTenantWorkspacePanel(args: {
 
 function renderNodeWorkspacePanel(args: {
   copy: DesiredStateTenantNodeCopy;
+  locale: WebLocale;
   selectedNode: Node | undefined;
   selectedNodePrimaryApps: App[];
   selectedNodePrimaryZones: Zone[];
   selectedNodeBackupPolicies: BackupPolicy[];
+  selectedNodeBackupRuns: BackupRun[];
   selectedNodeDesiredJobs: Job[];
   selectedNodeDesiredAuditEvents: AuditEvent[];
   selectedNodeLatestSuccess: Job | undefined;
@@ -262,10 +293,12 @@ function renderNodeWorkspacePanel(args: {
 }): string {
   const {
     copy,
+    locale,
     selectedNode,
     selectedNodePrimaryApps,
     selectedNodePrimaryZones,
     selectedNodeBackupPolicies,
+    selectedNodeBackupRuns,
     selectedNodeDesiredJobs,
     selectedNodeDesiredAuditEvents,
     selectedNodeLatestSuccess,
@@ -292,6 +325,24 @@ function renderNodeWorkspacePanel(args: {
     { auditEntity: selectedNode.nodeId }
   );
   const nodeHealthHref = buildDashboardViewUrl("node-health", undefined, selectedNode.nodeId);
+  const nodeBackupsHref = buildDashboardViewUrl("backups", undefined, undefined, {
+    backupNode: selectedNode.nodeId
+  });
+  const nodeBackupItems = createBackupScopePanelItems({
+    backupsHref: nodeBackupsHref,
+    backupsLabel: copy.openBackupsView,
+    emptySummary: copy.none,
+    formatDate: renderers.formatDate,
+    latestFailureLabel: copy.latestFailureLabel,
+    latestSuccessLabel: copy.latestSuccessLabel,
+    locale,
+    policyCount: selectedNodeBackupPolicies.length,
+    runs: selectedNodeBackupRuns
+  });
+  const nodeLatestBackupSummary =
+    selectedNodeBackupRuns.find((run) => run.status === "failed")?.summary ??
+    selectedNodeBackupRuns.find((run) => run.status === "succeeded")?.summary ??
+    copy.none;
   return `<article class="panel detail-shell resource-workspace-panel">
     <div class="section-head">
       <div>
@@ -404,8 +455,17 @@ function renderNodeWorkspacePanel(args: {
             <a class="button-link secondary" href="${escapeHtml(nodeAuditHref)}">${escapeHtml(
               copy.openAuditHistory
             )}</a>
+            <a class="button-link secondary" href="${escapeHtml(nodeBackupsHref)}">${escapeHtml(
+              copy.openBackupsView
+            )}</a>
           </div>
         </article>
+        ${renderers.renderRelatedPanel(
+          copy.backupsTitle,
+          copy.backupCoverageDescription,
+          nodeBackupItems,
+          copy.noRelatedRecords
+        )}
       </div>
       <div class="resource-workspace-column stack">
         <article class="panel panel-nested detail-shell">
@@ -448,6 +508,7 @@ export function renderTenantDesiredStatePanels(args: {
   selectedTenantApps: App[];
   selectedTenantZones: Zone[];
   selectedTenantBackupPolicies: BackupPolicy[];
+  selectedTenantBackupRuns: BackupRun[];
   selectedTenantJobs: Job[];
   selectedTenantAuditEvents: AuditEvent[];
   selectedTenantLatestSuccess: Job | undefined;
@@ -467,6 +528,7 @@ export function renderTenantDesiredStatePanels(args: {
     selectedTenantApps,
     selectedTenantZones,
     selectedTenantBackupPolicies,
+    selectedTenantBackupRuns,
     selectedTenantJobs,
     selectedTenantAuditEvents,
     selectedTenantLatestSuccess,
@@ -483,6 +545,25 @@ export function renderTenantDesiredStatePanels(args: {
       workspacePanel: ""
     };
   }
+
+  const tenantBackupsHref = buildDashboardViewUrl("backups", undefined, undefined, {
+    backupTenant: selectedTenant.slug
+  });
+  const tenantBackupItems = createBackupScopePanelItems({
+    backupsHref: tenantBackupsHref,
+    backupsLabel: copy.openBackupsView,
+    emptySummary: copy.none,
+    formatDate: renderers.formatDate,
+    latestFailureLabel: copy.latestFailureLabel,
+    latestSuccessLabel: copy.latestSuccessLabel,
+    locale,
+    policyCount: selectedTenantBackupPolicies.length,
+    runs: selectedTenantBackupRuns
+  });
+  const tenantLatestBackupSummary =
+    selectedTenantBackupRuns.find((run) => run.status === "failed")?.summary ??
+    selectedTenantBackupRuns.find((run) => run.status === "succeeded")?.summary ??
+    copy.none;
 
   const detailPanel = `<article class="panel detail-shell">
     <div class="section-head">
@@ -560,6 +641,18 @@ export function renderTenantDesiredStatePanels(args: {
           meta: escapeHtml(`${selectedTenantAuditEvents.length} event(s)`),
           summary: escapeHtml(selectedTenantAuditEvents[0]?.eventType ?? copy.none),
           tone: "default"
+        },
+        {
+          title: escapeHtml(copy.backupsTitle),
+          meta: escapeHtml(
+            `${selectedTenantBackupRuns.length} run(s) · ${selectedTenantBackupPolicies.length} polic(ies)`
+          ),
+          summary: escapeHtml(tenantLatestBackupSummary),
+          tone: selectedTenantBackupRuns.some((run) => run.status === "failed")
+            ? "danger"
+            : selectedTenantBackupRuns.some((run) => run.status === "succeeded")
+              ? "success"
+              : "default"
         }
       ],
       copy.noRelatedRecords
@@ -586,6 +679,12 @@ export function renderTenantDesiredStatePanels(args: {
           summary: escapeHtml(job.summary ?? job.dispatchReason ?? copy.none),
           tone: "danger" as const
         })),
+      copy.noRelatedRecords
+    )}
+    ${renderers.renderRelatedPanel(
+      copy.backupsTitle,
+      copy.backupCoverageDescription,
+      tenantBackupItems,
       copy.noRelatedRecords
     )}
     ${renderers.renderRelatedPanel(
@@ -631,9 +730,9 @@ export function renderTenantDesiredStatePanels(args: {
             )}">${escapeHtml(copy.openJobHistory)}</a>`
           : ""
       }
-      <a class="button-link secondary" href="${escapeHtml(
-        buildDashboardViewUrl("desired-state", "desired-state-backups")
-      )}">${escapeHtml(copy.openBackupsView)}</a>
+      <a class="button-link secondary" href="${escapeHtml(tenantBackupsHref)}">${escapeHtml(
+        copy.openBackupsView
+      )}</a>
     </div>
     ${renderers.renderResourceActivityStack(selectedTenantJobs, selectedTenantAuditEvents)}
   </article>`;
@@ -725,10 +824,12 @@ export function renderTenantDesiredStatePanels(args: {
 
   const workspacePanel = renderTenantWorkspacePanel({
     copy,
+    locale,
     selectedTenant,
     selectedTenantApps,
     selectedTenantZones,
     selectedTenantBackupPolicies,
+    selectedTenantBackupRuns,
     selectedTenantJobs,
     selectedTenantAuditEvents,
     selectedTenantLatestSuccess,
@@ -751,6 +852,7 @@ export function renderNodeDesiredStatePanels(args: {
   selectedNodePrimaryApps: App[];
   selectedNodePrimaryZones: Zone[];
   selectedNodeBackupPolicies: BackupPolicy[];
+  selectedNodeBackupRuns: BackupRun[];
   selectedNodeDesiredJobs: Job[];
   selectedNodeDesiredAuditEvents: AuditEvent[];
   selectedNodeDesiredDrift: DriftEntry[];
@@ -772,6 +874,7 @@ export function renderNodeDesiredStatePanels(args: {
     selectedNodePrimaryApps,
     selectedNodePrimaryZones,
     selectedNodeBackupPolicies,
+    selectedNodeBackupRuns,
     selectedNodeDesiredJobs,
     selectedNodeDesiredAuditEvents,
     selectedNodeDesiredDrift,
@@ -790,6 +893,25 @@ export function renderNodeDesiredStatePanels(args: {
       workspacePanel: ""
     };
   }
+
+  const nodeBackupsHref = buildDashboardViewUrl("backups", undefined, undefined, {
+    backupNode: selectedNode.nodeId
+  });
+  const nodeBackupItems = createBackupScopePanelItems({
+    backupsHref: nodeBackupsHref,
+    backupsLabel: copy.openBackupsView,
+    emptySummary: copy.none,
+    formatDate: renderers.formatDate,
+    latestFailureLabel: copy.latestFailureLabel,
+    latestSuccessLabel: copy.latestSuccessLabel,
+    locale,
+    policyCount: selectedNodeBackupPolicies.length,
+    runs: selectedNodeBackupRuns
+  });
+  const nodeLatestBackupSummary =
+    selectedNodeBackupRuns.find((run) => run.status === "failed")?.summary ??
+    selectedNodeBackupRuns.find((run) => run.status === "succeeded")?.summary ??
+    copy.none;
 
   const detailPanel = `<article class="panel detail-shell">
     <div class="section-head">
@@ -878,6 +1000,18 @@ export function renderNodeDesiredStatePanels(args: {
           tone: selectedNodeDesiredDrift.some((entry) => entry.driftStatus !== "in_sync")
             ? "danger"
             : "default"
+        },
+        {
+          title: escapeHtml(copy.backupsTitle),
+          meta: escapeHtml(
+            `${selectedNodeBackupRuns.length} run(s) · ${selectedNodeBackupPolicies.length} polic(ies)`
+          ),
+          summary: escapeHtml(nodeLatestBackupSummary),
+          tone: selectedNodeBackupRuns.some((run) => run.status === "failed")
+            ? "danger"
+            : selectedNodeBackupRuns.some((run) => run.status === "succeeded")
+              ? "success"
+              : "default"
         }
       ],
       copy.noRelatedRecords
@@ -904,6 +1038,12 @@ export function renderNodeDesiredStatePanels(args: {
           summary: escapeHtml(job.summary ?? job.dispatchReason ?? copy.none),
           tone: "danger" as const
         })),
+      copy.noRelatedRecords
+    )}
+    ${renderers.renderRelatedPanel(
+      copy.backupsTitle,
+      copy.backupCoverageDescription,
+      nodeBackupItems,
       copy.noRelatedRecords
     )}
     ${renderers.renderRelatedPanel(
@@ -945,6 +1085,9 @@ export function renderNodeDesiredStatePanels(args: {
       <a class="button-link secondary" href="${escapeHtml(
         buildDashboardViewUrl("node-health", undefined, selectedNode.nodeId)
       )}">${escapeHtml(copy.nodeHealthTitle)}</a>
+      <a class="button-link secondary" href="${escapeHtml(nodeBackupsHref)}">${escapeHtml(
+        copy.openBackupsView
+      )}</a>
       ${
         selectedNodeDesiredJobs[0]
           ? `<a class="button-link secondary" href="${escapeHtml(
@@ -1047,10 +1190,12 @@ export function renderNodeDesiredStatePanels(args: {
 
   const workspacePanel = renderNodeWorkspacePanel({
     copy,
+    locale,
     selectedNode,
     selectedNodePrimaryApps,
     selectedNodePrimaryZones,
     selectedNodeBackupPolicies,
+    selectedNodeBackupRuns,
     selectedNodeDesiredJobs,
     selectedNodeDesiredAuditEvents,
     selectedNodeLatestSuccess,

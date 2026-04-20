@@ -15,6 +15,7 @@ import type {
   InstalledPackageSummary,
   InventoryAppSummary,
   InventoryDatabaseSummary,
+  InventoryExportSummary,
   InventoryImportSummary,
   InventoryNodeSummary,
   InventoryZoneSummary,
@@ -38,6 +39,7 @@ import type {
   DriftStatusRow,
   InventoryAppRow,
   InventoryDatabaseRow,
+  InventoryExportRow,
   InventoryImportRow,
   InventoryNodeRow,
   InventoryZoneRow,
@@ -277,6 +279,24 @@ export function toInventoryImportSummary(row: InventoryImportRow): InventoryImpo
     appCount: Number(row.summary.appCount ?? 0),
     siteCount: Number(row.summary.siteCount ?? 0),
     databaseCount: Number(row.summary.databaseCount ?? 0)
+  };
+}
+
+export function toInventoryExportSummary(row: InventoryExportRow): InventoryExportSummary {
+  const summary =
+    row.payload && typeof row.payload.summary === "object" && row.payload.summary
+      ? (row.payload.summary as Record<string, unknown>)
+      : {};
+
+  return {
+    exportId: row.event_id,
+    exportedAt: normalizeTimestamp(row.occurred_at),
+    tenantCount: Number(summary.tenantCount ?? 0),
+    nodeCount: Number(summary.nodeCount ?? 0),
+    zoneCount: Number(summary.zoneCount ?? 0),
+    appCount: Number(summary.appCount ?? 0),
+    siteCount: Number(summary.siteCount ?? 0),
+    databaseCount: Number(summary.databaseCount ?? 0)
   };
 }
 

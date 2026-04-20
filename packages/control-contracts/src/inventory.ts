@@ -14,6 +14,17 @@ export interface InventoryImportSummary {
   databaseCount: number;
 }
 
+export interface InventoryExportSummary {
+  exportId: string;
+  exportedAt: string;
+  tenantCount: number;
+  nodeCount: number;
+  zoneCount: number;
+  appCount: number;
+  siteCount: number;
+  databaseCount: number;
+}
+
 export interface InventoryNodeSummary {
   nodeId: string;
   hostname: string;
@@ -55,6 +66,7 @@ export interface InventoryDatabaseSummary {
 
 export interface InventoryStateSnapshot {
   latestImport: InventoryImportSummary | null;
+  latestExport: InventoryExportSummary | null;
   nodes: InventoryNodeSummary[];
   zones: InventoryZoneSummary[];
   apps: InventoryAppSummary[];

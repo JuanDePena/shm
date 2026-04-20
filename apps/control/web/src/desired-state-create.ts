@@ -15,11 +15,13 @@ import { type WebLocale } from "./request.js";
 
 export interface DesiredStateCreateCopy {
   actionsImportInventory: string;
+  actionsDownloadYaml: string;
   backupPolicies: string;
   bootstrapInventoryDescription: string;
   bootstrapInventoryTitle: string;
   dailyOperationsSourceNote: string;
   desiredStateEditorsDescription: string;
+  latestExport: string;
   latestImport: string;
   latestImportCounts: string;
   navCreate: string;
@@ -303,6 +305,9 @@ export function buildDesiredStateCreateTab<Copy extends DesiredStateCreateCopy>(
   const desiredStateLatestImportSummary = data.inventory.latestImport
     ? `${formatDate(data.inventory.latestImport.importedAt, locale)} · ${data.inventory.latestImport.sourcePath}`
     : copy.never;
+  const desiredStateLatestExportSummary = data.inventory.latestExport
+    ? formatDate(data.inventory.latestExport.exportedAt, locale)
+    : copy.never;
 
   const createPanelHtml = `<div class="stack">
       <article class="panel panel-muted detail-shell">
@@ -342,18 +347,24 @@ export function buildDesiredStateCreateTab<Copy extends DesiredStateCreateCopy>(
         <p class="muted">${escapeHtml(copy.transitionalBootstrapNote)}</p>
         ${renderActionFacts([
           { label: copy.latestImport, value: escapeHtml(desiredStateLatestImportSummary) },
+          { label: copy.latestExport, value: escapeHtml(desiredStateLatestExportSummary) },
           {
             label: copy.records,
             value: escapeHtml(
               interpolateCopy(copy.latestImportCounts, {
-                nodes: data.inventory.nodes.length,
-                zones: data.inventory.zones.length,
-                apps: data.inventory.apps.length,
-                databases: data.inventory.databases.length
+                nodes: data.desiredState.summary.nodeCount,
+                zones: data.desiredState.summary.zoneCount,
+                apps: data.desiredState.summary.appCount,
+                databases: data.desiredState.summary.databaseCount
               })
             )
           }
         ])}
+        <div class="toolbar">
+          <a class="button-link secondary" href="/inventory/export">${escapeHtml(
+            copy.actionsDownloadYaml
+          )}</a>
+        </div>
         <form method="post" action="/actions/inventory-import" class="stack">
           <input
             type="text"

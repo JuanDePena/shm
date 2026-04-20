@@ -127,6 +127,7 @@ export interface DesiredStateApplyResponse {
 
 export interface DesiredStateExportResponse {
   exportedAt: string;
+  summary: DesiredStateApplySummary;
   spec: DesiredStateSpec;
   yaml: string;
 }

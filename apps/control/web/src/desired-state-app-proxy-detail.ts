@@ -1,13 +1,16 @@
 import { escapeHtml } from "@simplehost/ui";
 
+import { createBackupScopePanelItems } from "./dashboard-panels.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
 import { type RenderAppProxyDesiredStatePanelsArgs } from "./desired-state-app-proxy-types.js";
 
 export function renderProxyDetailPanel(args: RenderAppProxyDesiredStatePanelsArgs): string {
   const {
     copy,
+    locale,
     selectedApp,
     selectedAppBackupPolicies,
+    selectedAppBackupRuns,
     selectedAppDatabases,
     selectedAppLatestFailure,
     selectedAppLatestSuccess,
@@ -25,6 +28,20 @@ export function renderProxyDetailPanel(args: RenderAppProxyDesiredStatePanelsArg
     undefined,
     primaryProxyResourceKey
   );
+  const proxyBackupsHref = buildDashboardViewUrl("backups", undefined, undefined, {
+    backupTenant: selectedApp.tenantSlug
+  });
+  const proxyBackupItems = createBackupScopePanelItems({
+    backupsHref: proxyBackupsHref,
+    backupsLabel: copy.openBackupsView,
+    emptySummary: copy.none,
+    formatDate: renderers.formatDate,
+    latestFailureLabel: copy.latestFailureLabel,
+    latestSuccessLabel: copy.latestSuccessLabel,
+    locale,
+    policyCount: selectedAppBackupPolicies.length,
+    runs: selectedAppBackupRuns
+  });
 
   return `<article class="panel detail-shell">
     <div class="section-head">
@@ -139,9 +156,21 @@ export function renderProxyDetailPanel(args: RenderAppProxyDesiredStatePanelsArg
           <a class="button-link secondary" href="${escapeHtml(proxyDriftHref)}">${escapeHtml(
             copy.openDriftView
           )}</a>
+          <a class="button-link secondary" href="${escapeHtml(proxyBackupsHref)}">${escapeHtml(
+            copy.openBackupsView
+          )}</a>
+          <a class="button-link secondary" href="${escapeHtml(
+            buildDashboardViewUrl("node-health", undefined, selectedApp.primaryNodeId)
+          )}">${escapeHtml(copy.openNodeHealth)}</a>
         </div>
       </article>
     </div>
+    ${renderers.renderRelatedPanel(
+      copy.backupsTitle,
+      copy.backupCoverageDescription,
+      proxyBackupItems,
+      copy.noRelatedRecords
+    )}
     ${renderers.renderRelatedPanel(
       copy.relatedResourcesTitle,
       copy.relatedResourcesDescription,
@@ -171,10 +200,12 @@ export function renderProxyDetailPanel(args: RenderAppProxyDesiredStatePanelsArg
 export function renderAppDetailPanel(args: RenderAppProxyDesiredStatePanelsArgs): string {
   const {
     copy,
+    locale,
     selectedApp,
     selectedAppActionPreviewItems,
     selectedAppAuditEvents,
     selectedAppBackupPolicies,
+    selectedAppBackupRuns,
     selectedAppDatabases,
     selectedAppJobs,
     selectedAppLatestFailure,
@@ -191,6 +222,24 @@ export function renderAppDetailPanel(args: RenderAppProxyDesiredStatePanelsArgs)
   }
 
   const primaryProxyResourceKey = `app:${selectedApp.slug}:proxy:${selectedApp.primaryNodeId}`;
+  const appBackupsHref = buildDashboardViewUrl("backups", undefined, undefined, {
+    backupTenant: selectedApp.tenantSlug
+  });
+  const appBackupItems = createBackupScopePanelItems({
+    backupsHref: appBackupsHref,
+    backupsLabel: copy.openBackupsView,
+    emptySummary: copy.none,
+    formatDate: renderers.formatDate,
+    latestFailureLabel: copy.latestFailureLabel,
+    latestSuccessLabel: copy.latestSuccessLabel,
+    locale,
+    policyCount: selectedAppBackupPolicies.length,
+    runs: selectedAppBackupRuns
+  });
+  const appLatestBackupSummary =
+    selectedAppBackupRuns.find((run) => run.status === "failed")?.summary ??
+    selectedAppBackupRuns.find((run) => run.status === "succeeded")?.summary ??
+    copy.none;
 
   return `<article class="panel detail-shell">
     <div class="section-head">
@@ -320,6 +369,12 @@ export function renderAppDetailPanel(args: RenderAppProxyDesiredStatePanelsArgs)
           <a class="button-link secondary" href="${escapeHtml(
             buildDashboardViewUrl("resource-drift", undefined, primaryProxyResourceKey)
           )}">${escapeHtml(copy.openDriftView)}</a>
+          <a class="button-link secondary" href="${escapeHtml(appBackupsHref)}">${escapeHtml(
+            copy.openBackupsView
+          )}</a>
+          <a class="button-link secondary" href="${escapeHtml(
+            buildDashboardViewUrl("node-health", undefined, selectedApp.primaryNodeId)
+          )}">${escapeHtml(copy.openNodeHealth)}</a>
           ${
             selectedAppJobs[0]
               ? `<a class="button-link secondary" href="${escapeHtml(
@@ -386,6 +441,18 @@ export function renderAppDetailPanel(args: RenderAppProxyDesiredStatePanelsArgs)
             : selectedAppJobs.some((job) => job.status === "applied")
               ? "success"
               : "default"
+        },
+        {
+          title: escapeHtml(copy.backupsTitle),
+          meta: escapeHtml(
+            `${selectedAppBackupRuns.length} run(s) · ${selectedAppBackupPolicies.length} polic(ies)`
+          ),
+          summary: escapeHtml(appLatestBackupSummary),
+          tone: selectedAppBackupRuns.some((run) => run.status === "failed")
+            ? "danger"
+            : selectedAppBackupRuns.some((run) => run.status === "succeeded")
+              ? "success"
+              : "default"
         }
       ],
       copy.noRelatedRecords
@@ -400,6 +467,12 @@ export function renderAppDetailPanel(args: RenderAppProxyDesiredStatePanelsArgs)
       copy.queuedWorkTitle,
       copy.queuedWorkDescription,
       selectedAppPlanItems,
+      copy.noRelatedRecords
+    )}
+    ${renderers.renderRelatedPanel(
+      copy.backupsTitle,
+      copy.backupCoverageDescription,
+      appBackupItems,
       copy.noRelatedRecords
     )}
     ${renderers.renderRelatedPanel(

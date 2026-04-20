@@ -119,18 +119,23 @@ export interface DesiredStateSelectionModel {
   selectedTenantApps: App[];
   selectedTenantZones: Zone[];
   selectedTenantBackupPolicies: BackupPolicy[];
+  selectedTenantBackupRuns: DashboardData["backups"]["latestRuns"];
   selectedNodePrimaryApps: App[];
   selectedNodePrimaryZones: Zone[];
   selectedNodeBackupPolicies: BackupPolicy[];
+  selectedNodeBackupRuns: DashboardData["backups"]["latestRuns"];
   selectedZoneApps: App[];
   selectedZoneBackupPolicies: BackupPolicy[];
+  selectedZoneBackupRuns: DashboardData["backups"]["latestRuns"];
   selectedAppDatabases: Database[];
   selectedAppBackupPolicies: BackupPolicy[];
+  selectedAppBackupRuns: DashboardData["backups"]["latestRuns"];
   selectedBackupRuns: DashboardData["backups"]["latestRuns"];
   selectedBackupTenantApps: App[];
   selectedBackupTenantZones: Zone[];
   selectedBackupTenantDatabases: Database[];
   selectedDatabaseBackupPolicies: BackupPolicy[];
+  selectedDatabaseBackupRuns: DashboardData["backups"]["latestRuns"];
   tenantCounts: {
     apps: number;
     zones: number;

@@ -279,18 +279,23 @@ export function renderDesiredStateSection<Copy extends DesiredStateWorkspaceCopy
     selectedTenantApps,
     selectedTenantZones,
     selectedTenantBackupPolicies,
+    selectedTenantBackupRuns,
     selectedNodePrimaryApps,
     selectedNodePrimaryZones,
     selectedNodeBackupPolicies,
+    selectedNodeBackupRuns,
     selectedZoneApps,
     selectedZoneBackupPolicies,
+    selectedZoneBackupRuns,
     selectedAppDatabases,
     selectedAppBackupPolicies,
+    selectedAppBackupRuns,
     selectedBackupRuns,
     selectedBackupTenantApps,
     selectedBackupTenantZones,
     selectedBackupTenantDatabases,
     selectedDatabaseBackupPolicies,
+    selectedDatabaseBackupRuns,
     tenantCounts,
     nodeCounts,
     tenantTableRows,
@@ -389,6 +394,7 @@ export function renderDesiredStateSection<Copy extends DesiredStateWorkspaceCopy
       selectedTenantApps,
       selectedTenantZones,
       selectedTenantBackupPolicies,
+      selectedTenantBackupRuns,
       selectedTenantJobs,
       selectedTenantAuditEvents,
       selectedTenantLatestSuccess,
@@ -415,6 +421,7 @@ export function renderDesiredStateSection<Copy extends DesiredStateWorkspaceCopy
       selectedNodePrimaryApps,
       selectedNodePrimaryZones,
       selectedNodeBackupPolicies,
+      selectedNodeBackupRuns,
       selectedNodeDesiredJobs,
       selectedNodeDesiredAuditEvents,
       selectedNodeDesiredDrift,
@@ -472,6 +479,7 @@ export function renderDesiredStateSection<Copy extends DesiredStateWorkspaceCopy
       selectedZone,
       selectedZoneApps,
       selectedZoneBackupPolicies,
+      selectedZoneBackupRuns,
       selectedZoneJobs,
       selectedZoneAuditEvents,
       selectedZonePrimaryNodeHealth,
@@ -486,6 +494,7 @@ export function renderDesiredStateSection<Copy extends DesiredStateWorkspaceCopy
       renderers: {
         createComparisonDeltaItems: (rows, limit) =>
           createComparisonDeltaItems(copy, rows, limit),
+        formatDate,
         renderActionFacts,
         renderActionForm,
         renderComparisonTable: (title, description, rows) =>
@@ -507,9 +516,11 @@ export function renderDesiredStateSection<Copy extends DesiredStateWorkspaceCopy
     appWorkspacePanel
   } = renderAppProxyDesiredStatePanels({
     copy,
+    locale,
     selectedApp,
     selectedAppDatabases,
     selectedAppBackupPolicies,
+    selectedAppBackupRuns,
     selectedAppJobs,
     selectedAppAuditEvents,
     selectedAppLatestSuccess,
@@ -525,6 +536,7 @@ export function renderDesiredStateSection<Copy extends DesiredStateWorkspaceCopy
     renderers: {
       createComparisonDeltaItems: (rows, limit) =>
         createComparisonDeltaItems(copy, rows, limit),
+      formatDate,
       renderActionFacts,
       renderActionForm,
       renderComparisonTable: (title, description, rows) =>
@@ -544,9 +556,11 @@ export function renderDesiredStateSection<Copy extends DesiredStateWorkspaceCopy
   } =
     renderDatabaseDesiredStatePanels({
       copy,
+      locale,
       selectedDatabase,
       selectedDatabaseApp,
       selectedDatabaseBackupPolicies,
+      selectedDatabaseBackupRuns,
       selectedDatabaseJobs,
       selectedDatabaseAuditEvents,
       selectedDatabasePrimaryNodeHealth,
@@ -561,6 +575,7 @@ export function renderDesiredStateSection<Copy extends DesiredStateWorkspaceCopy
       renderers: {
         createComparisonDeltaItems: (rows, limit) =>
           createComparisonDeltaItems(copy, rows, limit),
+        formatDate,
         renderActionFacts,
         renderActionForm,
         renderComparisonTable: (title, description, rows) =>

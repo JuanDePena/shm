@@ -6,6 +6,7 @@ import {
   mergeDerivedDnsRecords,
   type MailDkimRuntimeRecord
 } from "./control-plane-store-spec.js";
+import { toInventoryExportSummary } from "./control-plane-store-helpers.js";
 import type { DnsRecordPayload } from "@simplehost/control-contracts";
 
 test("buildMailZoneRecords derives phase-2 deliverability records", () => {
@@ -133,4 +134,33 @@ test("mergeDerivedDnsRecords keeps explicit phase-2 TXT overrides authoritative"
   assert.ok(merged.find((record) => record.value.includes("id=manual")));
   assert.ok(merged.find((record) => record.value.includes("security@adudoc.com")));
   assert.ok(merged.find((record) => record.value.includes("p=manual")));
+});
+
+test("toInventoryExportSummary reads audit-backed export metadata", () => {
+  const summary = toInventoryExportSummary({
+    event_id: "export-123",
+    occurred_at: "2026-04-20T12:34:56Z",
+    payload: {
+      sourceKind: "desired_state_postgresql",
+      summary: {
+        tenantCount: 3,
+        nodeCount: 2,
+        zoneCount: 4,
+        appCount: 5,
+        siteCount: 5,
+        databaseCount: 5
+      }
+    }
+  });
+
+  assert.deepEqual(summary, {
+    exportId: "export-123",
+    exportedAt: "2026-04-20T12:34:56.000Z",
+    tenantCount: 3,
+    nodeCount: 2,
+    zoneCount: 4,
+    appCount: 5,
+    siteCount: 5,
+    databaseCount: 5
+  });
 });

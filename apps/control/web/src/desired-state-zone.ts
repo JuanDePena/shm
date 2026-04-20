@@ -1,6 +1,7 @@
 import { escapeHtml } from "@simplehost/ui";
 
 import { type DashboardData } from "./api-client.js";
+import { createBackupScopePanelItems } from "./dashboard-panels.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
 import { formatZoneRecords } from "./desired-state.js";
 import {
@@ -21,6 +22,7 @@ import { type WebLocale } from "./request.js";
 type Zone = DashboardData["desiredState"]["spec"]["zones"][number];
 type App = DashboardData["desiredState"]["spec"]["apps"][number];
 type BackupPolicy = DashboardData["desiredState"]["spec"]["backupPolicies"][number];
+type BackupRun = DashboardData["backups"]["latestRuns"][number];
 type Job = DashboardData["jobHistory"][number];
 type AuditEvent = DashboardData["auditEvents"][number];
 type NodeHealth = DashboardData["nodeHealth"][number];
@@ -47,6 +49,8 @@ export interface DesiredStateZoneCopy {
   noLabel: string;
   latestFailureLabel: string;
   linkedResource: string;
+  backupsTitle: string;
+  backupCoverageDescription: string;
   desiredAppliedTitle: string;
   desiredAppliedDescription: string;
   fieldDeltaTitle: string;
@@ -71,6 +75,8 @@ export interface DesiredStateZoneCopy {
   openDriftView: string;
   openJobHistory: string;
   openAuditHistory: string;
+  openBackupsView: string;
+  openNodeHealth: string;
   openZoneRecordsModal: string;
   zoneRecordsModalTitle: string;
   zoneRecordsModalDescription: string;
@@ -89,6 +95,7 @@ interface DesiredStateZoneRenderers {
   renderActionForm: DesiredStateActionFormRenderer;
   renderComparisonTable: DesiredStateComparisonTableRenderer<DesiredStateComparisonRow>;
   createComparisonDeltaItems: DesiredStateComparisonDeltaItemsRenderer<DesiredStateComparisonRow>;
+  formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderDetailGrid: DesiredStateDetailGridRenderer;
   renderPill: DesiredStatePillRenderer;
   renderRelatedPanel: DesiredStateRelatedPanelRenderer<DesiredStateRelatedPanelItem>;
@@ -102,6 +109,7 @@ function renderZoneWorkspacePanel(args: {
   selectedZone: Zone | undefined;
   selectedZoneApps: App[];
   selectedZoneBackupPolicies: BackupPolicy[];
+  selectedZoneBackupRuns: BackupRun[];
   selectedZoneJobs: Job[];
   selectedZoneAuditEvents: AuditEvent[];
   selectedZonePrimaryNodeHealth: NodeHealth | undefined;
@@ -118,6 +126,7 @@ function renderZoneWorkspacePanel(args: {
     selectedZone,
     selectedZoneApps,
     selectedZoneBackupPolicies,
+    selectedZoneBackupRuns,
     selectedZoneJobs,
     selectedZoneAuditEvents,
     selectedZonePrimaryNodeHealth,
@@ -151,6 +160,24 @@ function renderZoneWorkspacePanel(args: {
     undefined,
     zoneResourceKey
   );
+  const zoneBackupsHref = buildDashboardViewUrl("backups", undefined, undefined, {
+    backupTenant: selectedZone.tenantSlug
+  });
+  const zoneBackupItems = createBackupScopePanelItems({
+    backupsHref: zoneBackupsHref,
+    backupsLabel: copy.openBackupsView,
+    emptySummary: copy.none,
+    formatDate: renderers.formatDate,
+    latestFailureLabel: copy.latestFailureLabel,
+    latestSuccessLabel: copy.latestSuccessLabel,
+    locale,
+    policyCount: selectedZoneBackupPolicies.length,
+    runs: selectedZoneBackupRuns
+  });
+  const zoneLatestBackupSummary =
+    selectedZoneBackupRuns.find((run) => run.status === "failed")?.summary ??
+    selectedZoneBackupRuns.find((run) => run.status === "succeeded")?.summary ??
+    copy.none;
   const zoneRecordsModalId = `zone-records-modal-${selectedZone.zoneName.replace(/[^a-z0-9_-]+/gi, "-")}`;
   const closeLabel = locale === "es" ? "Cerrar" : "Close";
   const zoneRecordsValue = formatZoneRecords(selectedZone.records);
@@ -276,8 +303,20 @@ function renderZoneWorkspacePanel(args: {
             <a class="button-link secondary" href="${escapeHtml(zoneDriftHref)}">${escapeHtml(
               copy.openDriftView
             )}</a>
+            <a class="button-link secondary" href="${escapeHtml(zoneBackupsHref)}">${escapeHtml(
+              copy.openBackupsView
+            )}</a>
+            <a class="button-link secondary" href="${escapeHtml(
+              buildDashboardViewUrl("node-health", undefined, selectedZone.primaryNodeId)
+            )}">${escapeHtml(copy.openNodeHealth)}</a>
           </div>
         </article>
+        ${renderers.renderRelatedPanel(
+          copy.backupsTitle,
+          copy.backupCoverageDescription,
+          zoneBackupItems,
+          copy.noRelatedRecords
+        )}
       </div>
       <div class="resource-workspace-column stack">
         <article class="panel panel-nested detail-shell">
@@ -374,6 +413,7 @@ export function renderZoneDesiredStatePanels(args: {
   selectedZone: Zone | undefined;
   selectedZoneApps: App[];
   selectedZoneBackupPolicies: BackupPolicy[];
+  selectedZoneBackupRuns: BackupRun[];
   selectedZoneJobs: Job[];
   selectedZoneAuditEvents: AuditEvent[];
   selectedZonePrimaryNodeHealth: NodeHealth | undefined;
@@ -393,6 +433,7 @@ export function renderZoneDesiredStatePanels(args: {
     selectedZone,
     selectedZoneApps,
     selectedZoneBackupPolicies,
+    selectedZoneBackupRuns,
     selectedZoneJobs,
     selectedZoneAuditEvents,
     selectedZonePrimaryNodeHealth,
@@ -414,6 +455,25 @@ export function renderZoneDesiredStatePanels(args: {
       workspacePanel: ""
     };
   }
+
+  const zoneBackupsHref = buildDashboardViewUrl("backups", undefined, undefined, {
+    backupTenant: selectedZone.tenantSlug
+  });
+  const zoneBackupItems = createBackupScopePanelItems({
+    backupsHref: zoneBackupsHref,
+    backupsLabel: copy.openBackupsView,
+    emptySummary: copy.none,
+    formatDate: renderers.formatDate,
+    latestFailureLabel: copy.latestFailureLabel,
+    latestSuccessLabel: copy.latestSuccessLabel,
+    locale,
+    policyCount: selectedZoneBackupPolicies.length,
+    runs: selectedZoneBackupRuns
+  });
+  const zoneLatestBackupSummary =
+    selectedZoneBackupRuns.find((run) => run.status === "failed")?.summary ??
+    selectedZoneBackupRuns.find((run) => run.status === "succeeded")?.summary ??
+    copy.none;
 
   const detailPanel = `<article class="panel detail-shell">
     <div class="section-head">
@@ -573,6 +633,18 @@ export function renderZoneDesiredStatePanels(args: {
             : selectedZoneJobs.some((job) => job.status === "applied")
               ? "success"
               : "default"
+        },
+        {
+          title: escapeHtml(copy.backupsTitle),
+          meta: escapeHtml(
+            `${selectedZoneBackupRuns.length} run(s) · ${selectedZoneBackupPolicies.length} polic(ies)`
+          ),
+          summary: escapeHtml(zoneLatestBackupSummary),
+          tone: selectedZoneBackupRuns.some((run) => run.status === "failed")
+            ? "danger"
+            : selectedZoneBackupRuns.some((run) => run.status === "succeeded")
+              ? "success"
+              : "default"
         }
       ],
       copy.noRelatedRecords
@@ -618,6 +690,12 @@ export function renderZoneDesiredStatePanels(args: {
         : `<p class="empty">${escapeHtml(copy.noZones)}</p>`
     }
     ${renderers.renderRelatedPanel(
+      copy.backupsTitle,
+      copy.backupCoverageDescription,
+      zoneBackupItems,
+      copy.noRelatedRecords
+    )}
+    ${renderers.renderRelatedPanel(
       copy.relatedResourcesTitle,
       copy.relatedResourcesDescription,
       [
@@ -644,6 +722,12 @@ export function renderZoneDesiredStatePanels(args: {
       <a class="button-link secondary" href="${escapeHtml(
         buildDashboardViewUrl("resource-drift", undefined, `zone:${selectedZone.zoneName}`)
       )}">${escapeHtml(copy.openDriftView)}</a>
+      <a class="button-link secondary" href="${escapeHtml(zoneBackupsHref)}">${escapeHtml(
+        copy.openBackupsView
+      )}</a>
+      <a class="button-link secondary" href="${escapeHtml(
+        buildDashboardViewUrl("node-health", undefined, selectedZone.primaryNodeId)
+      )}">${escapeHtml(copy.openNodeHealth)}</a>
       ${
         selectedZoneJobs[0]
           ? `<a class="button-link secondary" href="${escapeHtml(
@@ -810,6 +894,7 @@ export function renderZoneDesiredStatePanels(args: {
     selectedZone,
     selectedZoneApps,
     selectedZoneBackupPolicies,
+    selectedZoneBackupRuns,
     selectedZoneJobs,
     selectedZoneAuditEvents,
     selectedZonePrimaryNodeHealth,

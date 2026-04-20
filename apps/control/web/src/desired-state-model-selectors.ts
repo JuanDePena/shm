@@ -72,6 +72,11 @@ export function buildDesiredStateSelectionModel<Copy extends DesiredStateModelCo
   const selectedTenantBackupPolicies = selectedTenant
     ? data.desiredState.spec.backupPolicies.filter((policy) => policy.tenantSlug === selectedTenant.slug)
     : [];
+  const selectedTenantBackupRuns = selectedTenant
+    ? data.backups.latestRuns.filter((run) =>
+        selectedTenantBackupPolicies.some((policy) => policy.policySlug === run.policySlug)
+      )
+    : [];
   const selectedNodePrimaryApps = selectedNode
     ? data.desiredState.spec.apps.filter((app) => app.primaryNodeId === selectedNode.nodeId)
     : [];
@@ -81,17 +86,34 @@ export function buildDesiredStateSelectionModel<Copy extends DesiredStateModelCo
   const selectedNodeBackupPolicies = selectedNode
     ? data.desiredState.spec.backupPolicies.filter((policy) => policy.targetNodeId === selectedNode.nodeId)
     : [];
+  const selectedNodeBackupRuns = selectedNode
+    ? data.backups.latestRuns.filter(
+        (run) =>
+          run.nodeId === selectedNode.nodeId ||
+          selectedNodeBackupPolicies.some((policy) => policy.policySlug === run.policySlug)
+      )
+    : [];
   const selectedZoneApps = selectedZone
     ? data.desiredState.spec.apps.filter((app) => app.zoneName === selectedZone.zoneName)
     : [];
   const selectedZoneBackupPolicies = selectedZone
     ? data.desiredState.spec.backupPolicies.filter((policy) => policy.tenantSlug === selectedZone.tenantSlug)
     : [];
+  const selectedZoneBackupRuns = selectedZone
+    ? data.backups.latestRuns.filter((run) =>
+        selectedZoneBackupPolicies.some((policy) => policy.policySlug === run.policySlug)
+      )
+    : [];
   const selectedAppDatabases = selectedApp
     ? data.desiredState.spec.databases.filter((database) => database.appSlug === selectedApp.slug)
     : [];
   const selectedAppBackupPolicies = selectedApp
     ? data.desiredState.spec.backupPolicies.filter((policy) => policy.tenantSlug === selectedApp.tenantSlug)
+    : [];
+  const selectedAppBackupRuns = selectedApp
+    ? data.backups.latestRuns.filter((run) =>
+        selectedAppBackupPolicies.some((policy) => policy.policySlug === run.policySlug)
+      )
     : [];
   const selectedBackupRuns = selectedBackupPolicy
     ? data.backups.latestRuns.filter((run) => run.policySlug === selectedBackupPolicy.policySlug)
@@ -111,6 +133,11 @@ export function buildDesiredStateSelectionModel<Copy extends DesiredStateModelCo
   const selectedDatabaseBackupPolicies = selectedDatabaseApp
     ? data.desiredState.spec.backupPolicies.filter((policy) => policy.tenantSlug === selectedDatabaseApp.tenantSlug)
     : [];
+  const selectedDatabaseBackupRuns = selectedDatabaseApp
+    ? data.backups.latestRuns.filter((run) =>
+        selectedDatabaseBackupPolicies.some((policy) => policy.policySlug === run.policySlug)
+      )
+    : [];
 
   return {
     tenantOptions,
@@ -128,18 +155,23 @@ export function buildDesiredStateSelectionModel<Copy extends DesiredStateModelCo
     selectedTenantApps,
     selectedTenantZones,
     selectedTenantBackupPolicies,
+    selectedTenantBackupRuns,
     selectedNodePrimaryApps,
     selectedNodePrimaryZones,
     selectedNodeBackupPolicies,
+    selectedNodeBackupRuns,
     selectedZoneApps,
     selectedZoneBackupPolicies,
+    selectedZoneBackupRuns,
     selectedAppDatabases,
     selectedAppBackupPolicies,
+    selectedAppBackupRuns,
     selectedBackupRuns,
     selectedBackupTenantApps,
     selectedBackupTenantZones,
     selectedBackupTenantDatabases,
     selectedDatabaseBackupPolicies,
+    selectedDatabaseBackupRuns,
     tenantCounts: {
       apps: selectedTenantApps.length,
       zones: selectedTenantZones.length,

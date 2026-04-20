@@ -1,6 +1,7 @@
 import { escapeHtml } from "@simplehost/ui";
 
 import { type DashboardData } from "./api-client.js";
+import { createBackupScopePanelItems } from "./dashboard-panels.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
 import {
   type DesiredStateActionFactsRenderer,
@@ -18,6 +19,7 @@ import {
 
 type App = DashboardData["desiredState"]["spec"]["apps"][number];
 type BackupPolicy = DashboardData["desiredState"]["spec"]["backupPolicies"][number];
+type BackupRun = DashboardData["backups"]["latestRuns"][number];
 type Database = DashboardData["desiredState"]["spec"]["databases"][number];
 type Job = DashboardData["jobHistory"][number];
 type AuditEvent = DashboardData["auditEvents"][number];
@@ -40,6 +42,8 @@ export interface DesiredStateDatabaseCopy {
   migrationCompletedLabel: string;
   migrationCompletedAtLabel: string;
   latestSuccessLabel: string;
+  backupsTitle: string;
+  backupCoverageDescription: string;
   databaseAccessTitle: string;
   databaseColNodes: string;
   appColDomain: string;
@@ -53,6 +57,8 @@ export interface DesiredStateDatabaseCopy {
   openDriftView: string;
   openJobHistory: string;
   openAuditHistory: string;
+  openBackupsView: string;
+  openNodeHealth: string;
   desiredAppliedTitle: string;
   desiredAppliedDescription: string;
   fieldDeltaTitle: string;
@@ -84,6 +90,7 @@ interface DesiredStateDatabaseRenderers {
   renderActionForm: DesiredStateActionFormRenderer;
   renderComparisonTable: DesiredStateComparisonTableRenderer<DesiredStateComparisonRow>;
   createComparisonDeltaItems: DesiredStateComparisonDeltaItemsRenderer<DesiredStateComparisonRow>;
+  formatDate: (value: string | undefined, locale: import("./request.js").WebLocale) => string;
   renderDetailGrid: DesiredStateDetailGridRenderer;
   renderPill: DesiredStatePillRenderer;
   renderRelatedPanel: DesiredStateRelatedPanelRenderer<DesiredStateRelatedPanelItem>;
@@ -115,8 +122,11 @@ function renderDatabaseMigrationPill(
 
 function renderDatabaseWorkspacePanel(args: {
   copy: DesiredStateDatabaseCopy;
+  locale: import("./request.js").WebLocale;
   selectedDatabase: Database | undefined;
   selectedDatabaseApp: App | undefined;
+  selectedDatabaseBackupPolicies: BackupPolicy[];
+  selectedDatabaseBackupRuns: BackupRun[];
   selectedDatabaseJobs: Job[];
   selectedDatabaseAuditEvents: AuditEvent[];
   selectedDatabasePrimaryNodeHealth: NodeHealth | undefined;
@@ -128,8 +138,11 @@ function renderDatabaseWorkspacePanel(args: {
 }): string {
   const {
     copy,
+    locale,
     selectedDatabase,
     selectedDatabaseApp,
+    selectedDatabaseBackupPolicies,
+    selectedDatabaseBackupRuns,
     selectedDatabaseJobs,
     selectedDatabaseAuditEvents,
     selectedDatabasePrimaryNodeHealth,
@@ -162,6 +175,25 @@ function renderDatabaseWorkspacePanel(args: {
     undefined,
     databaseResourceKey
   );
+  const databaseNodeHealthHref = buildDashboardViewUrl(
+    "node-health",
+    undefined,
+    selectedDatabase.primaryNodeId
+  );
+  const databaseBackupsHref = buildDashboardViewUrl("backups", undefined, undefined, {
+    backupTenant: selectedDatabaseApp?.tenantSlug
+  });
+  const databaseBackupItems = createBackupScopePanelItems({
+    backupsHref: databaseBackupsHref,
+    backupsLabel: copy.openBackupsView,
+    emptySummary: copy.none,
+    formatDate: renderers.formatDate,
+    latestFailureLabel: copy.latestFailureLabel,
+    latestSuccessLabel: copy.latestSuccessLabel,
+    locale,
+    policyCount: selectedDatabaseBackupPolicies.length,
+    runs: selectedDatabaseBackupRuns
+  });
 
   return `<article class="panel detail-shell resource-workspace-panel">
     <div class="section-head">
@@ -273,7 +305,19 @@ function renderDatabaseWorkspacePanel(args: {
             <a class="button-link secondary" href="${escapeHtml(databaseDriftHref)}">${escapeHtml(
               copy.openDriftView
             )}</a>
+            <a class="button-link secondary" href="${escapeHtml(databaseBackupsHref)}">${escapeHtml(
+              copy.openBackupsView
+            )}</a>
+            <a class="button-link secondary" href="${escapeHtml(databaseNodeHealthHref)}">${escapeHtml(
+              copy.openNodeHealth
+            )}</a>
           </div>
+          ${renderers.renderRelatedPanel(
+            copy.backupsTitle,
+            copy.backupCoverageDescription,
+            databaseBackupItems,
+            copy.noRelatedRecords
+          )}
         </article>
       </div>
       <div class="resource-workspace-column stack">
@@ -346,9 +390,11 @@ function renderDatabaseWorkspacePanel(args: {
 
 export function renderDatabaseDesiredStatePanels(args: {
   copy: DesiredStateDatabaseCopy;
+  locale: import("./request.js").WebLocale;
   selectedDatabase: Database | undefined;
   selectedDatabaseApp: App | undefined;
   selectedDatabaseBackupPolicies: BackupPolicy[];
+  selectedDatabaseBackupRuns: BackupRun[];
   selectedDatabaseJobs: Job[];
   selectedDatabaseAuditEvents: AuditEvent[];
   selectedDatabasePrimaryNodeHealth: NodeHealth | undefined;
@@ -364,9 +410,11 @@ export function renderDatabaseDesiredStatePanels(args: {
 }): { detailPanel: string; editorPanel: string; workspacePanel: string } {
   const {
     copy,
+    locale,
     selectedDatabase,
     selectedDatabaseApp,
     selectedDatabaseBackupPolicies,
+    selectedDatabaseBackupRuns,
     selectedDatabaseJobs,
     selectedDatabaseAuditEvents,
     selectedDatabasePrimaryNodeHealth,
@@ -390,6 +438,24 @@ export function renderDatabaseDesiredStatePanels(args: {
   }
 
   const databaseResourceKey = `database:${selectedDatabase.appSlug}`;
+  const databaseBackupsHref = buildDashboardViewUrl("backups", undefined, undefined, {
+    backupTenant: selectedDatabaseApp?.tenantSlug
+  });
+  const databaseBackupItems = createBackupScopePanelItems({
+    backupsHref: databaseBackupsHref,
+    backupsLabel: copy.openBackupsView,
+    emptySummary: copy.none,
+    formatDate: renderers.formatDate,
+    latestFailureLabel: copy.latestFailureLabel,
+    latestSuccessLabel: copy.latestSuccessLabel,
+    locale,
+    policyCount: selectedDatabaseBackupPolicies.length,
+    runs: selectedDatabaseBackupRuns
+  });
+  const databaseLatestBackupSummary =
+    selectedDatabaseBackupRuns.find((run) => run.status === "failed")?.summary ??
+    selectedDatabaseBackupRuns.find((run) => run.status === "succeeded")?.summary ??
+    copy.none;
 
   const detailPanel = `<article class="panel detail-shell">
     <div class="section-head">
@@ -505,6 +571,12 @@ export function renderDatabaseDesiredStatePanels(args: {
           <a class="button-link secondary" href="${escapeHtml(
             buildDashboardViewUrl("resource-drift", undefined, databaseResourceKey)
           )}">${escapeHtml(copy.openDriftView)}</a>
+          <a class="button-link secondary" href="${escapeHtml(databaseBackupsHref)}">${escapeHtml(
+            copy.openBackupsView
+          )}</a>
+          <a class="button-link secondary" href="${escapeHtml(
+            buildDashboardViewUrl("node-health", undefined, selectedDatabase.primaryNodeId)
+          )}">${escapeHtml(copy.openNodeHealth)}</a>
           ${
             selectedDatabaseJobs[0]
               ? `<a class="button-link secondary" href="${escapeHtml(
@@ -572,8 +644,26 @@ export function renderDatabaseDesiredStatePanels(args: {
             : selectedDatabaseJobs.some((job) => job.status === "applied")
               ? "success"
               : "default"
+        },
+        {
+          title: escapeHtml(copy.backupsTitle),
+          meta: escapeHtml(
+            `${selectedDatabaseBackupRuns.length} run(s) · ${selectedDatabaseBackupPolicies.length} polic(ies)`
+          ),
+          summary: escapeHtml(databaseLatestBackupSummary),
+          tone: selectedDatabaseBackupRuns.some((run) => run.status === "failed")
+            ? "danger"
+            : selectedDatabaseBackupRuns.some((run) => run.status === "succeeded")
+              ? "success"
+              : "default"
         }
       ],
+      copy.noRelatedRecords
+    )}
+    ${renderers.renderRelatedPanel(
+      copy.backupsTitle,
+      copy.backupCoverageDescription,
+      databaseBackupItems,
       copy.noRelatedRecords
     )}
     ${renderers.renderRelatedPanel(
@@ -817,8 +907,11 @@ export function renderDatabaseDesiredStatePanels(args: {
 
   const workspacePanel = renderDatabaseWorkspacePanel({
     copy,
+    locale,
     selectedDatabase,
     selectedDatabaseApp,
+    selectedDatabaseBackupPolicies,
+    selectedDatabaseBackupRuns,
     selectedDatabaseJobs,
     selectedDatabaseAuditEvents,
     selectedDatabasePrimaryNodeHealth,
