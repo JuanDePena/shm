@@ -53,6 +53,7 @@ import {
   renderMailFirewalldService,
   renderMailDesiredState,
   renderPostfixMainCf,
+  renderPostfixMasterCf,
   renderPostfixVirtualAliases,
   renderPostfixVirtualDomains,
   renderPostfixVirtualMailboxes,
@@ -395,6 +396,50 @@ async function readOptionalTextFile(targetPath: string): Promise<string | undefi
   }
 }
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function upsertManagedTextBlock(
+  existingContent: string,
+  startMarker: string,
+  endMarker: string,
+  blockContent: string
+): string {
+  const managedBlock = `${startMarker}\n${blockContent.trimEnd()}\n${endMarker}`;
+  const existingTrimmed = existingContent.trimEnd();
+  const blockPattern = new RegExp(
+    `${escapeRegex(startMarker)}[\\s\\S]*?${escapeRegex(endMarker)}`,
+    "m"
+  );
+
+  if (blockPattern.test(existingContent)) {
+    return `${existingContent.replace(blockPattern, managedBlock).trimEnd()}\n`;
+  }
+
+  if (existingTrimmed.length === 0) {
+    return `${managedBlock}\n`;
+  }
+
+  return `${existingTrimmed}\n\n${managedBlock}\n`;
+}
+
+async function ensureManagedTextBlock(
+  targetPath: string,
+  startMarker: string,
+  endMarker: string,
+  blockContent: string
+): Promise<void> {
+  const existingContent = (await readOptionalTextFile(targetPath)) ?? "";
+  const updatedContent = upsertManagedTextBlock(
+    existingContent,
+    startMarker,
+    endMarker,
+    blockContent
+  );
+  await writeFileAtomic(targetPath, updatedContent);
+}
+
 async function systemdUnitExists(serviceName: string): Promise<boolean> {
   const loadState = await runOptionalCommand("systemctl", [
     "show",
@@ -628,6 +673,30 @@ async function ensureMailFirewallPolicy(context: DriverExecutionContext): Promis
     serviceName: context.services.mail.firewallServiceName,
     configured: true
   };
+}
+
+async function applyPostfixMainCfConfiguration(content: string): Promise<void> {
+  const settings = content
+    .split(/\r?\n/g)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"));
+
+  for (const setting of settings) {
+    await execFileAsync("postconf", ["-e", setting], {
+      encoding: "utf8"
+    });
+  }
+}
+
+async function applyPostfixMasterCfConfiguration(content: string): Promise<void> {
+  const startMarker = "# --- BEGIN SimpleHostMan managed postfix services ---";
+  const endMarker = "# --- END SimpleHostMan managed postfix services ---";
+
+  await ensureManagedTextBlock("/etc/postfix/master.cf", startMarker, endMarker, content);
+}
+
+async function ensureDovecotLiveConfiguration(sourcePath: string): Promise<void> {
+  await ensureSymlinkPath("/etc/dovecot/conf.d/90-simplehost-mail.conf", sourcePath);
 }
 
 function deriveMailHomePath(
@@ -1529,6 +1598,11 @@ async function executeMailSyncJob(
       "postfix-main.cf.generated",
       renderPostfixMainCf(context.services.mail.configRoot, postmasterAddress)
     );
+    const stagedPostfixMasterCfPath = await writeRenderedFile(
+      context.services.mail.stagingDir,
+      "postfix-master.cf.generated",
+      renderPostfixMasterCf()
+    );
     const stagedDovecotPasswdPath = await writeRenderedFile(
       context.services.mail.stagingDir,
       "dovecot-passwd",
@@ -1565,6 +1639,7 @@ async function executeMailSyncJob(
     const deployedPostfixMailboxesPath = path.join(postfixConfigDir, "vmail_mailboxes");
     const deployedPostfixAliasesPath = path.join(postfixConfigDir, "vmail_aliases");
     const deployedPostfixMainCfPath = path.join(postfixConfigDir, "main.cf.generated");
+    const deployedPostfixMasterCfPath = path.join(postfixConfigDir, "master.cf.generated");
     const deployedDovecotPasswdPath = path.join(dovecotConfigDir, "passwd");
     const deployedDovecotConfPath = path.join(dovecotConfDir, "90-simplehost-mail.conf");
     const deployedRspamdSelectorsPath = path.join(rspamdConfigDir, "dkim_selectors.map");
@@ -1587,6 +1662,7 @@ async function executeMailSyncJob(
       deployedPostfixMainCfPath,
       renderPostfixMainCf(context.services.mail.configRoot, postmasterAddress)
     );
+    await writeFileAtomic(deployedPostfixMasterCfPath, renderPostfixMasterCf());
     await writeFileAtomic(
       deployedDovecotPasswdPath,
       renderDovecotPasswd(dovecotPasswdEntries)
@@ -1625,6 +1701,18 @@ async function executeMailSyncJob(
         context.services.mail.roundcubeGroup
       );
     }
+
+    await applyPostfixMainCfConfiguration(
+      renderPostfixMainCf(context.services.mail.configRoot, postmasterAddress)
+    );
+    await applyPostfixMasterCfConfiguration(renderPostfixMasterCf());
+    await ensureDovecotLiveConfiguration(deployedDovecotConfPath);
+    await execFileAsync("postfix", ["check"], {
+      encoding: "utf8"
+    });
+    await execFileAsync("doveconf", ["-n"], {
+      encoding: "utf8"
+    });
 
     const postfixService = await ensureServiceEnabledAndRestarted(
       context.services.mail.postfixServiceName
@@ -1683,11 +1771,13 @@ async function executeMailSyncJob(
           stagedDomains: stagedPostfixDomainsPath,
           stagedMailboxes: stagedPostfixMailboxesPath,
           stagedAliases: stagedPostfixAliasesPath,
+          stagedMasterCf: stagedPostfixMasterCfPath,
           deployedDomains: deployedPostfixDomainsPath,
           deployedMailboxes: deployedPostfixMailboxesPath,
           deployedAliases: deployedPostfixAliasesPath,
           stagedMainCf: stagedPostfixMainCfPath,
-          deployedMainCf: deployedPostfixMainCfPath
+          deployedMainCf: deployedPostfixMainCfPath,
+          deployedMasterCf: deployedPostfixMasterCfPath
         },
         dovecotPaths: {
           stagedPasswd: stagedDovecotPasswdPath,

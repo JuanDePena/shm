@@ -3,6 +3,8 @@
   <short>simplehost-mail</short>
   <description>SimpleHostMan mail ingress</description>
   <port protocol="tcp" port="25"/>
+  <port protocol="tcp" port="465"/>
   <port protocol="tcp" port="587"/>
   <port protocol="tcp" port="993"/>
+  <port protocol="tcp" port="995"/>
 </service>

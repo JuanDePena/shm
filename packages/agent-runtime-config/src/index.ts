@@ -317,7 +317,7 @@ export function createAgentRuntimeConfig(
         ),
         rspamdPackageTargets: readList(
           env.SIMPLEHOST_MAIL_RSPAMD_PACKAGE_TARGETS,
-          []
+          ["rspamd"]
         ),
         redisPackageTargets: readList(
           env.SIMPLEHOST_MAIL_REDIS_PACKAGE_TARGETS,

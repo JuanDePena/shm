@@ -263,7 +263,7 @@ Recommended flow:
 
 Recommended flow:
 
-1. authenticated client or `Roundcube` submits through `587/tcp`
+1. authenticated client or `Roundcube` submits through `587/tcp` or `465/tcp`
 2. `Postfix` authenticates through `Dovecot`
 3. `Rspamd` signs mail with DKIM and applies outbound policy
 4. `Postfix` delivers outward
@@ -273,13 +273,15 @@ Recommended flow:
 Recommended access:
 
 - `IMAPS` on `993/tcp`
+- `POP3S` on `995/tcp`
 - submission on `587/tcp`
+- implicit TLS submission on `465/tcp`
 - optional `ManageSieve` on `4190/tcp` only after sieve support is added
 
 Do not prioritize:
 
 - plaintext `IMAP` on `143/tcp`
-- `POP3`
+- plaintext `POP3` on `110/tcp`
 - legacy unauthenticated submission patterns
 
 ## Credential model
@@ -371,8 +373,10 @@ The public key must be surfaced into the zone through desired state and DNS sync
 Recommended public ports on the active mail node:
 
 - `25/tcp` inbound SMTP
+- `465/tcp` implicit TLS submission
 - `587/tcp` submission
 - `993/tcp` IMAPS
+- `995/tcp` POP3S
 
 Implemented phase-1 policy:
 
@@ -382,12 +386,12 @@ Implemented phase-1 policy:
 
 Optional later:
 
-- `465/tcp` for implicit TLS submission if required
 - `4190/tcp` for `ManageSieve`
 
 Do not expose publicly unless there is a clear reason:
 
 - `143/tcp`
+- `110/tcp`
 - `110/tcp`
 - `995/tcp`
 - admin protocols on public addresses

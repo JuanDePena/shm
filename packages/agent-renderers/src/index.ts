@@ -187,8 +187,10 @@ export function renderMailFirewalldService(serviceName: string): string {
     `  <short>${serviceName}</short>`,
     "  <description>SimpleHostMan mail ingress</description>",
     '  <port protocol="tcp" port="25"/>',
+    '  <port protocol="tcp" port="465"/>',
     '  <port protocol="tcp" port="587"/>',
     '  <port protocol="tcp" port="993"/>',
+    '  <port protocol="tcp" port="995"/>',
     "</service>"
   ].join("\n");
 }
@@ -242,6 +244,7 @@ export function renderPostfixMainCf(
 
   return [
     "# SimpleHost generated postfix mail snippet",
+    "inet_interfaces = all",
     `virtual_mailbox_domains = texthash:${postfixRoot}/vmail_domains`,
     `virtual_mailbox_maps = texthash:${postfixRoot}/vmail_mailboxes`,
     `virtual_alias_maps = texthash:${postfixRoot}/vmail_aliases`,
@@ -253,6 +256,37 @@ export function renderPostfixMainCf(
     "smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination",
     `smtpd_banner = $myhostname ESMTP ${postmasterAddress}`,
     `mydestination = localhost, localhost.localdomain`
+  ].join("\n");
+}
+
+export function renderPostfixMasterCf(): string {
+  return [
+    "# SimpleHost generated postfix submission services",
+    "submission inet n       -       n       -       -       smtpd",
+    "  -o syslog_name=postfix/submission",
+    "  -o smtpd_tls_security_level=encrypt",
+    "  -o smtpd_sasl_auth_enable=yes",
+    "  -o smtpd_tls_auth_only=yes",
+    "  -o local_header_rewrite_clients=static:all",
+    "  -o smtpd_reject_unlisted_recipient=no",
+    "  -o smtpd_client_restrictions=",
+    "  -o smtpd_helo_restrictions=",
+    "  -o smtpd_sender_restrictions=",
+    "  -o smtpd_relay_restrictions=",
+    "  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject",
+    "  -o milter_macro_daemon_name=ORIGINATING",
+    "submissions inet n      -       n       -       -       smtpd",
+    "  -o syslog_name=postfix/submissions",
+    "  -o smtpd_tls_wrappermode=yes",
+    "  -o smtpd_sasl_auth_enable=yes",
+    "  -o local_header_rewrite_clients=static:all",
+    "  -o smtpd_reject_unlisted_recipient=no",
+    "  -o smtpd_client_restrictions=",
+    "  -o smtpd_helo_restrictions=",
+    "  -o smtpd_sender_restrictions=",
+    "  -o smtpd_relay_restrictions=",
+    "  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject",
+    "  -o milter_macro_daemon_name=ORIGINATING"
   ].join("\n");
 }
 
@@ -279,6 +313,7 @@ export function renderDovecotMailConf(
 ): string {
   return [
     "# SimpleHost generated dovecot mail snippet",
+    "protocols = imap pop3 lmtp",
     "auth_mechanisms = plain login",
     "disable_plaintext_auth = yes",
     "mail_privileged_group = mail",
@@ -291,6 +326,32 @@ export function renderDovecotMailConf(
     "userdb {",
     "  driver = passwd-file",
     `  args = username_format=%u ${configRoot}/dovecot/passwd`,
+    "}",
+    "service imap-login {",
+    "  inet_listener imap {",
+    "    port = 0",
+    "  }",
+    "  inet_listener imaps {",
+    "    port = 993",
+    "    ssl = yes",
+    "  }",
+    "}",
+    "service pop3-login {",
+    "  inet_listener pop3 {",
+    "    port = 0",
+    "  }",
+    "  inet_listener pop3s {",
+    "    port = 995",
+    "    ssl = yes",
+    "  }",
+    "}",
+    "service submission-login {",
+    "  inet_listener submission {",
+    "    port = 0",
+    "  }",
+    "  inet_listener submissions {",
+    "    port = 0",
+    "  }",
     "}",
     "service auth {",
     "  unix_listener /var/spool/postfix/private/auth {",
