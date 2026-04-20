@@ -129,7 +129,6 @@ export interface MailSyncDomainPayload {
 }
 
 export interface MailSyncPayload {
-  generatedAt: string;
   domains: MailSyncDomainPayload[];
 }
 

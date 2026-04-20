@@ -215,7 +215,6 @@ export async function buildMailSyncPlans(
     .map(([nodeId, domains]) => ({
       nodeId,
       payload: {
-        generatedAt: new Date().toISOString(),
         domains: domains.sort((left, right) => {
           const keyLeft = `${left.domainName}:${left.deliveryRole}`;
           const keyRight = `${right.domainName}:${right.deliveryRole}`;

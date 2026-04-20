@@ -132,7 +132,6 @@ export function renderQuadletContainerUnit(
 export function renderMailDesiredState(payload: MailSyncPayload): string {
   return JSON.stringify(
     {
-      generatedAt: payload.generatedAt,
       domains: payload.domains.map((domain) => ({
         ...domain,
         mailboxes: domain.mailboxes.map(({ desiredPassword, ...mailbox }) => ({

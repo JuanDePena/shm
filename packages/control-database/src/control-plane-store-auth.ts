@@ -50,6 +50,15 @@ type ReportedInstalledPackage = {
   installedAt?: string;
 };
 
+const reclaimableClaimedJobKinds = [
+  "dns.sync",
+  "proxy.render",
+  "container.reconcile",
+  "mail.sync"
+] as const;
+
+const reclaimableJobClaimTimeoutMs = 5 * 60 * 1000;
+
 function normalizeReportedInstalledPackage(value: unknown): ReportedInstalledPackage | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return undefined;
@@ -694,13 +703,23 @@ export function createControlPlaneAuthMethods(
           ]
         );
 
+        const staleClaimedBefore = new Date(
+          Date.parse(claimedAt) - reclaimableJobClaimTimeoutMs
+        ).toISOString();
+
         const result = await client.query<JobRow>(
           `WITH candidate_jobs AS (
              SELECT id
              FROM control_plane_jobs
              WHERE node_id = $1
-               AND claimed_at IS NULL
                AND completed_at IS NULL
+               AND (
+                 claimed_at IS NULL
+                 OR (
+                   kind = ANY($4::text[])
+                   AND claimed_at < $5
+                 )
+               )
              ORDER BY created_at ASC
              LIMIT $2
              FOR UPDATE SKIP LOCKED
@@ -721,7 +740,13 @@ export function createControlPlaneAuthMethods(
            SELECT *
            FROM claimed_jobs
            ORDER BY created_at ASC`,
-          [request.nodeId, request.maxJobs, claimedAt]
+          [
+            request.nodeId,
+            request.maxJobs,
+            claimedAt,
+            [...reclaimableClaimedJobKinds],
+            staleClaimedBefore
+          ]
         );
 
         await insertAuditEvent(client, {

@@ -316,7 +316,6 @@ export interface AgentNodeRuntimeSnapshot {
 }
 
 export interface MailSyncPayload {
-  generatedAt: string;
   domains: MailSyncDomainPayload[];
 }
 
@@ -509,7 +508,6 @@ export function isMailSyncPayload(value: unknown): value is MailSyncPayload {
   const payload = value as Record<string, unknown>;
 
   return (
-    typeof payload.generatedAt === "string" &&
     Array.isArray(payload.domains) &&
     payload.domains.every((domain) => {
       if (!domain || typeof domain !== "object") {
