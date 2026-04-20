@@ -902,11 +902,17 @@ export function renderBaseStyleBlock(): string {
         display: flex;
         flex-wrap: wrap;
         justify-content: flex-end;
-        gap: 0.35rem;
+        align-items: center;
+        gap: 0.24rem;
       }
 
       .table-row-actions > button {
-        min-width: 4.5rem;
+        min-width: 0;
+        min-height: 1.62rem;
+        padding: 0.18rem 0.52rem;
+        font-size: 0.78rem;
+        box-shadow: none;
+        white-space: nowrap;
       }
 
       .mail-node-runtime-cell {

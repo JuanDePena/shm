@@ -532,6 +532,10 @@ export function renderAdminShellStyleBlock(): string {
         margin: 0;
       }
 
+      .section-head-actions .header-create-action {
+        min-width: 5.2rem;
+      }
+
       .panel > .section-head {
         margin: calc(var(--space-panel) * -1) calc(var(--space-panel) * -1) 0.72rem;
         padding: 0.72rem 0.84rem;

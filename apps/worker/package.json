@@ -1,6 +1,6 @@
 {
   "name": "@simplehost/worker",
-  "version": "2604.19.47",
+  "version": "2604.20.01",
   "private": true,
   "type": "module",
   "main": "dist/index.js",

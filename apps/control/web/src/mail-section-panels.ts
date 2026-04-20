@@ -158,7 +158,6 @@ export function renderMailSectionContent(args: {
         selectedMailbox?.address === mailbox.address,
         copy.selectedStateLabel
       ),
-      escapeHtml(mailbox.domainName),
       `<span class="mono">${escapeHtml(mailbox.primaryNodeId)}</span>`,
       mailbox.hasCredential
         ? renderers.renderPill(mailCopy.credentialPresent, "success")
@@ -187,12 +186,11 @@ export function renderMailSectionContent(args: {
     selected: selectedAlias?.address === alias.address,
     cells: [
       renderers.renderFocusLink(
-        alias.address,
-        buildDashboardViewUrl("mail", undefined, alias.address),
-        selectedAlias?.address === alias.address,
-        copy.selectedStateLabel
-      ),
-      escapeHtml(alias.domainName),
+      alias.address,
+      buildDashboardViewUrl("mail", undefined, alias.address),
+      selectedAlias?.address === alias.address,
+      copy.selectedStateLabel
+    ),
       `<span class="mono">${escapeHtml(alias.destinations.join(", "))}</span>`,
       renderRowActionButtons(
         `mail-alias-edit-${toModalIdSegment(alias.address)}`,
@@ -294,50 +292,6 @@ export function renderMailSectionContent(args: {
       }
     </article>`;
 
-  const selectedMailboxPanel = selectedMailbox
-    ? `<article class="panel detail-shell">
-        <div class="section-head">
-          <div>
-            <h3>${escapeHtml(mailCopy.selectedMailboxTitle)}</h3>
-            <p class="muted section-description">${escapeHtml(mailCopy.formsDescription)}</p>
-          </div>
-        </div>
-        ${renderers.renderDetailGrid([
-          {
-            label: mailCopy.addressLabel,
-            value: `<span class="mono">${escapeHtml(selectedMailbox.address)}</span>`
-          },
-          { label: mailCopy.domainNameLabel, value: escapeHtml(selectedMailbox.domainName) },
-          {
-            label: mailCopy.localPartLabel,
-            value: `<span class="mono">${escapeHtml(selectedMailbox.localPart)}</span>`
-          },
-          {
-            label: mailCopy.primaryNodeLabel,
-            value: `<span class="mono">${escapeHtml(selectedMailbox.primaryNodeId)}</span>`
-          },
-          {
-            label: mailCopy.standbyNodeLabel,
-            value: selectedMailbox.standbyNodeId
-              ? `<span class="mono">${escapeHtml(selectedMailbox.standbyNodeId)}</span>`
-              : escapeHtml(copy.none)
-          },
-          {
-            label: mailCopy.hasCredentialLabel,
-            value: selectedMailbox.hasCredential
-              ? renderers.renderPill(mailCopy.credentialPresent, "success")
-              : renderers.renderPill(mailCopy.credentialMissing, "danger")
-          },
-          {
-            label: mailCopy.quotaBytesLabel,
-            value: selectedMailbox.quotaBytes
-              ? `<span class="mono">${escapeHtml(formatStorageBytes(selectedMailbox.quotaBytes))}</span>`
-              : escapeHtml(copy.none)
-          }
-        ])}
-      </article>`
-    : "";
-
   const renderModalShell = (
     modalId: string,
     title: string,
@@ -366,7 +320,7 @@ export function renderMailSectionContent(args: {
   }
 
   function renderHeaderCreateButton(modalId: string): string {
-    return `<button type="button" class="secondary" data-overlay-trigger data-modal-id="${escapeHtml(
+    return `<button type="button" class="header-create-action" data-overlay-trigger data-modal-id="${escapeHtml(
       modalId
     )}">${escapeHtml(mailCopy.createLabel)}</button>`;
   }
@@ -775,10 +729,8 @@ export function renderMailSectionContent(args: {
         description: mailCopy.formsDescription,
         headingBadgeClassName: "section-badge-lime",
         headerActionsHtml: renderHeaderCreateButton(mailboxCreateModalId),
-        restoreSelectionHref: true,
         columns: [
           { label: mailCopy.addressLabel, className: "mono" },
-          { label: mailCopy.domainNameLabel },
           { label: mailCopy.primaryNodeLabel },
           { label: mailCopy.hasCredentialLabel },
           { label: mailCopy.quotaBytesLabel, className: "mono" },
@@ -799,10 +751,8 @@ export function renderMailSectionContent(args: {
         description: mailCopy.description,
         headingBadgeClassName: "section-badge-lime",
         headerActionsHtml: renderHeaderCreateButton(aliasCreateModalId),
-        restoreSelectionHref: true,
         columns: [
           { label: mailCopy.addressLabel, className: "mono" },
-          { label: mailCopy.domainNameLabel },
           { label: mailCopy.destinationsLabel, className: "mono" },
           { label: mailCopy.actionsLabel }
         ],
@@ -816,7 +766,6 @@ export function renderMailSectionContent(args: {
         defaultPageSize: 10
       })}
     </div>
-    ${selectedMailboxPanel}
     ${mailModals}
   </section>`;
 }
