@@ -587,6 +587,13 @@ function normalizeMailManagedDomainSnapshot(
       typeof record.mtaStsMaxAgeSeconds === "number"
         ? Number(record.mtaStsMaxAgeSeconds)
         : undefined,
+    runtimeConfigPresent:
+      typeof record.runtimeConfigPresent === "boolean"
+        ? record.runtimeConfigPresent
+        : undefined,
+    maildirRoot: typeof record.maildirRoot === "string" ? record.maildirRoot : undefined,
+    mailboxesReady:
+      typeof record.mailboxesReady === "boolean" ? record.mailboxesReady : undefined,
     webmailDocumentRoot:
       typeof record.webmailDocumentRoot === "string" ? record.webmailDocumentRoot : undefined,
     webmailDocumentPresent:
@@ -598,7 +605,12 @@ function normalizeMailManagedDomainSnapshot(
     mtaStsPolicyPath:
       typeof record.mtaStsPolicyPath === "string" ? record.mtaStsPolicyPath : undefined,
     mtaStsPolicyPresent:
-      typeof record.mtaStsPolicyPresent === "boolean" ? record.mtaStsPolicyPresent : undefined
+      typeof record.mtaStsPolicyPresent === "boolean" ? record.mtaStsPolicyPresent : undefined,
+    promotionReady:
+      typeof record.promotionReady === "boolean" ? record.promotionReady : undefined,
+    promotionBlockers: Array.isArray(record.promotionBlockers)
+      ? record.promotionBlockers.filter((entry): entry is string => typeof entry === "string")
+      : undefined
   };
 }
 
@@ -704,6 +716,10 @@ export function normalizeMailSnapshot(value: unknown): MailServiceSnapshot | und
     redisInstalled: Boolean(record.redisInstalled),
     configRoot: typeof record.configRoot === "string" ? record.configRoot : undefined,
     statePath: typeof record.statePath === "string" ? record.statePath : undefined,
+    desiredStatePresent:
+      typeof record.desiredStatePresent === "boolean" ? record.desiredStatePresent : undefined,
+    runtimeConfigPresent:
+      typeof record.runtimeConfigPresent === "boolean" ? record.runtimeConfigPresent : undefined,
     vmailRoot: typeof record.vmailRoot === "string" ? record.vmailRoot : undefined,
     policyRoot: typeof record.policyRoot === "string" ? record.policyRoot : undefined,
     dkimRoot: typeof record.dkimRoot === "string" ? record.dkimRoot : undefined,

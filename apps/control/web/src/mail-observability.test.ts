@@ -117,8 +117,11 @@ function createDashboardData(): DashboardData {
           redisServiceName: "valkey",
           redisEnabled: true,
           redisActive: true,
+          desiredStatePresent: true,
+          runtimeConfigPresent: true,
           roundcubeDeployment: "packaged",
           webmailHealthy: true,
+          firewallConfigured: true,
           policyDocumentCount: 1,
           healthyPolicyDocumentCount: 1,
           queue: {
@@ -154,12 +157,17 @@ function createDashboardData(): DashboardData {
               tlsReportAddress: "postmaster@example.com",
               mtaStsMode: "enforce",
               mtaStsMaxAgeSeconds: 86400,
+              runtimeConfigPresent: true,
+              maildirRoot: "/srv/mail/vmail/example.com",
+              mailboxesReady: true,
               webmailDocumentRoot: "/srv/www/roundcube/acme/example.com/public",
               webmailDocumentPresent: true,
               mtaStsDocumentRoot: "/srv/www/mail-policies/acme/example.com/public",
               mtaStsPolicyPath:
                 "/srv/www/mail-policies/acme/example.com/public/.well-known/mta-sts.txt",
-              mtaStsPolicyPresent: true
+              mtaStsPolicyPresent: true,
+              promotionReady: true,
+              promotionBlockers: []
             }
           ],
           checkedAt: "2026-04-21T09:00:00.000Z"
@@ -259,8 +267,10 @@ function createDashboardData(): DashboardData {
 test("buildMailObservabilityModel marks a fully reported mail domain as ready", () => {
   const model = buildMailObservabilityModel(createDashboardData());
   const row = model.deliverabilityRows[0];
+  const haRow = model.haRows[0];
 
   assert.ok(row);
+  assert.ok(haRow);
   assert.equal(row.spf.status, "ready");
   assert.equal(row.dkim.status, "ready");
   assert.equal(row.dmarc.status, "ready");
@@ -273,6 +283,8 @@ test("buildMailObservabilityModel marks a fully reported mail domain as ready", 
   assert.equal(row.topDeferReason, "connect to mx.remote.test timed out");
   assert.equal(model.totalQueuedMessages, 3);
   assert.equal(model.totalRecentFailures, 1);
+  assert.equal(haRow.primary.services.status, "ready");
+  assert.equal(haRow.primary.promotionReady.status, "ready");
 });
 
 test("buildMailObservabilityModel marks deliverability as unreported without dns or runtime data", () => {
@@ -325,6 +337,78 @@ test("buildMailObservabilityModel uses the latest applied dns.sync per zone", ()
   assert.equal(row.dmarc.status, "ready");
   assert.equal(row.mtaSts.status, "ready");
   assert.equal(row.tlsRpt.status, "ready");
+});
+
+test("buildMailObservabilityModel reports standby promotion readiness when both mail roles are present", () => {
+  const data = createDashboardData();
+
+  data.desiredState.spec.nodes.push({
+    nodeId: "mail-b",
+    hostname: "mail-b.example.net",
+    publicIpv4: "203.0.113.11",
+    wireguardAddress: "10.0.0.11/24"
+  });
+  data.desiredState.summary.nodeCount = 2;
+  data.mail.domains[0] = {
+    ...data.mail.domains[0],
+    standbyNodeId: "mail-b"
+  };
+  data.mail.mailboxes[0] = {
+    ...data.mail.mailboxes[0],
+    standbyNodeId: "mail-b"
+  };
+  data.nodeHealth = [
+    {
+      ...data.nodeHealth[0]!,
+      mail: {
+        ...data.nodeHealth[0]!.mail!,
+        firewallConfigured: true,
+        runtimeConfigPresent: true,
+        managedDomains: [
+          {
+            ...data.nodeHealth[0]!.mail!.managedDomains[0]!,
+            runtimeConfigPresent: true,
+            maildirRoot: "/srv/mail/vmail/example.com",
+            mailboxesReady: true,
+            promotionReady: true,
+            promotionBlockers: []
+          }
+        ]
+      }
+    },
+    {
+      nodeId: "mail-b",
+      hostname: "mail-b.example.net",
+      desiredRole: "inventory",
+      pendingJobCount: 0,
+      mail: {
+        ...data.nodeHealth[0]!.mail!,
+        checkedAt: "2026-04-21T09:05:00.000Z",
+        firewallConfigured: true,
+        runtimeConfigPresent: true,
+        managedDomains: [
+          {
+            ...data.nodeHealth[0]!.mail!.managedDomains[0]!,
+            deliveryRole: "standby",
+            runtimeConfigPresent: true,
+            maildirRoot: "/srv/mail/vmail/example.com",
+            mailboxesReady: true,
+            promotionReady: true,
+            promotionBlockers: []
+          }
+        ]
+      }
+    }
+  ];
+
+  const model = buildMailObservabilityModel(data);
+  const haRow = model.haRows[0];
+
+  assert.ok(haRow);
+  assert.equal(haRow.primary.promotionReady.status, "ready");
+  assert.equal(haRow.standby?.promotionReady.status, "ready");
+  assert.equal(haRow.standby?.runtimeConfig.status, "ready");
+  assert.equal(haRow.standby?.mailboxes.status, "ready");
 });
 
 test("toneForMailObservabilityStatus maps states to the expected UI tones", () => {

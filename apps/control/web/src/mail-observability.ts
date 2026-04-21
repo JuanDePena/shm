@@ -26,8 +26,33 @@ export interface MailDeliverabilityRow {
   runtime: MailDeliverabilityCheck;
 }
 
+export interface MailHaNodeRow {
+  nodeId: string;
+  deliveryRole: "primary" | "standby";
+  checkedAt?: string;
+  services: MailDeliverabilityCheck;
+  runtimeConfig: MailDeliverabilityCheck;
+  mailboxes: MailDeliverabilityCheck;
+  dkim: MailDeliverabilityCheck;
+  policyDocuments: MailDeliverabilityCheck;
+  webmail: MailDeliverabilityCheck;
+  promotionReady: MailDeliverabilityCheck;
+  blockers: string[];
+}
+
+export interface MailHaRow {
+  domainName: string;
+  mailHost: string;
+  webmailHostname: string;
+  primaryNodeId: string;
+  standbyNodeId?: string;
+  primary: MailHaNodeRow;
+  standby?: MailHaNodeRow;
+}
+
 export interface MailObservabilityModel {
   deliverabilityRows: MailDeliverabilityRow[];
+  haRows: MailHaRow[];
   totalQueuedMessages: number;
   totalRecentFailures: number;
 }
@@ -179,9 +204,35 @@ function findDomainRuntime(
   domainName: string,
   primaryNodeId: string
 ): DomainRuntimeMatch | undefined {
+  const exactPrimary = findDomainRuntimeOnNode(data, domainName, primaryNodeId);
+
+  if (exactPrimary) {
+    return exactPrimary;
+  }
+
+  for (const node of data.nodeHealth) {
+    const managedDomain = node.mail?.managedDomains.find((domain) => domain.domainName === domainName);
+
+    if (node.mail && managedDomain) {
+      return {
+        nodeId: node.nodeId,
+        mail: node.mail,
+        managedDomain
+      };
+    }
+  }
+
+  return undefined;
+}
+
+function findDomainRuntimeOnNode(
+  data: DashboardData,
+  domainName: string,
+  nodeId: string
+): DomainRuntimeMatch | undefined {
   const exactPrimary = data.nodeHealth.find(
     (node) =>
-      node.nodeId === primaryNodeId &&
+      node.nodeId === nodeId &&
       node.mail?.managedDomains.some((domain) => domain.domainName === domainName)
   );
 
@@ -199,19 +250,99 @@ function findDomainRuntime(
     }
   }
 
-  for (const node of data.nodeHealth) {
-    const managedDomain = node.mail?.managedDomains.find((domain) => domain.domainName === domainName);
+  return undefined;
+}
 
-    if (node.mail && managedDomain) {
-      return {
-        nodeId: node.nodeId,
-        mail: node.mail,
-        managedDomain
-      };
-    }
+function buildMailHaNodeRow(args: {
+  runtime: DomainRuntimeMatch | undefined;
+  nodeId: string;
+  deliveryRole: "primary" | "standby";
+}): MailHaNodeRow {
+  const { runtime, nodeId, deliveryRole } = args;
+
+  if (!runtime) {
+    return {
+      nodeId,
+      deliveryRole,
+      services: unreported("No node runtime snapshot for this mail role."),
+      runtimeConfig: unreported("No node runtime snapshot for this mail role."),
+      mailboxes: unreported("No node runtime snapshot for this mail role."),
+      dkim: unreported("No node runtime snapshot for this mail role."),
+      policyDocuments: unreported("No node runtime snapshot for this mail role."),
+      webmail: unreported("No node runtime snapshot for this mail role."),
+      promotionReady: unreported("No node runtime snapshot for this mail role."),
+      blockers: ["No node runtime snapshot for this mail role."]
+    };
   }
 
-  return undefined;
+  const servicesReady =
+    runtime.mail.postfixActive &&
+    runtime.mail.dovecotActive &&
+    runtime.mail.rspamdActive &&
+    runtime.mail.redisActive &&
+    runtime.mail.firewallConfigured === true;
+  const runtimeConfig = statusFromPresence(
+    true,
+    runtime.managedDomain.runtimeConfigPresent === true && runtime.mail.runtimeConfigPresent === true,
+    runtime.mail.runtimeConfigPresent
+      ? "Generated Postfix, Dovecot, and Rspamd config is present."
+      : "Generated mail runtime config is incomplete."
+  );
+  const mailboxes = statusFromPresence(
+    true,
+    runtime.managedDomain.mailboxesReady === true,
+    runtime.managedDomain.mailboxesReady
+      ? "Expected Maildir scaffolds are present on this node."
+      : "One or more expected Maildir trees are missing."
+  );
+  const dkim = statusFromPresence(
+    true,
+    Boolean(runtime.managedDomain.dkimAvailable || runtime.managedDomain.dkimDnsTxtValue),
+    runtime.managedDomain.dkimAvailable
+      ? "DKIM key material is present."
+      : "DKIM key material is missing."
+  );
+  const policyDocuments = statusFromPresence(
+    true,
+    runtime.managedDomain.mtaStsPolicyPresent === true,
+    runtime.managedDomain.mtaStsPolicyPresent
+      ? "The node-local MTA-STS policy is present."
+      : "The node-local MTA-STS policy is missing."
+  );
+  const webmail = statusFromPresence(
+    true,
+    runtime.mail.webmailHealthy === true && runtime.managedDomain.webmailDocumentPresent === true,
+    runtime.mail.webmailHealthy && runtime.managedDomain.webmailDocumentPresent
+      ? "Roundcube and the domain webmail root are present."
+      : "Roundcube or the domain webmail root is incomplete."
+  );
+  const blockers = runtime.managedDomain.promotionBlockers ?? [];
+
+  return {
+    nodeId,
+    deliveryRole,
+    checkedAt: runtime.mail.checkedAt,
+    services: statusFromPresence(
+      true,
+      servicesReady,
+      servicesReady
+        ? "Postfix, Dovecot, Rspamd, Redis, and firewall policy are active."
+        : "Core mail services or firewall policy are not fully active."
+    ),
+    runtimeConfig,
+    mailboxes,
+    dkim,
+    policyDocuments,
+    webmail,
+    promotionReady: statusFromPresence(
+      true,
+      runtime.managedDomain.promotionReady === true,
+      runtime.managedDomain.promotionReady
+        ? "This node satisfies the current promotion checks."
+        : blockers[0] ?? "This node is not ready for mail promotion."
+    ),
+    blockers
+  };
 }
 
 export function buildMailObservabilityModel(data: DashboardData): MailObservabilityModel {
@@ -296,9 +427,38 @@ export function buildMailObservabilityModel(data: DashboardData): MailObservabil
       runtime: runtimeStatus
     };
   });
+  const haRows: MailHaRow[] = data.mail.domains.map((domain) => {
+    const primaryRuntime = findDomainRuntimeOnNode(data, domain.domainName, domain.primaryNodeId);
+    const standbyRuntime = domain.standbyNodeId
+      ? findDomainRuntimeOnNode(data, domain.domainName, domain.standbyNodeId)
+      : undefined;
+    const primary = buildMailHaNodeRow({
+      runtime: primaryRuntime,
+      nodeId: domain.primaryNodeId,
+      deliveryRole: "primary"
+    });
+    const standby = domain.standbyNodeId
+      ? buildMailHaNodeRow({
+          runtime: standbyRuntime,
+          nodeId: domain.standbyNodeId,
+          deliveryRole: "standby"
+        })
+      : undefined;
+
+    return {
+      domainName: domain.domainName,
+      mailHost: domain.mailHost,
+      webmailHostname: primaryRuntime?.managedDomain.webmailHostname ?? `webmail.${domain.domainName}`,
+      primaryNodeId: domain.primaryNodeId,
+      standbyNodeId: domain.standbyNodeId,
+      primary,
+      standby
+    };
+  });
 
   return {
     deliverabilityRows,
+    haRows,
     totalQueuedMessages: data.nodeHealth.reduce(
       (total, node) => total + (node.mail?.queue?.messageCount ?? 0),
       0

@@ -44,12 +44,12 @@ Phase 3 is now complete:
 - Greylisting is now an opt-in policy and remains disabled in the default profile.
 - Anti-spam policy state is surfaced in the UI and propagated through API, desired state, and `mail.sync` jobs.
 
-### Phase 4. Mail HA model
+Phase 4 is now complete:
 
-- Define what `primary` and `secondary` mean for mail as a product concept, not only as node labels.
-- Specify which mail artifacts must exist on both nodes: `Maildir`, DKIM keys, policy documents, runtime config, and webmail assets.
-- Document and implement the exact failover behavior for mail delivery, mailbox access, and DNS-facing artifacts.
-- Add explicit health and promotion criteria before treating a secondary node as mail-ready.
+- `primary` and `secondary` are now explicit mail product roles, not only inventory labels.
+- `SimpleHost Agent` now treats standby mail nodes as warm replicas that must carry runtime config, `Maildir` scaffolds, DKIM material, policy documents, and webmail roots.
+- The failover model is now documented and surfaced as manual DNS cutover through stable `mail.<domain>` and `MX` semantics.
+- `SimpleHostMan` now reports per-domain standby promotion readiness and concrete blockers before a secondary is treated as mail-ready.
 
 ### Phase 5. Product validations
 

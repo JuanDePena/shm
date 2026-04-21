@@ -37,9 +37,10 @@ Related references:
 - `SimpleHost Agent` now executes `mail.sync` end-to-end: it installs and restarts `Postfix`, `Dovecot`, `Roundcube`, `Redis`-compatible cache (`valkey` by default), creates the `vmail` runtime user, generates DKIM material, writes node-local runtime artifacts, deploys `Roundcube`, and applies a generated `firewalld` service policy.
 - Phase-2 deliverability scaffolding is now wired end-to-end: `SimpleHost Control` derives `MTA-STS`, `TLS-RPT`, strict `SPF`, strengthened `DMARC`, and node-reported `DKIM` TXT records; `SimpleHost Agent` publishes the `mta-sts.txt` policy document and injects `Rspamd` into the live `Postfix` path through milters.
 - Phase-3 anti-spam policy is now explicit end-to-end: `SimpleHost Control` persists `Rspamd` thresholds plus sender allowlists, denylists, optional greylisting, and authenticated-sender rate limits, while `SimpleHost Agent` renders those policies into node-local `Rspamd` config and `SimpleHostMan` surfaces the current posture in the operator UI.
+- Phase-4 mail HA semantics are now explicit end-to-end: `SimpleHost Control` keeps per-domain primary and standby roles, `SimpleHost Agent` pre-seeds both nodes with mail runtime artifacts, and `SimpleHostMan` reports whether a standby is actually promotable or still blocked.
 - Mail desired state persisted on the nodes is sanitized: mailbox plaintext passwords are not written to `/srv/mail/config/desired-state.json`.
 - Node runtime reporting now includes service installation state, firewall state, `Roundcube` deployment state, and configured vs reset-required mailbox counts.
-- `SimpleHostMan` now exposes mail observability directly from control-plane and node snapshots: queue depth, recent delivery failures, defer reasons, per-domain deliverability checks, and direct tracing from mail resources into recent jobs and audit history.
+- `SimpleHostMan` now exposes mail observability directly from control-plane and node snapshots: queue depth, recent delivery failures, defer reasons, per-domain deliverability checks, direct tracing from mail resources into recent jobs and audit history, plus per-domain standby promotion readiness and blockers.
 - The chosen direction remains self-hosted mail on the two VPS nodes, not a third-party hosted mail backend.
 - The selected persistence model remains filesystem-backed mailbox storage, not message storage inside `PostgreSQL`.
 - `adudoc.com` remains the first pilot mail domain, with `webmaster@adudoc.com` and `notificaciones@adudoc.com` as the initial mailbox set.
@@ -450,6 +451,14 @@ Mail should follow the same baseline as the rest of the platform:
 - warm standby on the secondary node
 - manual failover only
 
+Implemented phase-4 semantics:
+
+- `primary` means the current public mail node for `SMTP`, submission, `IMAP`, DKIM signing, and the DNS-facing `mail.<domain>` target
+- `secondary` means a warm standby mail node that receives the same generated runtime artifacts but is not considered public or writable until a manual promotion happens
+- `mail.sync` now pre-seeds both primary and standby with generated runtime config, `Maildir` scaffolds, DKIM material, `mta-sts` policy documents, and per-domain webmail roots
+- `SimpleHostMan` now treats a standby as mail-ready only when core mail services, firewall policy, generated config, mailbox storage, DKIM material, policy documents, and webmail assets are all reported ready
+- promotion remains manual and DNS-led rather than automatic service failover
+
 Do not run both nodes as equal-priority public `MX` targets during the initial design.
 
 Reasons:
@@ -487,9 +496,18 @@ In a promotion event:
 1. stop inbound delivery on the failed or retiring primary if possible
 2. run a final mailbox sync if the source is still reachable
 3. promote the secondary mail services
-4. repoint `mail.<domain>` to the promoted node
+4. repoint `mail.<domain>`, `webmail.<domain>`, and `mta-sts.<domain>` to the promoted node
 5. keep `MX` pointing to `mail.<domain>` so clients do not need a record change
-6. confirm `IMAP`, submission, and SMTP ingress on the promoted node
+6. confirm `IMAP`, submission, SMTP ingress, and policy document hosting on the promoted node
+
+Promotion criteria before a standby is treated as mail-ready:
+
+- `Postfix`, `Dovecot`, `Rspamd`, and `Redis` are active on the standby and the generated firewall policy is installed
+- generated `Postfix`, `Dovecot`, and `Rspamd` runtime config is present on the standby
+- expected `Maildir` scaffolds exist for the current mailbox set on the standby
+- DKIM material exists for every managed domain selector
+- `mta-sts.txt` policy documents exist for the managed domains on the standby
+- `Roundcube` and the per-domain webmail document roots are present on the standby
 
 ## Backups
 
@@ -572,6 +590,7 @@ Implemented in the current backend:
 3. `mail.sync`, node runtime reporting, baseline DNS derivation, and `webmail.<domain>` proxy scaffolding
 4. `SimpleHost Agent` renderers and drivers for `Postfix`, `Dovecot`, `Rspamd` config, `Redis`-compatible cache, `Roundcube`, and mail firewall policy
 5. concrete mailbox migration runbook for low-volume cutovers
+6. explicit mail HA readiness reporting and manual promotion criteria for standby nodes
 
 Follow-on product work now belongs to broader diagnostics, deliverability, audit, and backup improvements rather than the core mail execution backend.
 

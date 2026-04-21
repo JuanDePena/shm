@@ -12,7 +12,8 @@ import { findRelatedAuditEvents, findRelatedJobs } from "./dashboard-panels.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
 import {
   buildMailObservabilityModel,
-  toneForMailObservabilityStatus
+  toneForMailObservabilityStatus,
+  type MailHaNodeRow
 } from "./mail-observability.js";
 import {
   type MailCredentialRevealViewModel,
@@ -268,6 +269,86 @@ export function renderMailSectionContent(args: {
       ? `${policy.rateLimit.burst} / ${policy.rateLimit.periodSeconds}s`
       : mailCopy.rateLimitDisabledLabel;
 
+  const renderPromotionBlockers = (blockers: string[]): string => {
+    if (blockers.length === 0) {
+      return `<p class="empty">${escapeHtml(mailCopy.noPromotionBlockers)}</p>`;
+    }
+
+    return `<div class="feed-list">
+      ${blockers
+        .map(
+          (blocker) => `<article class="feed-item feed-item-danger">
+            <p>${escapeHtml(blocker)}</p>
+          </article>`
+        )
+        .join("")}
+    </div>`;
+  };
+
+  const renderHaNodePanel = (node: MailHaNodeRow, title: string): string => `<article class="panel detail-shell panel-nested">
+      <h4>${escapeHtml(title)}</h4>
+      ${renderers.renderSignalStrip([
+        {
+          label: mailCopy.promotionReadyLabel,
+          value: labelForObservabilityStatus(node.promotionReady.status),
+          tone: toneForMailObservabilityStatus(node.promotionReady.status)
+        },
+        {
+          label: mailCopy.runtimeConfigLabel,
+          value: labelForObservabilityStatus(node.runtimeConfig.status),
+          tone: toneForMailObservabilityStatus(node.runtimeConfig.status)
+        },
+        {
+          label: mailCopy.maildirReadinessLabel,
+          value: labelForObservabilityStatus(node.mailboxes.status),
+          tone: toneForMailObservabilityStatus(node.mailboxes.status)
+        }
+      ])}
+      ${renderers.renderDetailGrid(
+        [
+          {
+            label: copy.navNodes,
+            value: `<span class="mono">${escapeHtml(node.nodeId)}</span>`
+          },
+          {
+            label: mailCopy.checkedAtLabel,
+            value: node.checkedAt
+              ? escapeHtml(renderers.formatDate(node.checkedAt, locale))
+              : escapeHtml(copy.none)
+          },
+          {
+            label: mailCopy.runtimeTitle,
+            value: formatObservabilityStatus(node.services.status)
+          },
+          {
+            label: mailCopy.runtimeConfigLabel,
+            value: formatObservabilityStatus(node.runtimeConfig.status)
+          },
+          {
+            label: mailCopy.maildirReadinessLabel,
+            value: formatObservabilityStatus(node.mailboxes.status)
+          },
+          {
+            label: mailCopy.dkimLabel,
+            value: formatObservabilityStatus(node.dkim.status)
+          },
+          {
+            label: mailCopy.policyDocsLabel,
+            value: formatObservabilityStatus(node.policyDocuments.status)
+          },
+          {
+            label: mailCopy.webmailLabel,
+            value: formatObservabilityStatus(node.webmail.status)
+          }
+        ],
+        { className: "detail-grid-two" }
+      )}
+      <article class="panel detail-shell panel-nested">
+        <h5>${escapeHtml(mailCopy.promotionBlockersLabel)}</h5>
+        ${renderPromotionBlockers(node.blockers)}
+      </article>
+    </article>`;
+
   const deliverabilityRows: DataTableRow[] = observability.deliverabilityRows.map((row) => ({
     selectionKey: row.domainName,
     selected: selectedDomain?.domainName === row.domainName,
@@ -491,6 +572,9 @@ export function renderMailSectionContent(args: {
 
   const selectedDeliverability = selectedDomain
     ? observability.deliverabilityRows.find((row) => row.domainName === selectedDomain.domainName)
+    : undefined;
+  const selectedHa = selectedDomain
+    ? observability.haRows.find((row) => row.domainName === selectedDomain.domainName)
     : undefined;
   const selectedActivityScope = selectedMailbox?.address ?? selectedAlias?.address ?? selectedDomain?.domainName;
   const selectedRelatedJobs = selectedDomain
@@ -726,6 +810,90 @@ export function renderMailSectionContent(args: {
               ],
               { className: "detail-grid-two" }
             )}`
+          : `<p class="empty">${escapeHtml(mailCopy.noSelectionLabel)}</p>`
+      }
+    </article>`;
+  const selectedHaPanel = `<article class="panel detail-shell">
+      <div class="section-head">
+        <div>
+          <h3>${escapeHtml(mailCopy.haTitle)}</h3>
+          <p class="muted section-description">${escapeHtml(mailCopy.haDescription)}</p>
+        </div>
+      </div>
+      ${
+        selectedHa
+          ? `${renderers.renderSignalStrip([
+              {
+                label: mailCopy.failoverModeLabel,
+                value: mailCopy.manualFailoverLabel,
+                tone: "default"
+              },
+              {
+                label: mailCopy.dnsCutoverLabel,
+                value: selectedHa.mailHost,
+                tone: "default"
+              },
+              {
+                label: mailCopy.promotionReadyLabel,
+                value: selectedHa.standby
+                  ? labelForObservabilityStatus(selectedHa.standby.promotionReady.status)
+                  : mailCopy.noStandbyConfiguredLabel,
+                tone: selectedHa.standby
+                  ? toneForMailObservabilityStatus(selectedHa.standby.promotionReady.status)
+                  : "muted"
+              }
+            ])}
+            ${renderers.renderDetailGrid(
+              [
+                {
+                  label: mailCopy.primaryNodeLabel,
+                  value: `<span class="mono">${escapeHtml(selectedHa.primary.nodeId)}</span>`
+                },
+                {
+                  label: mailCopy.standbyNodeLabel,
+                  value: selectedHa.standby
+                    ? `<span class="mono">${escapeHtml(selectedHa.standby.nodeId)}</span>`
+                    : escapeHtml(copy.none)
+                },
+                {
+                  label: mailCopy.mailHostLabel,
+                  value: `<span class="mono">${escapeHtml(selectedHa.mailHost)}</span>`
+                },
+                {
+                  label: mailCopy.webmailHostnameLabel,
+                  value: `<span class="mono">${escapeHtml(selectedHa.webmailHostname)}</span>`
+                },
+                {
+                  label: mailCopy.mxBehaviorLabel,
+                  value: escapeHtml(mailCopy.mxStableLabel)
+                },
+                {
+                  label: mailCopy.primaryBehaviorLabel,
+                  value: escapeHtml(mailCopy.primaryBehaviorValue)
+                },
+                {
+                  label: mailCopy.standbyBehaviorLabel,
+                  value: escapeHtml(
+                    selectedHa.standby
+                      ? mailCopy.standbyBehaviorValue
+                      : mailCopy.noStandbyConfiguredLabel
+                  ),
+                  className: "detail-item-span-two"
+                }
+              ],
+              { className: "detail-grid-three" }
+            )}
+            <div class="grid-two-desktop">
+              ${renderHaNodePanel(selectedHa.primary, mailCopy.primaryReadinessTitle)}
+              ${
+                selectedHa.standby
+                  ? renderHaNodePanel(selectedHa.standby, mailCopy.standbyPromotionTitle)
+                  : `<article class="panel detail-shell panel-nested">
+                      <h4>${escapeHtml(mailCopy.standbyPromotionTitle)}</h4>
+                      <p class="empty">${escapeHtml(mailCopy.noStandbyConfiguredLabel)}</p>
+                    </article>`
+              }
+            </div>`
           : `<p class="empty">${escapeHtml(mailCopy.noSelectionLabel)}</p>`
       }
     </article>`;
@@ -1457,7 +1625,10 @@ export function renderMailSectionContent(args: {
       ${selectedObservabilityPanel}
     </div>
     <div class="grid-two-desktop">
+      ${selectedHaPanel}
       ${selectedActivityPanel}
+    </div>
+    <div class="grid-two-desktop">
       ${renderDataTable({
         id: "section-mail-runtime",
         heading: mailCopy.runtimeTitle,

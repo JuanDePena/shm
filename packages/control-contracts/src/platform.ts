@@ -49,11 +49,16 @@ export interface MailManagedDomainSnapshot {
   tlsReportAddress?: string;
   mtaStsMode?: "enforce" | "testing" | "none";
   mtaStsMaxAgeSeconds?: number;
+  runtimeConfigPresent?: boolean;
+  maildirRoot?: string;
+  mailboxesReady?: boolean;
   webmailDocumentRoot?: string;
   webmailDocumentPresent?: boolean;
   mtaStsDocumentRoot?: string;
   mtaStsPolicyPath?: string;
   mtaStsPolicyPresent?: boolean;
+  promotionReady?: boolean;
+  promotionBlockers?: string[];
 }
 
 export interface MailQueueSnapshot {
@@ -95,6 +100,8 @@ export interface MailServiceSnapshot {
   redisInstalled?: boolean;
   configRoot?: string;
   statePath?: string;
+  desiredStatePresent?: boolean;
+  runtimeConfigPresent?: boolean;
   vmailRoot?: string;
   policyRoot?: string;
   dkimRoot?: string;

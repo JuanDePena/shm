@@ -506,6 +506,10 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
     roundcubePackageRootExists,
     roundcubeConfigExists,
     roundcubeDatabaseExists,
+    desiredStatePresent,
+    postfixConfigPresent,
+    dovecotConfigPresent,
+    rspamdConfigPresent,
     firewallConfigured,
     queue,
     recentDeliveryFailures
@@ -526,6 +530,25 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
     pathExists(roundcubePackageRoot),
     pathExists(roundcubeConfigPath),
     pathExists(roundcubeDatabasePath),
+    pathExists(statePath),
+    Promise.all([
+      pathExists(path.join(configRoot, "postfix", "vmail_domains")),
+      pathExists(path.join(configRoot, "postfix", "vmail_mailboxes")),
+      pathExists(path.join(configRoot, "postfix", "vmail_aliases")),
+      pathExists(path.join(configRoot, "postfix", "main.cf.generated"))
+    ]).then((values) => values.every(Boolean)),
+    Promise.all([
+      pathExists(path.join(configRoot, "dovecot", "passwd")),
+      pathExists(path.join(configRoot, "dovecot", "conf.d", "90-simplehost-mail.conf"))
+    ]).then((values) => values.every(Boolean)),
+    Promise.all([
+      pathExists(path.join(configRoot, "rspamd", "dkim_selectors.map")),
+      pathExists(path.join(configRoot, "rspamd", "local.d", "actions.conf")),
+      pathExists(path.join(configRoot, "rspamd", "local.d", "milter_headers.conf")),
+      pathExists(path.join(configRoot, "rspamd", "local.d", "dkim_signing.conf")),
+      pathExists(path.join(configRoot, "rspamd", "local.d", "multimap.conf")),
+      pathExists(path.join(configRoot, "rspamd", "local.d", "ratelimit.conf"))
+    ]).then((values) => values.every(Boolean)),
     commandOutput("firewall-cmd", [
       "--permanent",
       "--query-service",
@@ -539,6 +562,15 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
   const dovecotInstalledResolved = dovecotEnabledState !== undefined || dovecotInstalled;
   const rspamdInstalledResolved = rspamdEnabledState !== undefined || rspamdInstalled;
   const redisInstalledResolved = redisEnabledState !== undefined || redisInstalled;
+  const runtimeConfigPresent =
+    desiredStatePresent && postfixConfigPresent && dovecotConfigPresent && rspamdConfigPresent;
+  const coreMailServicesActive =
+    postfixActiveState === "active" &&
+    dovecotActiveState === "active" &&
+    rspamdActiveState === "active" &&
+    redisActiveState === "active";
+  const roundcubePackaged =
+    roundcubePackageRootExists && roundcubeConfigExists && roundcubeDatabaseExists;
 
   let managedDomains: MailServiceSnapshot["managedDomains"] = [];
   let configuredMailboxCount = 0;
@@ -561,7 +593,7 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
           mtaStsMaxAgeSeconds?: number;
           dkimSelector?: string;
           aliases?: unknown[];
-          mailboxes?: Array<{ credentialState?: string }>;
+          mailboxes?: Array<{ localPart?: string; credentialState?: string }>;
         }>;
       };
       managedDomains = Array.isArray(parsed.domains)
@@ -593,10 +625,55 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
                       .then((content) => content.trim())
                       .catch(() => undefined)
                   : undefined;
-              const [webmailDocumentPresent, mtaStsPolicyPresent] = await Promise.all([
+              const maildirRoot = path.join(vmailRoot, domain.domainName);
+              const [webmailDocumentPresent, mtaStsPolicyPresent, mailboxesReady] = await Promise.all([
                 pathExists(webmailDocumentRoot),
-                pathExists(mtaStsPolicyPath)
+                pathExists(mtaStsPolicyPath),
+                Promise.all(
+                  (domain.mailboxes ?? []).map((mailbox) => {
+                    const localPart = mailbox.localPart?.trim();
+
+                    if (!localPart) {
+                      return Promise.resolve(false);
+                    }
+
+                    return pathExists(path.join(maildirRoot, localPart, "Maildir", "cur"));
+                  })
+                ).then((values) => values.every(Boolean))
               ]);
+              const promotionBlockers: string[] = [];
+
+              if (!coreMailServicesActive || !firewallConfigured) {
+                promotionBlockers.push(
+                  "Core mail services or firewall policy are not active on this node."
+                );
+              }
+
+              if (!runtimeConfigPresent) {
+                promotionBlockers.push(
+                  "Generated Postfix, Dovecot, or Rspamd runtime config is incomplete."
+                );
+              }
+
+              if (!mailboxesReady) {
+                promotionBlockers.push(
+                  "One or more mailbox Maildir trees are missing on this node."
+                );
+              }
+
+              if (!dkimDnsTxtValue) {
+                promotionBlockers.push("DKIM key material is missing for this domain.");
+              }
+
+              if (!mtaStsPolicyPresent) {
+                promotionBlockers.push("The node-local MTA-STS policy document is missing.");
+              }
+
+              if (!(roundcubePackaged && webmailDocumentPresent)) {
+                promotionBlockers.push(
+                  "Roundcube or the per-domain webmail document root is incomplete."
+                );
+              }
 
               return {
                 domainName: domain.domainName,
@@ -613,11 +690,16 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
                 tlsReportAddress: domain.tlsReportAddress,
                 mtaStsMode: domain.mtaStsMode,
                 mtaStsMaxAgeSeconds: domain.mtaStsMaxAgeSeconds,
+                runtimeConfigPresent,
+                maildirRoot,
+                mailboxesReady,
                 webmailDocumentRoot,
                 webmailDocumentPresent,
                 mtaStsDocumentRoot,
                 mtaStsPolicyPath,
-                mtaStsPolicyPresent
+                mtaStsPolicyPresent,
+                promotionReady: promotionBlockers.length === 0,
+                promotionBlockers
               };
             })
           )
@@ -639,7 +721,7 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
   }
 
   const roundcubeDeployment: MailServiceSnapshot["roundcubeDeployment"] =
-    roundcubePackageRootExists && roundcubeConfigExists && roundcubeDatabaseExists
+    roundcubePackaged
       ? "packaged"
       : managedDomains.length > 0
         ? "placeholder"
@@ -671,6 +753,8 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
     redisActive: redisActiveState === "active",
     configRoot,
     statePath,
+    desiredStatePresent,
+    runtimeConfigPresent,
     vmailRoot,
     policyRoot,
     dkimRoot,
