@@ -3,6 +3,7 @@ import {
   type CombinedControlPreflightSurface,
   type ControlPreflightRuntime
 } from "./preflight-surface.js";
+import { runMailReleaseBaseline } from "@simplehost/control-web";
 
 export interface ControlPreflightCheckResult {
   readonly name: string;
@@ -279,6 +280,31 @@ export async function runCombinedControlPreflight(
         };
       })
     );
+
+    checks.push(await runCheck("mail-view", resolvedSurface.checks[10]!.description, async () => {
+      const response = await requestContext.request("/?view=mail", {
+        headers: {
+          cookie: await requestContext.getCookie()
+        }
+      });
+      expectStatus(response, 200, "mail view");
+      return {
+        detail: "Mail workspace rendered successfully.",
+        statusCode: response.status
+      };
+    }));
+
+    checks.push(await runCheck("mail-baseline", resolvedSurface.checks[11]!.description, async () => {
+      const baseline = runMailReleaseBaseline();
+
+      if (!baseline.ok) {
+        throw new Error(baseline.detail);
+      }
+
+      return {
+        detail: baseline.detail
+      };
+    }));
 
     const failed = checks.filter((check) => !check.ok).length;
 

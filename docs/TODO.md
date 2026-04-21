@@ -65,9 +65,9 @@ Phase 6 is now complete:
 - The mail product now documents concrete recovery procedures instead of treating backup policy presence as sufficient evidence.
 - Restore rehearsal evidence now travels end-to-end from backup run details into the operator UI so recovery readiness is visible, not implied.
 
-### Phase 7. End-to-end reliability
+Phase 7 is now complete:
 
-- Add automated tests for stable `mail.sync` behavior with no redispatch loops.
-- Add regression coverage for long TXT records, segmented DNS TXT verification, and deliverability records.
-- Add runtime checks for the intended mail ports, firewall alignment, and `Rspamd` milter wiring.
-- Turn the full mail baseline into repeatable release checks so regressions are caught before publish.
+- `mail.sync` dispatch stability now has automated regression coverage so unchanged mail plans do not redispatch in loops.
+- Mail DNS generation and observability now cover long TXT values plus segmented TXT verification for deliverability records.
+- `SimpleHost Agent` now reports intended public mail ports, firewall service port alignment, and `Rspamd` milter readiness as explicit runtime checks.
+- Combined `preflight` and `release-candidate` workflows now run a repeatable mail baseline so regressions are caught before publish.

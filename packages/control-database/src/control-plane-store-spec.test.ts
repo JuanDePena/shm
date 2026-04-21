@@ -149,6 +149,39 @@ test("buildMailZoneRecords derives phase-2 deliverability records", () => {
   );
 });
 
+test("buildMailZoneRecords segments long DKIM TXT values into DNS-safe chunks", () => {
+  const dkimRuntimeRecords: MailDkimRuntimeRecord[] = [
+    {
+      domainName: "adudoc.com",
+      dkimDnsTxtValue: `v=DKIM1; k=rsa; p=${"a".repeat(520)}`
+    }
+  ];
+  const records = buildMailZoneRecords(
+    "adudoc.com",
+    [
+      {
+        domain_name: "adudoc.com",
+        tenant_slug: "adudoc",
+        mail_host: "mail.adudoc.com",
+        dkim_selector: "mail",
+        primary_node_id: "primary",
+        public_ipv4: "51.222.204.86"
+      }
+    ],
+    dkimRuntimeRecords
+  );
+  const dkimRecord = records.find(
+    (record) => record.name === "mail._domainkey" && record.type === "TXT"
+  );
+
+  assert.ok(dkimRecord);
+  const segments = [...dkimRecord.value.matchAll(/"([^"]*)"/g)].map((match) => match[1] ?? "");
+
+  assert.ok(segments.length > 1);
+  assert.ok(segments.every((segment) => segment.length <= 255));
+  assert.equal(segments.join(""), dkimRuntimeRecords[0]!.dkimDnsTxtValue);
+});
+
 test("mergeDerivedDnsRecords keeps explicit phase-2 TXT overrides authoritative", () => {
   const explicitRecords: DnsRecordPayload[] = [
     {
@@ -208,6 +241,37 @@ test("mergeDerivedDnsRecords keeps explicit phase-2 TXT overrides authoritative"
   assert.ok(merged.find((record) => record.value.includes("id=manual")));
   assert.ok(merged.find((record) => record.value.includes("security@adudoc.com")));
   assert.ok(merged.find((record) => record.value.includes("p=manual")));
+});
+
+test("mergeDerivedDnsRecords treats segmented explicit DKIM TXT overrides as authoritative", () => {
+  const manualDkimValue = `"v=DKIM1; k=rsa; p=${"m".repeat(250)}" "${"m".repeat(120)}"`;
+  const explicitRecords: DnsRecordPayload[] = [
+    {
+      name: "mail._domainkey",
+      type: "TXT",
+      value: manualDkimValue,
+      ttl: 300
+    }
+  ];
+  const derivedRecords: DnsRecordPayload[] = [
+    {
+      name: "mail._domainkey",
+      type: "TXT",
+      value: '"v=DKIM1; k=rsa; p=generated"',
+      ttl: 300
+    }
+  ];
+
+  const merged = mergeDerivedDnsRecords(explicitRecords, derivedRecords);
+
+  assert.equal(
+    merged.filter((record) => record.name === "mail._domainkey" && record.type === "TXT").length,
+    1
+  );
+  assert.equal(
+    merged.find((record) => record.name === "mail._domainkey" && record.type === "TXT")?.value,
+    manualDkimValue
+  );
 });
 
 test("toInventoryExportSummary reads audit-backed export metadata", () => {

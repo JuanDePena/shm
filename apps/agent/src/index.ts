@@ -42,6 +42,16 @@ import { renderJobResult, renderNodeSnapshot } from "@simplehost/agent-renderers
 
 const execFileAsync = promisify(execFile);
 const rustDeskTrackedPorts = new Set([21115, 21116, 21117, 21118, 21119]);
+const expectedPublicMailPorts = [
+  { label: "smtp", port: 25, exposure: "public" as const },
+  { label: "submissions", port: 465, exposure: "public" as const },
+  { label: "submission", port: 587, exposure: "public" as const },
+  { label: "imaps", port: 993, exposure: "public" as const },
+  { label: "pop3s", port: 995, exposure: "public" as const }
+];
+const expectedLocalMailPorts = [
+  { label: "rspamd-milter", port: 11332, exposure: "local" as const }
+];
 
 async function writeLastAppliedState(
   desiredStateVersion: string,
@@ -246,6 +256,67 @@ function parseSocketAddress(value: string): { address: string; port: number } | 
   };
 }
 
+function isLoopbackAddress(address: string): boolean {
+  const normalized = address.trim().toLowerCase();
+  return normalized === "127.0.0.1" || normalized === "::1" || normalized === "localhost";
+}
+
+function addressAcceptsPublicTraffic(address: string): boolean {
+  const normalized = address.trim().toLowerCase();
+
+  if (normalized === "*" || normalized === "0.0.0.0" || normalized === "::") {
+    return true;
+  }
+
+  return normalized.length > 0 && !isLoopbackAddress(normalized);
+}
+
+function addressAcceptsLoopbackTraffic(address: string): boolean {
+  const normalized = address.trim().toLowerCase();
+
+  return (
+    normalized === "*" ||
+    normalized === "0.0.0.0" ||
+    normalized === "::" ||
+    normalized === "127.0.0.1" ||
+    normalized === "::1" ||
+    normalized === "localhost"
+  );
+}
+
+function parseFirewallPorts(value: string | undefined): number[] {
+  if (!value) {
+    return [];
+  }
+
+  const matches = [...value.matchAll(/(\d+)\/tcp/g)];
+
+  return [...new Set(matches.map((match) => Number.parseInt(match[1] ?? "", 10)).filter(Number.isInteger))].sort(
+    (left, right) => left - right
+  );
+}
+
+function parseFirewallPortsFromXml(value: string | undefined): number[] {
+  if (!value) {
+    return [];
+  }
+
+  const matches = [...value.matchAll(/<port\s+protocol="tcp"\s+port="(\d+)"\s*\/>/g)];
+
+  return [...new Set(matches.map((match) => Number.parseInt(match[1] ?? "", 10)).filter(Number.isInteger))].sort(
+    (left, right) => left - right
+  );
+}
+
+function readPostfixGeneratedSetting(content: string | undefined, key: string): string | undefined {
+  if (!content) {
+    return undefined;
+  }
+
+  const match = new RegExp(`^${key}\\s*=\\s*(.+)$`, "m").exec(content);
+  return match?.[1]?.trim();
+}
+
 async function inspectRustDeskListeners(): Promise<RustDeskListenerSnapshot[]> {
   const output = await commandOutput("ss", ["-H", "-lntu"]);
 
@@ -327,6 +398,56 @@ async function inspectRustDesk(): Promise<RustDeskServiceSnapshot> {
     listeners,
     checkedAt
   };
+}
+
+async function inspectMailTcpListeners(): Promise<NonNullable<MailServiceSnapshot["portListeners"]>> {
+  const trackedPorts = new Set(
+    [...expectedPublicMailPorts, ...expectedLocalMailPorts].map((entry) => entry.port)
+  );
+  const output = await commandOutput("ss", ["-H", "-ltn"]);
+  const listenersByPort = new Map<number, Set<string>>();
+
+  if (output) {
+    for (const line of output.split(/\r?\n/g)) {
+      const trimmed = line.trim();
+
+      if (!trimmed) {
+        continue;
+      }
+
+      const parts = trimmed.split(/\s+/);
+      const localAddress = parts[3];
+
+      if (typeof localAddress !== "string") {
+        continue;
+      }
+
+      const parsed = parseSocketAddress(localAddress);
+
+      if (!parsed || !trackedPorts.has(parsed.port)) {
+        continue;
+      }
+
+      const addresses = listenersByPort.get(parsed.port) ?? new Set<string>();
+      addresses.add(parsed.address);
+      listenersByPort.set(parsed.port, addresses);
+    }
+  }
+
+  return [...expectedPublicMailPorts, ...expectedLocalMailPorts].map((entry) => {
+    const addresses = [...(listenersByPort.get(entry.port) ?? new Set<string>())].sort((left, right) =>
+      left.localeCompare(right)
+    );
+
+    return {
+      label: entry.label,
+      protocol: "tcp",
+      port: entry.port,
+      exposure: entry.exposure,
+      addresses,
+      listening: addresses.length > 0
+    };
+  });
 }
 
 function createEmptyMailQueueSnapshot(): NonNullable<MailServiceSnapshot["queue"]> {
@@ -486,7 +607,8 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
     roundcubeConfigPath,
     roundcubeDatabasePath,
     roundcubePackageRoot,
-    firewallServiceName
+    firewallServiceName,
+    firewallServicePath
   } = config.services.mail;
 
   const [
@@ -510,7 +632,11 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
     postfixConfigPresent,
     dovecotConfigPresent,
     rspamdConfigPresent,
+    postfixGeneratedContent,
     firewallConfigured,
+    firewallInfo,
+    firewallServiceContent,
+    portListeners,
     queue,
     recentDeliveryFailures
   ] = await Promise.all([
@@ -549,11 +675,15 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
       pathExists(path.join(configRoot, "rspamd", "local.d", "multimap.conf")),
       pathExists(path.join(configRoot, "rspamd", "local.d", "ratelimit.conf"))
     ]).then((values) => values.every(Boolean)),
+    readFile(path.join(configRoot, "postfix", "main.cf.generated"), "utf8").catch(() => undefined),
     commandOutput("firewall-cmd", [
       "--permanent",
       "--query-service",
       firewallServiceName
     ]).then((value) => value === "yes"),
+    commandOutput("firewall-cmd", ["--permanent", `--info-service=${firewallServiceName}`]),
+    readFile(firewallServicePath, "utf8").catch(() => undefined),
+    inspectMailTcpListeners(),
     inspectMailQueue(),
     inspectRecentMailFailures(postfixServiceName)
   ]);
@@ -569,6 +699,41 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
     dovecotActiveState === "active" &&
     rspamdActiveState === "active" &&
     redisActiveState === "active";
+  const firewallExpectedPorts = expectedPublicMailPorts.map((entry) => entry.port);
+  const firewallOpenPorts = (() => {
+    const fromRuntime = parseFirewallPorts(firewallInfo);
+    return fromRuntime.length > 0 ? fromRuntime : parseFirewallPortsFromXml(firewallServiceContent);
+  })();
+  const missingPublicMailPorts = expectedPublicMailPorts
+    .map((entry) => {
+      const listener = portListeners.find((candidate) => candidate.port === entry.port);
+
+      return listener?.listening &&
+        listener.addresses.some((address) => addressAcceptsPublicTraffic(address))
+        ? undefined
+        : entry.port;
+    })
+    .filter((port): port is number => typeof port === "number");
+  const firewallPortsReady =
+    firewallConfigured &&
+    firewallExpectedPorts.every((port) => firewallOpenPorts.includes(port));
+  const milterListener = portListeners.find((listener) => listener.port === 11332);
+  const milterEndpoint = "inet:127.0.0.1:11332";
+  const milter = {
+    endpoint: milterEndpoint,
+    postfixConfigured:
+      readPostfixGeneratedSetting(postfixGeneratedContent, "smtpd_milters") === milterEndpoint &&
+      readPostfixGeneratedSetting(postfixGeneratedContent, "non_smtpd_milters") ===
+        milterEndpoint &&
+      readPostfixGeneratedSetting(postfixGeneratedContent, "milter_default_action") ===
+        "accept" &&
+      readPostfixGeneratedSetting(postfixGeneratedContent, "milter_protocol") === "6",
+    rspamdConfigPresent,
+    listenerReady: Boolean(
+      milterListener?.listening &&
+        milterListener.addresses.some((address) => addressAcceptsLoopbackTraffic(address))
+    )
+  } satisfies NonNullable<MailServiceSnapshot["milter"]>;
   const roundcubePackaged =
     roundcubePackageRootExists && roundcubeConfigExists && roundcubeDatabaseExists;
 
@@ -643,10 +808,28 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
               ]);
               const promotionBlockers: string[] = [];
 
-              if (!coreMailServicesActive || !firewallConfigured) {
+              if (!coreMailServicesActive) {
+                promotionBlockers.push("Core mail services are not active on this node.");
+              }
+
+              if (!firewallConfigured) {
+                promotionBlockers.push("The managed mail firewall policy is not active on this node.");
+              }
+
+              if (missingPublicMailPorts.length > 0) {
                 promotionBlockers.push(
-                  "Core mail services or firewall policy are not active on this node."
+                  `The intended public mail ports are not all listening (${missingPublicMailPorts.join(", ")}).`
                 );
+              }
+
+              if (!firewallPortsReady) {
+                promotionBlockers.push(
+                  `The managed mail firewall service is missing ${firewallExpectedPorts.filter((port) => !firewallOpenPorts.includes(port)).join(", ")}.`
+                );
+              }
+
+              if (!(milter.postfixConfigured && milter.rspamdConfigPresent && milter.listenerReady)) {
+                promotionBlockers.push("Rspamd milter wiring is incomplete on this node.");
               }
 
               if (!runtimeConfigPresent) {
@@ -766,6 +949,10 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
     webmailHealthy,
     firewallServiceName,
     firewallConfigured,
+    firewallExpectedPorts,
+    firewallOpenPorts,
+    portListeners,
+    milter,
     configuredMailboxCount,
     missingMailboxCount,
     resetRequiredMailboxCount,

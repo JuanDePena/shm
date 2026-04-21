@@ -93,6 +93,14 @@ export function createDefaultControlReleaseCandidateChecks(): readonly ControlRe
     {
       name: "invalid-session-redirect",
       description: "Protected routes redirect to login when the session is invalid."
+    },
+    {
+      name: "mail-view",
+      description: "Authenticated mail workspace renders successfully."
+    },
+    {
+      name: "mail-baseline",
+      description: "The repeatable mail baseline fixture passes deliverability and runtime checks."
     }
   ] as const;
 }

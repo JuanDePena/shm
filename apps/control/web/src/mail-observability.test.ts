@@ -122,6 +122,64 @@ function createDashboardData(): DashboardData {
           roundcubeDeployment: "packaged",
           webmailHealthy: true,
           firewallConfigured: true,
+          firewallExpectedPorts: [25, 465, 587, 993, 995],
+          firewallOpenPorts: [25, 465, 587, 993, 995],
+          portListeners: [
+            {
+              label: "smtp",
+              protocol: "tcp",
+              port: 25,
+              exposure: "public",
+              addresses: ["0.0.0.0"],
+              listening: true
+            },
+            {
+              label: "submissions",
+              protocol: "tcp",
+              port: 465,
+              exposure: "public",
+              addresses: ["0.0.0.0"],
+              listening: true
+            },
+            {
+              label: "submission",
+              protocol: "tcp",
+              port: 587,
+              exposure: "public",
+              addresses: ["0.0.0.0"],
+              listening: true
+            },
+            {
+              label: "imaps",
+              protocol: "tcp",
+              port: 993,
+              exposure: "public",
+              addresses: ["0.0.0.0"],
+              listening: true
+            },
+            {
+              label: "pop3s",
+              protocol: "tcp",
+              port: 995,
+              exposure: "public",
+              addresses: ["0.0.0.0"],
+              listening: true
+            },
+            {
+              label: "rspamd-milter",
+              protocol: "tcp",
+              port: 11332,
+              exposure: "local",
+              addresses: ["127.0.0.1"],
+              listening: true
+            }
+          ],
+          milter: {
+            endpoint: "inet:127.0.0.1:11332",
+            postfixConfigured: true,
+            rspamdConfigPresent: true,
+            listenerReady: true
+          },
           policyDocumentCount: 1,
           healthyPolicyDocumentCount: 1,
           queue: {
@@ -347,6 +405,58 @@ test("buildMailObservabilityModel uses the latest applied dns.sync per zone", ()
   assert.equal(row.tlsRpt.status, "ready");
 });
 
+test("buildMailObservabilityModel recognizes segmented TXT deliverability records", () => {
+  const data = createDashboardData();
+  const dnsPayload = data.jobHistory[0]!.payload as {
+    records: Array<{ name: string; type: string; value: string; ttl: number }>;
+  };
+
+  data.jobHistory[0] = {
+    ...data.jobHistory[0]!,
+    payload: {
+      ...dnsPayload,
+      records: dnsPayload.records.map((record) => {
+        if (record.type !== "TXT") {
+          return record;
+        }
+
+        if (record.name === "@") {
+          return { ...record, value: "\"v=spf1 mx \" \"-all\"" };
+        }
+
+        if (record.name === "_dmarc") {
+          return {
+            ...record,
+            value: "\"v=DMARC1; p=quarantine; rua=mailto:postmaster@\" \"example.com\""
+          };
+        }
+
+        if (record.name === "_mta-sts") {
+          return { ...record, value: "\"v=STSv1; \" \"id=abc123\"" };
+        }
+
+        if (record.name === "_smtp._tls") {
+          return {
+            ...record,
+            value: "\"v=TLSRPTv1; rua=mailto:postmaster@\" \"example.com\""
+          };
+        }
+
+        return record;
+      })
+    }
+  };
+
+  const model = buildMailObservabilityModel(data);
+  const row = model.deliverabilityRows[0];
+
+  assert.ok(row);
+  assert.equal(row.spf.status, "ready");
+  assert.equal(row.dmarc.status, "ready");
+  assert.equal(row.mtaSts.status, "ready");
+  assert.equal(row.tlsRpt.status, "ready");
+});
+
 test("buildMailObservabilityModel reports ready mail backup coverage and restore rehearsals", () => {
   const data = createDashboardData();
 
@@ -523,6 +633,43 @@ test("buildMailObservabilityModel raises dispatch warnings for DNS drift and mis
   );
   assert.equal(model.totalWarnings, 3);
   assert.equal(model.totalDispatchWarnings, 3);
+});
+
+test("buildMailObservabilityModel raises dispatch warnings for ports, firewall alignment, and milter drift", () => {
+  const data = createDashboardData();
+  const mail = data.nodeHealth[0]!.mail!;
+
+  data.nodeHealth[0] = {
+    ...data.nodeHealth[0]!,
+    mail: {
+      ...mail,
+      firewallOpenPorts: [25, 465, 993, 995],
+      portListeners: (mail.portListeners ?? []).filter((listener) => listener.port !== 587),
+      milter: {
+        ...(mail.milter ?? {
+          endpoint: "inet:127.0.0.1:11332",
+          postfixConfigured: true,
+          rspamdConfigPresent: true,
+          listenerReady: true
+        }),
+        listenerReady: false
+      }
+    }
+  };
+
+  const model = buildMailObservabilityModel(data);
+  const row = model.deliverabilityRows[0];
+  const validationRow = model.validationRows[0];
+
+  assert.ok(row);
+  assert.ok(validationRow);
+  assert.equal(row.runtime.status, "warning");
+  assert.equal(validationRow.warningCount, 3);
+  assert.equal(validationRow.dispatchWarningCount, 3);
+  assert.deepEqual(
+    validationRow.warnings.map((warning) => warning.code),
+    ["primary-public-ports", "primary-firewall-ports", "primary-milter"]
+  );
 });
 
 test("buildMailObservabilityModel reports standby promotion readiness when both mail roles are present", () => {

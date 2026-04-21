@@ -40,9 +40,10 @@ Related references:
 - Phase-4 mail HA semantics are now explicit end-to-end: `SimpleHost Control` keeps per-domain primary and standby roles, `SimpleHost Agent` pre-seeds both nodes with mail runtime artifacts, and `SimpleHostMan` reports whether a standby is actually promotable or still blocked.
 - Phase-5 product validations are now explicit end-to-end: `SimpleHost Control` rejects unsafe mail desired-state shapes such as alias loops, conflicting `MX` intent, unsupported `mailHost` placement, divergent standby topology, and nonsensical quotas, while `SimpleHostMan` surfaces pre-dispatch warnings when published DNS or runtime posture drifts away from the expected model.
 - Phase-6 backup and restore visibility is now explicit end-to-end: backup runs can report structured mail coverage plus restore rehearsals, and `SimpleHostMan` now shows per-domain coverage for `Maildir`, DKIM, runtime config, and webmail state together with restore readiness for mailbox, domain, and full-stack recovery.
+- Phase-7 reliability checks are now explicit end-to-end: `mail.sync` redispatch stability has regression coverage, long TXT records are rendered as segmented DNS TXT safely, `SimpleHost Agent` reports intended public ports plus firewall and `Rspamd` milter alignment, and combined release checks now run a repeatable mail baseline before publish.
 - Mail desired state persisted on the nodes is sanitized: mailbox plaintext passwords are not written to `/srv/mail/config/desired-state.json`.
 - Node runtime reporting now includes service installation state, firewall state, `Roundcube` deployment state, and configured vs reset-required mailbox counts.
-- `SimpleHostMan` now exposes mail observability directly from control-plane and node snapshots: queue depth, recent delivery failures, defer reasons, per-domain deliverability checks, direct tracing from mail resources into recent jobs and audit history, plus per-domain standby promotion readiness and blockers.
+- `SimpleHostMan` now exposes mail observability directly from control-plane and node snapshots: queue depth, recent delivery failures, defer reasons, per-domain deliverability checks, direct tracing from mail resources into recent jobs and audit history, per-domain standby promotion readiness and blockers, and explicit warnings for port, firewall, or milter drift on the primary mail node.
 - The chosen direction remains self-hosted mail on the two VPS nodes, not a third-party hosted mail backend.
 - The selected persistence model remains filesystem-backed mailbox storage, not message storage inside `PostgreSQL`.
 - `adudoc.com` remains the first pilot mail domain, with `webmaster@adudoc.com` and `notificaciones@adudoc.com` as the initial mailbox set.
@@ -281,8 +282,13 @@ Current product-validation behavior:
 - mailboxes must follow the same primary and standby topology as their parent mail domain so the current failover model stays coherent
 - alias chains are validated server-side and rejected when they loop back into another managed alias instead of terminating in a mailbox or external address
 - mailbox quotas below `64 MiB` or above `10 TiB` are rejected as outside the supported operating envelope for the current mail stack
-- `SimpleHostMan` now derives per-domain pre-dispatch warnings for missing applied `dns.sync` payloads, `MX` drift, missing `mailHost` records, missing primary runtime snapshots, missing primary DKIM or runtime artifacts, and standby promotion blockers
+- `SimpleHostMan` now derives per-domain pre-dispatch warnings for missing applied `dns.sync` payloads, `MX` drift, missing `mailHost` records, missing primary runtime snapshots, missing primary DKIM or runtime artifacts, primary port/firewall/milter drift, and standby promotion blockers
 - mail CRUD failures now return to the dashboard as operator-facing notices instead of falling through to the generic web error page
+
+Current release-check behavior:
+
+- combined `preflight` and `release-candidate` runs now include the authenticated mail workspace plus a repeatable mail baseline fixture
+- that baseline asserts segmented deliverability TXT verification together with ready primary-node runtime posture for services, intended public ports, firewall alignment, and `Rspamd` milter wiring
 
 ## Mail routing model
 

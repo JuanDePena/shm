@@ -192,6 +192,121 @@ function parseMxRecordTarget(value: string): string | undefined {
   return target ? normalizeHostnameValue(target) : undefined;
 }
 
+function decodeDnsTxtRecordValue(value: string): string {
+  const trimmed = value.trim();
+  const quotedSegments = [...trimmed.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((match) =>
+    (match[1] ?? "").replace(/\\(["\\])/g, "$1")
+  );
+
+  if (quotedSegments.length > 0) {
+    return quotedSegments.join("").trim();
+  }
+
+  if (trimmed.startsWith("\"") && trimmed.endsWith("\"") && trimmed.length >= 2) {
+    return trimmed.slice(1, -1).replace(/\\(["\\])/g, "$1").trim();
+  }
+
+  return trimmed;
+}
+
+function normalizeTxtRecordValue(value: string): string {
+  return decodeDnsTxtRecordValue(value).toLowerCase();
+}
+
+const expectedPublicMailPorts = [25, 465, 587, 993, 995];
+
+function isLoopbackAddress(address: string): boolean {
+  const normalized = address.trim().toLowerCase();
+  return normalized === "127.0.0.1" || normalized === "::1" || normalized === "localhost";
+}
+
+function addressAcceptsPublicTraffic(address: string): boolean {
+  const normalized = address.trim().toLowerCase();
+
+  if (normalized === "*" || normalized === "0.0.0.0" || normalized === "::") {
+    return true;
+  }
+
+  return normalized.length > 0 && !isLoopbackAddress(normalized);
+}
+
+function addressAcceptsLoopbackTraffic(address: string): boolean {
+  const normalized = address.trim().toLowerCase();
+
+  return (
+    normalized === "*" ||
+    normalized === "0.0.0.0" ||
+    normalized === "::" ||
+    normalized === "127.0.0.1" ||
+    normalized === "::1" ||
+    normalized === "localhost"
+  );
+}
+
+function getMailPortListener(
+  mail: NonNullable<DashboardData["nodeHealth"][number]["mail"]>,
+  port: number
+) {
+  return mail.portListeners?.find((listener) => listener.protocol === "tcp" && listener.port === port);
+}
+
+function getMissingPublicMailPorts(
+  mail: NonNullable<DashboardData["nodeHealth"][number]["mail"]>
+): number[] {
+  return expectedPublicMailPorts.filter((port) => {
+    const listener = getMailPortListener(mail, port);
+
+    return !(
+      listener?.listening &&
+      listener.addresses.some((address) => addressAcceptsPublicTraffic(address))
+    );
+  });
+}
+
+function areExpectedPublicMailPortsReady(
+  mail: NonNullable<DashboardData["nodeHealth"][number]["mail"]>
+): boolean {
+  return getMissingPublicMailPorts(mail).length === 0;
+}
+
+function getExpectedFirewallPorts(
+  mail: NonNullable<DashboardData["nodeHealth"][number]["mail"]>
+): number[] {
+  const candidate: number[] = [...(mail.firewallExpectedPorts ?? expectedPublicMailPorts)];
+  return [...new Set(candidate)].sort((left, right) => left - right);
+}
+
+function getMissingFirewallPorts(
+  mail: NonNullable<DashboardData["nodeHealth"][number]["mail"]>
+): number[] {
+  const openPorts = new Set(mail.firewallOpenPorts ?? []);
+  return getExpectedFirewallPorts(mail).filter((port) => !openPorts.has(port));
+}
+
+function areFirewallPortsAligned(
+  mail: NonNullable<DashboardData["nodeHealth"][number]["mail"]>
+): boolean {
+  return mail.firewallConfigured === true && getMissingFirewallPorts(mail).length === 0;
+}
+
+function isMailMilterReady(
+  mail: NonNullable<DashboardData["nodeHealth"][number]["mail"]>
+): boolean {
+  const listener = getMailPortListener(mail, 11332);
+
+  return Boolean(
+    mail.milter?.postfixConfigured &&
+      mail.milter?.rspamdConfigPresent &&
+      mail.milter?.listenerReady &&
+      listener?.listening &&
+      listener.addresses.some((address) => addressAcceptsLoopbackTraffic(address))
+  );
+}
+
+function formatPortList(ports: number[]): string {
+  return ports.map((port) => `${port}/tcp`).join(", ");
+}
+
 function sortRunsByStartedAtDescending(runs: BackupRun[]): BackupRun[] {
   return [...runs].sort(
     (left, right) => Date.parse(right.startedAt) - Date.parse(left.startedAt)
@@ -449,7 +564,10 @@ function findRecord(
   }
 
   return records.some(
-    (record) => record.type === type && record.name === recordName && predicate(record.value)
+    (record) =>
+      record.type === type &&
+      record.name === recordName &&
+      predicate(type === "TXT" ? normalizeTxtRecordValue(record.value) : record.value)
   );
 }
 
@@ -661,8 +779,7 @@ function buildMailHaNodeRow(args: {
     runtime.mail.postfixActive &&
     runtime.mail.dovecotActive &&
     runtime.mail.rspamdActive &&
-    runtime.mail.redisActive &&
-    runtime.mail.firewallConfigured === true;
+    runtime.mail.redisActive;
   const runtimeConfig = statusFromPresence(
     true,
     runtime.managedDomain.runtimeConfigPresent === true && runtime.mail.runtimeConfigPresent === true,
@@ -708,8 +825,8 @@ function buildMailHaNodeRow(args: {
       true,
       servicesReady,
       servicesReady
-        ? "Postfix, Dovecot, Rspamd, Redis, and firewall policy are active."
-        : "Core mail services or firewall policy are not fully active."
+        ? "Postfix, Dovecot, Rspamd, and Redis are active."
+        : "Core mail services are not fully active."
     ),
     runtimeConfig,
     mailboxes,
@@ -787,9 +904,15 @@ export function buildMailObservabilityModel(data: DashboardData): MailObservabil
           : missing("Roundcube is not fully deployed on the primary node.")
       : unreported("No node runtime snapshot for the domain.");
     const runtimeStatus = runtime
-      ? runtime.mail.postfixActive && runtime.mail.dovecotActive && runtime.mail.rspamdActive
-        ? ready("Postfix, Dovecot, and Rspamd are active.")
-        : warning("One or more core mail services are not active.")
+      ? runtime.mail.postfixActive &&
+        runtime.mail.dovecotActive &&
+        runtime.mail.rspamdActive &&
+        runtime.mail.redisActive &&
+        areExpectedPublicMailPortsReady(runtime.mail) &&
+        areFirewallPortsAligned(runtime.mail) &&
+        isMailMilterReady(runtime.mail)
+        ? ready("Core mail services, intended ports, firewall policy, and Rspamd milter are ready.")
+        : warning("Runtime mail posture is missing service, listener, firewall, or milter readiness.")
       : unreported("No node runtime snapshot for the domain.");
 
     return {
@@ -1033,7 +1156,7 @@ export function buildMailObservabilityModel(data: DashboardData): MailObservabil
         pushWarning(
           "primary-services",
           "The primary mail node is not fully healthy.",
-          ha.primary.services.detail ?? "Core mail services or firewall policy are not fully active on the primary node.",
+          ha.primary.services.detail ?? "Core mail services are not fully active on the primary node.",
           true
         );
       }
@@ -1061,6 +1184,37 @@ export function buildMailObservabilityModel(data: DashboardData): MailObservabil
           "dkim-missing",
           "DKIM signing material is missing on the primary node.",
           ha.primary.dkim.detail ?? "SimpleHost Agent did not report DKIM key material for this domain on the primary node.",
+          true
+        );
+      }
+
+      if (!areExpectedPublicMailPortsReady(primaryRuntime.mail)) {
+        pushWarning(
+          "primary-public-ports",
+          "The intended public mail ports are not all listening.",
+          `SimpleHost Agent did not confirm public listeners for ${formatPortList(
+            getMissingPublicMailPorts(primaryRuntime.mail)
+          )} on primary node ${domain.primaryNodeId}.`,
+          true
+        );
+      }
+
+      if (!areFirewallPortsAligned(primaryRuntime.mail)) {
+        pushWarning(
+          "primary-firewall-ports",
+          "The primary firewall service is not aligned with the intended mail ports.",
+          `The primary node firewall policy is missing ${formatPortList(
+            getMissingFirewallPorts(primaryRuntime.mail)
+          )} from ${primaryRuntime.mail.firewallServiceName ?? "the managed mail service"}.`,
+          true
+        );
+      }
+
+      if (!isMailMilterReady(primaryRuntime.mail)) {
+        pushWarning(
+          "primary-milter",
+          "Rspamd milter wiring is incomplete on the primary node.",
+          `SimpleHost Agent did not confirm a ready Postfix-to-Rspamd milter path on ${domain.primaryNodeId}.`,
           true
         );
       }

@@ -306,6 +306,22 @@ export interface MailDeliveryFailureSnapshot {
   reason: string;
 }
 
+export interface MailPortListenerSnapshot {
+  label: string;
+  protocol: "tcp";
+  port: number;
+  exposure: "public" | "local";
+  addresses: string[];
+  listening: boolean;
+}
+
+export interface MailMilterSnapshot {
+  endpoint: string;
+  postfixConfigured: boolean;
+  rspamdConfigPresent: boolean;
+  listenerReady: boolean;
+}
+
 export interface MailServiceSnapshot {
   postfixServiceName: string;
   postfixEnabled: boolean;
@@ -338,6 +354,10 @@ export interface MailServiceSnapshot {
   webmailHealthy?: boolean;
   firewallServiceName?: string;
   firewallConfigured?: boolean;
+  firewallExpectedPorts?: number[];
+  firewallOpenPorts?: number[];
+  portListeners?: MailPortListenerSnapshot[];
+  milter?: MailMilterSnapshot;
   configuredMailboxCount?: number;
   missingMailboxCount?: number;
   resetRequiredMailboxCount?: number;

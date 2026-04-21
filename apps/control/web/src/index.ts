@@ -24,6 +24,11 @@ export {
   type ControlWebApiRequest,
   WebApiError
 } from "./api-client.js";
+export {
+  runMailReleaseBaseline,
+  type MailReleaseBaselineCheck,
+  type MailReleaseBaselineResult
+} from "./mail-release-baseline.js";
 
 export interface ControlWebProcessContext {
   config: StartControlWebServerArgs["config"];

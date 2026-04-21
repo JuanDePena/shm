@@ -4,6 +4,7 @@ import {
   type CombinedControlReleaseCandidateRuntime
 } from "./release-candidate-surface.js";
 import type { CombinedControlStartupManifest } from "./startup-manifest.js";
+import { runMailReleaseBaseline } from "@simplehost/control-web";
 
 export interface ControlReleaseCandidateCheckResult {
   readonly name: string;
@@ -388,6 +389,35 @@ export async function runCombinedControlReleaseCandidate(
           };
         }
       )
+    );
+
+    checks.push(
+      await runCheck("mail-view", resolvedSurface.checks[12]!.description, async () => {
+        const response = await requestContext.request("/?view=mail", {
+          headers: {
+            cookie: await requestContext.getCookie()
+          }
+        });
+        expectStatus(response, 200, "mail view");
+        return {
+          detail: "Mail workspace rendered successfully.",
+          statusCode: response.status
+        };
+      })
+    );
+
+    checks.push(
+      await runCheck("mail-baseline", resolvedSurface.checks[13]!.description, async () => {
+        const baseline = runMailReleaseBaseline();
+
+        if (!baseline.ok) {
+          throw new Error(baseline.detail);
+        }
+
+        return {
+          detail: baseline.detail
+        };
+      })
     );
 
     const failed = checks.filter((check) => !check.ok).length;

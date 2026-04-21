@@ -1238,14 +1238,52 @@ function normalizeDnsTargetHost(hostname: string): string {
   return `${hostname.replace(/\.$/, "").toLowerCase()}.`;
 }
 
-function normalizeTxtRecordValue(value: string): string {
-  const trimmed = value.trim();
+const dnsTxtSegmentLimit = 255;
 
-  if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length >= 2) {
-    return trimmed.slice(1, -1).trim().toLowerCase();
+function unescapeDnsTxtSegment(value: string): string {
+  return value.replace(/\\(["\\])/g, "$1");
+}
+
+function decodeDnsTxtRecordValue(value: string): string {
+  const trimmed = value.trim();
+  const quotedSegments = [...trimmed.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((match) =>
+    unescapeDnsTxtSegment(match[1] ?? "")
+  );
+
+  if (quotedSegments.length > 0) {
+    return quotedSegments.join("").trim();
   }
 
-  return trimmed.toLowerCase();
+  if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length >= 2) {
+    return unescapeDnsTxtSegment(trimmed.slice(1, -1)).trim();
+  }
+
+  return trimmed;
+}
+
+function normalizeTxtRecordValue(value: string): string {
+  return decodeDnsTxtRecordValue(value).toLowerCase();
+}
+
+function quoteDnsTxtRecordValue(value: string): string {
+  const decoded = decodeDnsTxtRecordValue(value);
+
+  if (!decoded) {
+    return '""';
+  }
+
+  const segments: string[] = [];
+
+  for (let index = 0; index < decoded.length; index += dnsTxtSegmentLimit) {
+    segments.push(
+      `"${decoded
+        .slice(index, index + dnsTxtSegmentLimit)
+        .replace(/\\/g, "\\\\")
+        .replace(/"/g, '\\"')}"`
+    );
+  }
+
+  return segments.join(" ");
 }
 
 function isSpfTxtRecord(value: string): boolean {
@@ -1273,17 +1311,19 @@ export function buildMailReportAddress(domainName: string): string {
 }
 
 function buildMailSpfRecordValue(): string {
-  return '"v=spf1 mx -all"';
+  return quoteDnsTxtRecordValue("v=spf1 mx -all");
 }
 
 function buildMailDmarcRecordValue(domainName: string): string {
   const reportAddress = buildMailReportAddress(domainName);
-  return `"v=DMARC1; p=quarantine; adkim=s; aspf=s; fo=1; pct=100; rua=mailto:${reportAddress}; ruf=mailto:${reportAddress}"`;
+  return quoteDnsTxtRecordValue(
+    `v=DMARC1; p=quarantine; adkim=s; aspf=s; fo=1; pct=100; rua=mailto:${reportAddress}; ruf=mailto:${reportAddress}`
+  );
 }
 
 function buildMailTlsRptRecordValue(domainName: string): string {
   const reportAddress = buildMailReportAddress(domainName);
-  return `"v=TLSRPTv1; rua=mailto:${reportAddress}"`;
+  return quoteDnsTxtRecordValue(`v=TLSRPTv1; rua=mailto:${reportAddress}`);
 }
 
 export function buildMailMtaStsHostname(domainName: string): string {
@@ -1520,7 +1560,9 @@ export function buildMailZoneRecords(
       });
     }
 
-    const mtaStsValue = `"v=STSv1; id=${buildMailMtaStsPolicyId(domain)}"`;
+    const mtaStsValue = quoteDnsTxtRecordValue(
+      `v=STSv1; id=${buildMailMtaStsPolicyId(domain)}`
+    );
     const mtaStsKey = `_mta-sts:TXT:${mtaStsValue}`;
 
     if (!recordMap.has(mtaStsKey)) {
@@ -1537,7 +1579,7 @@ export function buildMailZoneRecords(
 
     if (dkimTxtValue) {
       const dkimRecordName = `${domain.dkim_selector}._domainkey`;
-      const quotedDkimValue = `"${dkimTxtValue}"`;
+      const quotedDkimValue = quoteDnsTxtRecordValue(dkimTxtValue);
       const dkimKey = `${dkimRecordName}:TXT:${quotedDkimValue}`;
 
       if (!recordMap.has(dkimKey)) {

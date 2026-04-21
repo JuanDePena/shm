@@ -678,6 +678,57 @@ function normalizeMailDeliveryFailureSnapshot(
   };
 }
 
+function normalizeMailPortListenerSnapshot(
+  value: unknown
+): NonNullable<MailServiceSnapshot["portListeners"]>[number] | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (
+    typeof record.label !== "string" ||
+    record.protocol !== "tcp" ||
+    typeof record.port !== "number" ||
+    (record.exposure !== "public" && record.exposure !== "local")
+  ) {
+    return undefined;
+  }
+
+  return {
+    label: record.label,
+    protocol: "tcp",
+    port: record.port,
+    exposure: record.exposure,
+    addresses: Array.isArray(record.addresses)
+      ? record.addresses.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    listening: Boolean(record.listening)
+  };
+}
+
+function normalizeMailMilterSnapshot(
+  value: unknown
+): NonNullable<MailServiceSnapshot["milter"]> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (typeof record.endpoint !== "string") {
+    return undefined;
+  }
+
+  return {
+    endpoint: record.endpoint,
+    postfixConfigured: Boolean(record.postfixConfigured),
+    rspamdConfigPresent: Boolean(record.rspamdConfigPresent),
+    listenerReady: Boolean(record.listenerReady)
+  };
+}
+
 export function normalizeMailSnapshot(value: unknown): MailServiceSnapshot | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return undefined;
@@ -750,6 +801,25 @@ export function normalizeMailSnapshot(value: unknown): MailServiceSnapshot | und
       typeof record.firewallConfigured === "boolean"
         ? record.firewallConfigured
         : undefined,
+    firewallExpectedPorts: Array.isArray(record.firewallExpectedPorts)
+      ? record.firewallExpectedPorts
+          .filter((entry): entry is number => typeof entry === "number")
+          .sort((left, right) => left - right)
+      : undefined,
+    firewallOpenPorts: Array.isArray(record.firewallOpenPorts)
+      ? record.firewallOpenPorts
+          .filter((entry): entry is number => typeof entry === "number")
+          .sort((left, right) => left - right)
+      : undefined,
+    portListeners: Array.isArray(record.portListeners)
+      ? record.portListeners
+          .map(normalizeMailPortListenerSnapshot)
+          .filter(
+            (entry): entry is NonNullable<MailServiceSnapshot["portListeners"]>[number] =>
+              Boolean(entry)
+          )
+      : undefined,
+    milter: normalizeMailMilterSnapshot(record.milter),
     configuredMailboxCount: Number(record.configuredMailboxCount ?? 0),
     missingMailboxCount: Number(record.missingMailboxCount ?? 0),
     resetRequiredMailboxCount: Number(record.resetRequiredMailboxCount ?? 0),

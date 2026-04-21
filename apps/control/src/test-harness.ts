@@ -91,67 +91,75 @@ export function createDashboardBootstrap(
   return {
     currentUser,
     overview: {
-      tenants: 0,
-      nodes: 0,
-      zones: 0,
-      apps: 0,
-      databases: 0,
-      mailDomains: 0,
-      backupPolicies: 0,
-      backupRuns: 0,
-      pendingJobs: 0,
-      failedJobs: 0,
-      driftedResources: 0
+      generatedAt: new Date().toISOString(),
+      nodeCount: 0,
+      pendingJobCount: 0,
+      failedJobCount: 0,
+      backupPolicyCount: 0,
+      driftedResourceCount: 0
     },
     inventory: {
-      tenants: [],
+      latestImport: null,
+      latestExport: null,
       nodes: [],
       zones: [],
       apps: [],
-      databases: [],
-      mailDomains: [],
-      mailboxes: [],
-      mailAliases: [],
-      mailQuotas: []
+      databases: []
     },
     desiredState: {
+      exportedAt: new Date().toISOString(),
+      summary: {
+        tenantCount: 0,
+        nodeCount: 0,
+        zoneCount: 0,
+        recordCount: 0,
+        appCount: 0,
+        databaseCount: 0,
+        backupPolicyCount: 0,
+        mailDomainCount: 0,
+        mailboxCount: 0,
+        mailAliasCount: 0,
+        mailboxQuotaCount: 0
+      },
       spec: {
         tenants: [],
         nodes: [],
         zones: [],
         apps: [],
         databases: [],
-        mail: {
-          domains: [],
-          mailboxes: [],
-          aliases: [],
-          quotas: []
-        },
-        backupPolicies: []
-      }
+        backupPolicies: [],
+        mailDomains: [],
+        mailboxes: [],
+        mailAliases: [],
+        mailboxQuotas: []
+      },
+      yaml: ""
     },
     drift: [],
     nodeHealth: [],
     jobHistory: [],
     auditEvents: [],
     backups: {
+      generatedAt: new Date().toISOString(),
       policies: [],
       latestRuns: []
     },
     rustdesk: {
-      relay: null,
-      server: null,
-      listeners: [],
+      generatedAt: new Date().toISOString(),
+      keyConsistency: "unknown",
       nodes: []
     },
     mail: {
+      generatedAt: new Date().toISOString(),
       domains: [],
       mailboxes: [],
       aliases: [],
       quotas: []
     },
     packages: {
-      nodes: [],
+      generatedAt: new Date().toISOString(),
+      nodeCount: 0,
+      packageCount: 0,
       packages: []
     }
   } as unknown as ControlDashboardBootstrap;
