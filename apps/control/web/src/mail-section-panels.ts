@@ -51,6 +51,7 @@ export function renderMailSectionContent(args: {
     tenantOptions,
     zoneOptions
   } = model;
+  type MailboxUsageEntry = NonNullable<MailServiceSnapshot["mailboxUsage"]>[number];
 
   const formatStorageBytes = (value: number | undefined): string => {
     if (value === undefined || value <= 0) {
@@ -72,12 +73,105 @@ export function renderMailSectionContent(args: {
     }).format(normalized)} ${units[unitIndex]}`;
   };
 
+  const formatMailboxSize = (value: number | undefined): string => {
+    if (value === undefined) {
+      return copy.none;
+    }
+
+    if (value === 0) {
+      return "0 B";
+    }
+
+    return formatStorageBytes(value);
+  };
+
+  const formatQuotaEditorValue = (value: number): string => {
+    const rounded = Math.round(value * 100) / 100;
+    return Number.isInteger(rounded)
+      ? String(rounded)
+      : rounded.toFixed(2).replace(/\.?0+$/, "");
+  };
+
+  const getQuotaEditorDefaults = (
+    quotaBytes: number | undefined
+  ): { value: string; unit: "mb" | "gb" | "tb" } => {
+    if (quotaBytes === undefined || quotaBytes <= 0) {
+      return {
+        value: "0",
+        unit: "gb"
+      };
+    }
+
+    const unitOptions = [
+      { unit: "tb" as const, bytes: 1024 ** 4 },
+      { unit: "gb" as const, bytes: 1024 ** 3 },
+      { unit: "mb" as const, bytes: 1024 ** 2 }
+    ];
+
+    for (const option of unitOptions) {
+      if (quotaBytes % option.bytes === 0) {
+        return {
+          value: String(quotaBytes / option.bytes),
+          unit: option.unit
+        };
+      }
+    }
+
+    const fallback =
+      quotaBytes >= 1024 ** 4
+        ? unitOptions[0]
+        : quotaBytes >= 1024 ** 3
+          ? unitOptions[1]
+          : unitOptions[2];
+
+    return {
+      value: formatQuotaEditorValue(quotaBytes / fallback.bytes),
+      unit: fallback.unit
+    };
+  };
+
   const primaryMailNodeIds = new Set(data.mail.domains.map((domain) => domain.primaryNodeId));
   const standbyMailNodeIds = new Set(
     data.mail.domains
       .map((domain) => domain.standbyNodeId)
       .filter((nodeId): nodeId is string => Boolean(nodeId))
   );
+  const primaryNodeIdByDomain = new Map(
+    data.mail.domains.map((domain) => [domain.domainName, domain.primaryNodeId] as const)
+  );
+  const mailboxUsageByNodeId = new Map<string, Map<string, MailboxUsageEntry>>();
+  const mailboxUsageFallbackByAddress = new Map<string, MailboxUsageEntry>();
+
+  for (const node of mailRuntimeNodes) {
+    const usageEntries = node.mail?.mailboxUsage ?? [];
+
+    if (usageEntries.length === 0) {
+      continue;
+    }
+
+    mailboxUsageByNodeId.set(
+      node.nodeId,
+      new Map(usageEntries.map((entry) => [entry.address, entry] as const))
+    );
+
+    for (const usageEntry of usageEntries) {
+      if (!mailboxUsageFallbackByAddress.has(usageEntry.address)) {
+        mailboxUsageFallbackByAddress.set(usageEntry.address, usageEntry);
+      }
+    }
+  }
+
+  const findMailboxUsage = (
+    mailbox: DashboardData["mail"]["mailboxes"][number]
+  ): MailboxUsageEntry | undefined => {
+    const primaryNodeId = primaryNodeIdByDomain.get(mailbox.domainName);
+
+    return (
+      (primaryNodeId
+        ? mailboxUsageByNodeId.get(primaryNodeId)?.get(mailbox.address)
+        : undefined) ?? mailboxUsageFallbackByAddress.get(mailbox.address)
+    );
+  };
   const observability = buildMailObservabilityModel(data);
   const mailPolicy = data.mail.policy ?? createDefaultMailPolicy();
 
@@ -129,9 +223,10 @@ export function renderMailSectionContent(args: {
   };
 
   const renderCredentialState = (
-    credentialState: DashboardData["mail"]["mailboxes"][number]["credentialState"]
+    credentialState: DashboardData["mail"]["mailboxes"][number]["credentialState"] | undefined,
+    hasCredential = false
   ): string => {
-    if (credentialState === "configured") {
+    if (credentialState === "configured" || (credentialState === undefined && hasCredential)) {
       return renderers.renderPill(mailCopy.credentialConfigured, "success");
     }
 
@@ -140,6 +235,14 @@ export function renderMailSectionContent(args: {
     }
 
     return renderers.renderPill(mailCopy.credentialMissing, "muted");
+  };
+
+  const labelForNodeOption = (nodeId: string | undefined): string => {
+    if (!nodeId?.trim()) {
+      return copy.none;
+    }
+
+    return nodeOptions.find((option) => option.value === nodeId)?.label ?? nodeId;
   };
 
   const formatObservabilityStatus = (
@@ -159,7 +262,19 @@ export function renderMailSectionContent(args: {
         ? mailCopy.observabilityWarning
         : status === "missing"
           ? mailCopy.observabilityMissing
-          : mailCopy.observabilityUnreported;
+        : mailCopy.observabilityUnreported;
+
+  const renderBinaryArtifactStatus = (
+    status: Parameters<typeof toneForMailObservabilityStatus>[0]
+  ): string =>
+    renderers.renderPill(
+      status === "ready" || status === "warning" ? mailCopy.onLabel : mailCopy.offLabel,
+      status === "ready" || status === "warning"
+        ? "success"
+        : status === "missing"
+          ? "danger"
+          : "muted"
+    );
 
   const renderQueueStatus = (
     queue: MailQueueSnapshot | undefined
@@ -270,21 +385,30 @@ export function renderMailSectionContent(args: {
       ? `${policy.rateLimit.burst} / ${policy.rateLimit.periodSeconds}s`
       : mailCopy.rateLimitDisabledLabel;
 
-  const renderPromotionBlockers = (blockers: string[]): string => {
-    if (blockers.length === 0) {
-      return `<p class="empty">${escapeHtml(mailCopy.noPromotionBlockers)}</p>`;
-    }
-
-    return `<div class="feed-list">
-      ${blockers
-        .map(
-          (blocker) => `<article class="feed-item feed-item-danger">
-            <p>${escapeHtml(blocker)}</p>
-          </article>`
-        )
-        .join("")}
+  const renderHaDetailCard = (label: string, value: string): string => `<div class="detail-item">
+      <dt>${escapeHtml(label)}</dt>
+      <dd>${value}</dd>
     </div>`;
-  };
+
+  const renderDeliverabilityStatusCard = (label: string, value: string): string => `<div class="detail-item deliverability-status-card">
+      <div class="deliverability-status-row">
+        <dt>${escapeHtml(label)}</dt>
+        <dd>${value}</dd>
+      </div>
+    </div>`;
+
+  const renderDeliverabilityMetricCard = (
+    label: string,
+    value: string,
+    options: { className?: string } = {}
+  ): string => `<div class="detail-item deliverability-metric-card${
+      options.className ? ` ${escapeHtml(options.className)}` : ""
+    }">
+      <div class="deliverability-status-row">
+        <dt>${escapeHtml(label)}</dt>
+        <dd>${value}</dd>
+      </div>
+    </div>`;
 
   const renderValidationWarnings = (warnings: MailValidationWarning[]): string => {
     if (warnings.length === 0) {
@@ -310,155 +434,53 @@ export function renderMailSectionContent(args: {
     </div>`;
   };
 
-  const renderPathList = (paths: string[], emptyMessage: string): string => {
-    if (paths.length === 0) {
-      return `<p class="empty">${escapeHtml(emptyMessage)}</p>`;
-    }
-
-    return `<div class="feed-list">
-      ${paths
-        .map(
-          (pathValue) => `<article class="feed-item">
-            <strong class="mono">${escapeHtml(pathValue)}</strong>
-          </article>`
-        )
-        .join("")}
-    </div>`;
-  };
-
-  const renderRestoreChecks = (
-    checks: Array<{
-      scope: "mailbox" | "domain" | "mail-stack";
-      status: Parameters<typeof toneForMailObservabilityStatus>[0];
-      target: string;
-      summary: string;
-      validatedAt?: string;
-      runId?: string;
-    }>
-  ): string =>
-    `<div class="feed-list">
-      ${checks
-        .map((check) => {
-          const scopeLabel =
-            check.scope === "mailbox"
-              ? mailCopy.restoreMailboxLabel
-              : check.scope === "domain"
-                ? mailCopy.restoreDomainLabel
-                : mailCopy.restoreStackLabel;
-
-          return `<article class="feed-item${
-            check.status === "missing" ? " feed-item-danger" : ""
-          }">
-            <strong>${escapeHtml(scopeLabel)}</strong>
-            <span class="feed-meta">${escapeHtml(
-              [
-                check.target,
-                check.validatedAt ? renderers.formatDate(check.validatedAt, locale) : "",
-                check.runId ?? ""
-              ]
-                .filter(Boolean)
-                .join(" · ")
-            )}</span>
-            <p>${escapeHtml(check.summary)}</p>
-          </article>`;
-        })
-        .join("")}
-    </div>`;
-
-  const renderHaNodePanel = (node: MailHaNodeRow, title: string): string => `<article class="panel detail-shell panel-nested">
+  const renderHaNodePanel = (node: MailHaNodeRow, title: string): string => `<article class="panel detail-shell panel-nested mail-ha-node-panel">
       <h4>${escapeHtml(title)}</h4>
-      ${renderers.renderSignalStrip([
-        {
-          label: mailCopy.promotionReadyLabel,
-          value: labelForObservabilityStatus(node.promotionReady.status),
-          tone: toneForMailObservabilityStatus(node.promotionReady.status)
-        },
-        {
-          label: mailCopy.runtimeConfigLabel,
-          value: labelForObservabilityStatus(node.runtimeConfig.status),
-          tone: toneForMailObservabilityStatus(node.runtimeConfig.status)
-        },
-        {
-          label: mailCopy.maildirReadinessLabel,
-          value: labelForObservabilityStatus(node.mailboxes.status),
-          tone: toneForMailObservabilityStatus(node.mailboxes.status)
-        }
-      ])}
-      ${renderers.renderDetailGrid(
-        [
-          {
-            label: copy.navNodes,
-            value: `<span class="mono">${escapeHtml(node.nodeId)}</span>`
-          },
-          {
-            label: mailCopy.checkedAtLabel,
-            value: node.checkedAt
+      <div class="mail-ha-node-columns">
+        <dl class="mail-ha-node-column">
+          ${renderHaDetailCard(
+            mailCopy.promotionReadyLabel,
+            renderers.renderPill(
+              labelForObservabilityStatus(node.promotionReady.status),
+              toneForMailObservabilityStatus(node.promotionReady.status)
+            )
+          )}
+          ${renderHaDetailCard(
+            mailCopy.maildirReadinessLabel,
+            renderers.renderPill(
+              labelForObservabilityStatus(node.mailboxes.status),
+              toneForMailObservabilityStatus(node.mailboxes.status)
+            )
+          )}
+          ${renderHaDetailCard(copy.navNodes, `<span class="mono">${escapeHtml(node.nodeId)}</span>`)}
+          ${renderHaDetailCard(mailCopy.runtimeTitle, formatObservabilityStatus(node.services.status))}
+          ${renderHaDetailCard(mailCopy.maildirReadinessLabel, formatObservabilityStatus(node.mailboxes.status))}
+          ${renderHaDetailCard(mailCopy.policyDocsLabel, formatObservabilityStatus(node.policyDocuments.status))}
+        </dl>
+        <dl class="mail-ha-node-column">
+          ${renderHaDetailCard(
+            mailCopy.runtimeConfigLabel,
+            renderers.renderPill(
+              labelForObservabilityStatus(node.runtimeConfig.status),
+              toneForMailObservabilityStatus(node.runtimeConfig.status)
+            )
+          )}
+          ${renderHaDetailCard(
+            mailCopy.promotionBlockersLabel,
+            renderers.renderPill(String(node.blockers.length), node.blockers.length > 0 ? "danger" : "success")
+          )}
+          ${renderHaDetailCard(
+            mailCopy.checkedAtLabel,
+            node.checkedAt
               ? escapeHtml(renderers.formatDate(node.checkedAt, locale))
               : escapeHtml(copy.none)
-          },
-          {
-            label: mailCopy.runtimeTitle,
-            value: formatObservabilityStatus(node.services.status)
-          },
-          {
-            label: mailCopy.runtimeConfigLabel,
-            value: formatObservabilityStatus(node.runtimeConfig.status)
-          },
-          {
-            label: mailCopy.maildirReadinessLabel,
-            value: formatObservabilityStatus(node.mailboxes.status)
-          },
-          {
-            label: mailCopy.dkimLabel,
-            value: formatObservabilityStatus(node.dkim.status)
-          },
-          {
-            label: mailCopy.policyDocsLabel,
-            value: formatObservabilityStatus(node.policyDocuments.status)
-          },
-          {
-            label: mailCopy.webmailLabel,
-            value: formatObservabilityStatus(node.webmail.status)
-          }
-        ],
-        { className: "detail-grid-two" }
-      )}
-      <article class="panel detail-shell panel-nested">
-        <h5>${escapeHtml(mailCopy.promotionBlockersLabel)}</h5>
-        ${renderPromotionBlockers(node.blockers)}
-      </article>
+          )}
+          ${renderHaDetailCard(mailCopy.runtimeConfigLabel, formatObservabilityStatus(node.runtimeConfig.status))}
+          ${renderHaDetailCard(mailCopy.dkimLabel, formatObservabilityStatus(node.dkim.status))}
+          ${renderHaDetailCard(mailCopy.webmailLabel, formatObservabilityStatus(node.webmail.status))}
+        </dl>
+      </div>
     </article>`;
-
-  const deliverabilityRows: DataTableRow[] = observability.deliverabilityRows.map((row) => ({
-    selectionKey: row.domainName,
-    selected: selectedDomain?.domainName === row.domainName,
-    cells: [
-      renderers.renderFocusLink(
-        row.domainName,
-        buildDashboardViewUrl("mail", undefined, row.domainName),
-        selectedDomain?.domainName === row.domainName,
-        copy.selectedStateLabel
-      ),
-      formatObservabilityStatus(row.spf.status),
-      formatObservabilityStatus(row.dkim.status),
-      formatObservabilityStatus(row.dmarc.status),
-      formatObservabilityStatus(row.mtaSts.status),
-      formatObservabilityStatus(row.tlsRpt.status),
-      formatObservabilityStatus(row.runtime.status),
-      row.checkedAt ? escapeHtml(renderers.formatDate(row.checkedAt, locale)) : escapeHtml(copy.none)
-    ],
-    searchText: [
-      row.domainName,
-      row.zoneName,
-      row.primaryNodeId,
-      row.spf.status,
-      row.dkim.status,
-      row.dmarc.status,
-      row.mtaSts.status,
-      row.tlsRpt.status,
-      row.runtime.status
-    ].join(" ")
-  }));
 
   const domainRows: DataTableRow[] = data.mail.domains.map((domain) => ({
     selectionKey: domain.domainName,
@@ -498,40 +520,46 @@ export function renderMailSectionContent(args: {
     ].join(" ")
   }));
 
-  const mailboxRows: DataTableRow[] = data.mail.mailboxes.map((mailbox) => ({
-    selectionKey: mailbox.address,
-    selected: selectedMailbox?.address === mailbox.address,
-    cells: [
-      renderers.renderFocusLink(
+  const mailboxRows: DataTableRow[] = data.mail.mailboxes.map((mailbox) => {
+    const mailboxUsage = findMailboxUsage(mailbox);
+    const mailboxSize = formatMailboxSize(mailboxUsage?.usedBytes);
+
+    return {
+      selectionKey: mailbox.address,
+      selected: selectedMailbox?.address === mailbox.address,
+      cells: [
+        renderers.renderFocusLink(
+          mailbox.address,
+          buildDashboardViewUrl("mail", undefined, mailbox.address),
+          selectedMailbox?.address === mailbox.address,
+          copy.selectedStateLabel
+        ),
+        renderCredentialState(mailbox.credentialState, mailbox.hasCredential),
+        `<span class="mono">${escapeHtml(mailboxSize)}</span>`,
+        mailbox.quotaBytes
+          ? `<span class="mono">${escapeHtml(formatStorageBytes(mailbox.quotaBytes))}</span>`
+          : escapeHtml(copy.none),
+        renderRowActionButtons(
+          `mail-mailbox-edit-${toModalIdSegment(mailbox.address)}`,
+          `mail-mailbox-delete-${toModalIdSegment(mailbox.address)}`,
+          {
+            rotateModalId: `mail-mailbox-rotate-${toModalIdSegment(mailbox.address)}`,
+            resetModalId: `mail-mailbox-reset-${toModalIdSegment(mailbox.address)}`
+          }
+        )
+      ],
+      searchText: [
         mailbox.address,
-        buildDashboardViewUrl("mail", undefined, mailbox.address),
-        selectedMailbox?.address === mailbox.address,
-        copy.selectedStateLabel
-      ),
-      `<span class="mono">${escapeHtml(mailbox.primaryNodeId)}</span>`,
-      renderCredentialState(mailbox.credentialState),
-      mailbox.quotaBytes
-        ? `<span class="mono">${escapeHtml(formatStorageBytes(mailbox.quotaBytes))}</span>`
-        : escapeHtml(copy.none),
-      renderRowActionButtons(
-        `mail-mailbox-edit-${toModalIdSegment(mailbox.address)}`,
-        `mail-mailbox-delete-${toModalIdSegment(mailbox.address)}`,
-        {
-          rotateModalId: `mail-mailbox-rotate-${toModalIdSegment(mailbox.address)}`,
-          resetModalId: `mail-mailbox-reset-${toModalIdSegment(mailbox.address)}`
-        }
-      )
-    ],
-    searchText: [
-      mailbox.address,
-      mailbox.domainName,
-      mailbox.localPart,
-      mailbox.primaryNodeId,
-      mailbox.standbyNodeId ?? "",
-      mailbox.credentialState,
-      String(mailbox.quotaBytes ?? "")
-    ].join(" ")
-  }));
+        mailbox.domainName,
+        mailbox.localPart,
+        mailbox.primaryNodeId,
+        mailbox.standbyNodeId ?? "",
+        mailbox.credentialState,
+        mailboxSize,
+        String(mailbox.quotaBytes ?? "")
+      ].join(" ")
+    };
+  });
 
   const aliasRows: DataTableRow[] = data.mail.aliases.map((alias) => ({
     selectionKey: alias.address,
@@ -569,6 +597,11 @@ export function renderMailSectionContent(args: {
               : ""
           }
         </div>
+        <p class="muted mail-node-runtime-subline">${escapeHtml(
+          node.mail?.checkedAt
+            ? `${mailCopy.checkedAtLabel}: ${renderers.formatDate(node.mail.checkedAt, locale)}`
+            : `${mailCopy.checkedAtLabel}: ${copy.none}`
+        )}</p>
       </div>`,
       renderServiceStatus(node.mail, "postfix"),
       renderServiceStatus(node.mail, "dovecot"),
@@ -583,10 +616,7 @@ export function renderMailSectionContent(args: {
             String(node.mail.managedDomains.length),
             node.mail.managedDomains.length > 0 ? "success" : "muted"
           )
-        : renderers.renderPill(mailCopy.runtimeUnreported, "muted"),
-      node.mail?.checkedAt
-        ? escapeHtml(renderers.formatDate(node.mail.checkedAt, locale))
-        : escapeHtml(copy.none)
+        : renderers.renderPill(mailCopy.runtimeUnreported, "muted")
     ],
     searchText: [
       node.nodeId,
@@ -763,66 +793,6 @@ export function renderMailSectionContent(args: {
               ],
               { className: "detail-grid-two" }
             )}
-            <div class="grid-two-desktop">
-              <article class="panel detail-shell panel-nested">
-                <h4>${escapeHtml(mailCopy.relatedJobsTitle)}</h4>
-                ${
-                  selectedRelatedJobs.length === 0
-                    ? `<p class="empty">${escapeHtml(copy.none)}</p>`
-                    : `<div class="feed-list">
-                        ${selectedRelatedJobs
-                          .map(
-                            (job) => `<article class="feed-item${
-                              job.status === "failed"
-                                ? " feed-item-danger"
-                                : job.status === "applied"
-                                  ? " feed-item-success"
-                                  : ""
-                            }">
-                              <strong><a class="detail-link" href="${escapeHtml(
-                                buildDashboardViewUrl("job-history", undefined, job.jobId)
-                              )}">${escapeHtml(job.kind)}</a></strong>
-                              <span class="feed-meta">${escapeHtml(
-                                [job.jobId, job.status ?? "queued", renderers.formatDate(job.createdAt, locale)]
-                                  .join(" · ")
-                              )}</span>
-                              <p>${escapeHtml(job.summary ?? job.dispatchReason ?? copy.none)}</p>
-                            </article>`
-                          )
-                          .join("")}
-                      </div>`
-                }
-              </article>
-              <article class="panel detail-shell panel-nested">
-                <h4>${escapeHtml(mailCopy.relatedAuditsTitle)}</h4>
-                ${
-                  selectedRelatedAudits.length === 0
-                    ? `<p class="empty">${escapeHtml(copy.none)}</p>`
-                    : `<div class="feed-list">
-                        ${selectedRelatedAudits
-                          .map(
-                            (event) => `<article class="feed-item">
-                              <strong>${escapeHtml(event.eventType)}</strong>
-                              <span class="feed-meta">${escapeHtml(
-                                [
-                                  event.entityType && event.entityId
-                                    ? `${event.entityType}:${event.entityId}`
-                                    : event.entityType ?? event.entityId ?? copy.none,
-                                  renderers.formatDate(event.occurredAt, locale)
-                                ].join(" · ")
-                              )}</span>
-                              <p>${escapeHtml(
-                                Object.keys(event.payload).length > 0
-                                  ? JSON.stringify(event.payload)
-                                  : copy.none
-                              )}</p>
-                            </article>`
-                          )
-                          .join("")}
-                      </div>`
-                }
-              </article>
-            </div>
             <article class="panel detail-shell panel-nested">
               <h4>${escapeHtml(mailCopy.recentFailuresLabel)}</h4>
               ${renderFailureFeed(selectedRuntimeFailures)}
@@ -839,63 +809,76 @@ export function renderMailSectionContent(args: {
       </div>
       ${
         selectedDeliverability
-          ? `${renderers.renderSignalStrip([
-              {
-                label: mailCopy.spfLabel,
-                value: labelForObservabilityStatus(selectedDeliverability.spf.status),
-                tone: toneForMailObservabilityStatus(selectedDeliverability.spf.status)
-              },
-              {
-                label: mailCopy.dkimLabel,
-                value: labelForObservabilityStatus(selectedDeliverability.dkim.status),
-                tone: toneForMailObservabilityStatus(selectedDeliverability.dkim.status)
-              },
-              {
-                label: mailCopy.dmarcLabel,
-                value: labelForObservabilityStatus(selectedDeliverability.dmarc.status),
-                tone: toneForMailObservabilityStatus(selectedDeliverability.dmarc.status)
-              },
-              {
-                label: mailCopy.mtaStsLabel,
-                value: labelForObservabilityStatus(selectedDeliverability.mtaSts.status),
-                tone: toneForMailObservabilityStatus(selectedDeliverability.mtaSts.status)
-              },
-              {
-                label: mailCopy.tlsRptLabel,
-                value: labelForObservabilityStatus(selectedDeliverability.tlsRpt.status),
-                tone: toneForMailObservabilityStatus(selectedDeliverability.tlsRpt.status)
-              }
-            ])}
-            ${renderers.renderDetailGrid(
-              [
-                {
-                  label: mailCopy.runtimeTitle,
-                  value: formatObservabilityStatus(selectedDeliverability.runtime.status)
-                },
-                {
-                  label: mailCopy.webmailLabel,
-                  value: formatObservabilityStatus(selectedDeliverability.webmail.status)
-                },
-                {
-                  label: mailCopy.queuedMessagesLabel,
-                  value: escapeHtml(
-                    selectedDeliverability.queueMessageCount !== undefined
-                      ? String(selectedDeliverability.queueMessageCount)
-                      : copy.none
-                  )
-                },
-                {
-                  label: mailCopy.recentFailuresLabel,
-                  value: escapeHtml(String(selectedDeliverability.recentFailureCount))
-                },
-                {
-                  label: mailCopy.topDeferReasonLabel,
-                  value: escapeHtml(selectedDeliverability.topDeferReason ?? copy.none),
-                  className: "detail-item-span-two"
-                }
-              ],
-              { className: "detail-grid-two" }
-            )}`
+          ? `<dl class="deliverability-card-grid">
+              ${renderDeliverabilityStatusCard(
+                mailCopy.spfLabel,
+                renderers.renderPill(
+                  labelForObservabilityStatus(selectedDeliverability.spf.status),
+                  toneForMailObservabilityStatus(selectedDeliverability.spf.status)
+                )
+              )}
+              ${renderDeliverabilityStatusCard(
+                mailCopy.dkimLabel,
+                renderers.renderPill(
+                  labelForObservabilityStatus(selectedDeliverability.dkim.status),
+                  toneForMailObservabilityStatus(selectedDeliverability.dkim.status)
+                )
+              )}
+              ${renderDeliverabilityStatusCard(
+                mailCopy.dmarcLabel,
+                renderers.renderPill(
+                  labelForObservabilityStatus(selectedDeliverability.dmarc.status),
+                  toneForMailObservabilityStatus(selectedDeliverability.dmarc.status)
+                )
+              )}
+              ${renderDeliverabilityStatusCard(
+                mailCopy.mtaStsLabel,
+                renderers.renderPill(
+                  labelForObservabilityStatus(selectedDeliverability.mtaSts.status),
+                  toneForMailObservabilityStatus(selectedDeliverability.mtaSts.status)
+                )
+              )}
+              ${renderDeliverabilityStatusCard(
+                mailCopy.tlsRptLabel,
+                renderers.renderPill(
+                  labelForObservabilityStatus(selectedDeliverability.tlsRpt.status),
+                  toneForMailObservabilityStatus(selectedDeliverability.tlsRpt.status)
+                )
+              )}
+              ${renderDeliverabilityStatusCard(
+                mailCopy.runtimeTitle,
+                formatObservabilityStatus(selectedDeliverability.runtime.status)
+              )}
+              ${renderDeliverabilityStatusCard(
+                mailCopy.webmailLabel,
+                formatObservabilityStatus(selectedDeliverability.webmail.status)
+              )}
+              ${renderDeliverabilityMetricCard(
+                mailCopy.queuedMessagesLabel,
+                selectedDeliverability.queueMessageCount !== undefined
+                  ? renderers.renderPill(
+                      String(selectedDeliverability.queueMessageCount),
+                      selectedDeliverability.queueMessageCount > 0 ? "default" : "success"
+                    )
+                  : renderers.renderPill(copy.none, "muted")
+              )}
+              ${renderDeliverabilityMetricCard(
+                mailCopy.recentFailuresLabel,
+                renderers.renderPill(
+                  String(selectedDeliverability.recentFailureCount),
+                  selectedDeliverability.recentFailureCount > 0 ? "danger" : "success"
+                )
+              )}
+              ${renderDeliverabilityMetricCard(
+                mailCopy.topDeferReasonLabel,
+                selectedDeliverability.topDeferReason
+                  ? `<span class="deliverability-metric-text">${escapeHtml(
+                      selectedDeliverability.topDeferReason
+                    )}</span>`
+                  : renderers.renderPill(copy.none, "muted"),
+                { className: "deliverability-metric-card-wide" }
+              )}
+            </dl>`
           : `<p class="empty">${escapeHtml(mailCopy.noSelectionLabel)}</p>`
       }
     </article>`;
@@ -964,86 +947,27 @@ export function renderMailSectionContent(args: {
               ],
               { className: "detail-grid-two" }
             )}
-            <div class="grid-two-desktop">
-              <article class="panel detail-shell panel-nested">
-                <h4>${escapeHtml(mailCopy.maildirReadinessLabel)}</h4>
-                ${renderers.renderSignalStrip([
-                  {
-                    label: mailCopy.observabilityReady,
-                    value: labelForObservabilityStatus(selectedBackup.artifacts.maildir.status),
-                    tone: toneForMailObservabilityStatus(selectedBackup.artifacts.maildir.status)
-                  }
-                ])}
-                <p class="muted">${escapeHtml(selectedBackup.artifacts.maildir.detail)}</p>
-                <h5>${escapeHtml(mailCopy.expectedPathsLabel)}</h5>
-                ${renderPathList(
-                  selectedBackup.artifacts.maildir.expectedPaths,
-                  mailCopy.noExpectedBackupPaths
-                )}
-                <h5>${escapeHtml(mailCopy.coveredPathsLabel)}</h5>
-                ${renderPathList(selectedBackup.artifacts.maildir.coveredPaths, copy.none)}
-              </article>
-              <article class="panel detail-shell panel-nested">
-                <h4>${escapeHtml(mailCopy.dkimLabel)}</h4>
-                ${renderers.renderSignalStrip([
-                  {
-                    label: mailCopy.observabilityReady,
-                    value: labelForObservabilityStatus(selectedBackup.artifacts.dkim.status),
-                    tone: toneForMailObservabilityStatus(selectedBackup.artifacts.dkim.status)
-                  }
-                ])}
-                <p class="muted">${escapeHtml(selectedBackup.artifacts.dkim.detail)}</p>
-                <h5>${escapeHtml(mailCopy.expectedPathsLabel)}</h5>
-                ${renderPathList(
-                  selectedBackup.artifacts.dkim.expectedPaths,
-                  mailCopy.noExpectedBackupPaths
-                )}
-                <h5>${escapeHtml(mailCopy.coveredPathsLabel)}</h5>
-                ${renderPathList(selectedBackup.artifacts.dkim.coveredPaths, copy.none)}
-              </article>
-            </div>
-            <div class="grid-two-desktop">
-              <article class="panel detail-shell panel-nested">
-                <h4>${escapeHtml(mailCopy.runtimeConfigLabel)}</h4>
-                ${renderers.renderSignalStrip([
-                  {
-                    label: mailCopy.observabilityReady,
-                    value: labelForObservabilityStatus(selectedBackup.artifacts.runtimeConfig.status),
-                    tone: toneForMailObservabilityStatus(selectedBackup.artifacts.runtimeConfig.status)
-                  }
-                ])}
-                <p class="muted">${escapeHtml(selectedBackup.artifacts.runtimeConfig.detail)}</p>
-                <h5>${escapeHtml(mailCopy.expectedPathsLabel)}</h5>
-                ${renderPathList(
-                  selectedBackup.artifacts.runtimeConfig.expectedPaths,
-                  mailCopy.noExpectedBackupPaths
-                )}
-                <h5>${escapeHtml(mailCopy.coveredPathsLabel)}</h5>
-                ${renderPathList(selectedBackup.artifacts.runtimeConfig.coveredPaths, copy.none)}
-              </article>
-              <article class="panel detail-shell panel-nested">
-                <h4>${escapeHtml(mailCopy.webmailLabel)}</h4>
-                ${renderers.renderSignalStrip([
-                  {
-                    label: mailCopy.observabilityReady,
-                    value: labelForObservabilityStatus(selectedBackup.artifacts.webmailState.status),
-                    tone: toneForMailObservabilityStatus(selectedBackup.artifacts.webmailState.status)
-                  }
-                ])}
-                <p class="muted">${escapeHtml(selectedBackup.artifacts.webmailState.detail)}</p>
-                <h5>${escapeHtml(mailCopy.expectedPathsLabel)}</h5>
-                ${renderPathList(
-                  selectedBackup.artifacts.webmailState.expectedPaths,
-                  mailCopy.noExpectedBackupPaths
-                )}
-                <h5>${escapeHtml(mailCopy.coveredPathsLabel)}</h5>
-                ${renderPathList(selectedBackup.artifacts.webmailState.coveredPaths, copy.none)}
-              </article>
-            </div>
-            <article class="panel detail-shell panel-nested">
-              <h4>${escapeHtml(mailCopy.backupTitle)}</h4>
-              ${renderRestoreChecks(selectedBackup.restoreChecks)}
-            </article>`
+            ${renderers.renderDetailGrid(
+              [
+                {
+                  label: mailCopy.maildirReadinessLabel,
+                  value: renderBinaryArtifactStatus(selectedBackup.artifacts.maildir.status)
+                },
+                {
+                  label: mailCopy.dkimLabel,
+                  value: renderBinaryArtifactStatus(selectedBackup.artifacts.dkim.status)
+                },
+                {
+                  label: mailCopy.runtimeConfigLabel,
+                  value: renderBinaryArtifactStatus(selectedBackup.artifacts.runtimeConfig.status)
+                },
+                {
+                  label: mailCopy.webmailLabel,
+                  value: renderBinaryArtifactStatus(selectedBackup.artifacts.webmailState.status)
+                }
+              ],
+              { className: "detail-grid-two" }
+            )}`
           : `<p class="empty">${escapeHtml(mailCopy.noSelectionLabel)}</p>`
       }
     </article>`;
@@ -1236,18 +1160,6 @@ export function renderMailSectionContent(args: {
         ],
         { className: "detail-grid-three" }
       )}
-      <div class="grid-two-desktop">
-        <article class="panel detail-shell panel-nested">
-          <h4>${escapeHtml(mailCopy.senderAllowlistLabel)}</h4>
-          <p class="muted section-description">${escapeHtml(mailCopy.senderPolicyHelp)}</p>
-          ${renderSenderPolicyList(mailPolicy.senderAllowlist)}
-        </article>
-        <article class="panel detail-shell panel-nested">
-          <h4>${escapeHtml(mailCopy.senderDenylistLabel)}</h4>
-          <p class="muted section-description">${escapeHtml(mailCopy.senderPolicyHelp)}</p>
-          ${renderSenderPolicyList(mailPolicy.senderDenylist)}
-        </article>
-      </div>
     </article>`;
 
   const credentialRevealPanel = mailCredentialReveal
@@ -1429,85 +1341,135 @@ export function renderMailSectionContent(args: {
       primaryNodeId: string;
       standbyNodeId?: string;
       credentialState?: DashboardData["mail"]["mailboxes"][number]["credentialState"];
+      hasCredential?: boolean;
       quotaBytes?: number;
     },
     mode: "create" | "edit",
     autofocus = false
-  ): string => `<form method="post" action="/resources/mail/mailboxes/upsert" class="stack">
+  ): string => {
+    const standbyNodeId = defaults.standbyNodeId || "";
+    const quotaDefaults = getQuotaEditorDefaults(defaults.quotaBytes);
+    const quotaUnitOptions = [
+      { value: "mb", label: "MB" },
+      { value: "gb", label: "GB" },
+      { value: "tb", label: "TB" }
+    ];
+    const sharedCredentialField = `<label>${escapeHtml(
+      mode === "create"
+        ? mailCopy.desiredPasswordCreateLabel
+        : mailCopy.desiredPasswordUpdateLabel
+    )}
+        <input name="desiredPassword" type="password" value="" autocomplete="new-password"${mode === "edit" && autofocus ? " data-overlay-autofocus" : ""} />
+      </label>`;
+    const quotaField = `<div class="stack">
+        <div class="grid-two-desktop">
+          <label>${escapeHtml(mailCopy.quotaValueLabel)}
+            <input name="quotaValue" type="number" min="0" step="0.1" inputmode="decimal" value="${escapeHtml(
+              quotaDefaults.value
+            )}" />
+          </label>
+          <label>${escapeHtml(mailCopy.quotaUnitLabel)}
+            <select name="quotaUnit">${renderers.renderSelectOptions(quotaUnitOptions, quotaDefaults.unit)}</select>
+          </label>
+        </div>
+        <p class="muted section-description">${escapeHtml(mailCopy.quotaHelp)}</p>
+      </div>`;
+
+    if (mode === "edit") {
+      return `<form method="post" action="/resources/mail/mailboxes/upsert" class="stack">
+        <input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}" />
+        <input type="hidden" name="address" value="${escapeHtml(defaults.address)}" />
+        <input type="hidden" name="domainName" value="${escapeHtml(defaults.domainName)}" />
+        <input type="hidden" name="primaryNodeId" value="${escapeHtml(defaults.primaryNodeId)}" />
+        <input type="hidden" name="standbyNodeId" value="${escapeHtml(standbyNodeId)}" />
+        <input type="hidden" name="credentialStrategy" value="keep" />
+        <div class="action-card-context">
+          <span class="action-card-context-title">${escapeHtml(mailCopy.addressLabel)}</span>
+          <div class="toolbar">
+            <p class="mono">${escapeHtml(defaults.address)}</p>
+            ${renderCredentialState(defaults.credentialState, defaults.hasCredential)}
+          </div>
+        </div>
+        <div class="grid-two-desktop">
+          <label>${escapeHtml(mailCopy.mailboxNameLabel)}
+            <input value="${escapeHtml(defaults.localPart)}" readonly spellcheck="false" />
+          </label>
+          <label>${escapeHtml(mailCopy.domainNameLabel)}
+            <input value="${escapeHtml(defaults.domainName)}" readonly spellcheck="false" />
+          </label>
+        </div>
+        <div class="grid-two-desktop">
+          <label>${escapeHtml(mailCopy.primaryNodeLabel)}
+            <input value="${escapeHtml(labelForNodeOption(defaults.primaryNodeId))}" readonly spellcheck="false" />
+          </label>
+          <label>${escapeHtml(mailCopy.standbyNodeLabel)}
+            <input value="${escapeHtml(labelForNodeOption(standbyNodeId))}" readonly spellcheck="false" />
+          </label>
+        </div>
+        <div class="grid-two-desktop">
+          ${sharedCredentialField}
+          ${quotaField}
+        </div>
+        <p class="muted section-description">${escapeHtml(mailCopy.editMailboxDescription)}</p>
+        <p class="muted section-description">${escapeHtml(mailCopy.mailboxAddressHelp)}</p>
+        <p class="muted section-description">${escapeHtml(mailCopy.editMailboxPasswordHelp)}</p>
+        <div class="toolbar">
+          <button type="submit">${escapeHtml(mailCopy.saveMailboxLabel)}</button>
+        </div>
+      </form>`;
+    }
+
+    return `<form method="post" action="/resources/mail/mailboxes/upsert" class="stack">
       <input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}" />
-      <div class="form-grid">
-        <label>${escapeHtml(mailCopy.addressLabel)}
-          <input name="address" value="${escapeHtml(defaults.address)}" required spellcheck="false"${autofocus ? " data-overlay-autofocus" : ""} />
+      <div class="grid-two-desktop">
+        <label>${escapeHtml(mailCopy.mailboxNameLabel)}
+          <input name="localPart" value="${escapeHtml(defaults.localPart)}" required spellcheck="false"${autofocus ? " data-overlay-autofocus" : ""} />
         </label>
         <label>${escapeHtml(mailCopy.domainNameLabel)}
           <select name="domainName" required>${renderers.renderSelectOptions(mailDomainOptions, defaults.domainName)}</select>
         </label>
-        <label>${escapeHtml(mailCopy.localPartLabel)}
-          <input name="localPart" value="${escapeHtml(defaults.localPart)}" required spellcheck="false" />
-        </label>
+      </div>
+      <div class="grid-two-desktop">
         <label>${escapeHtml(mailCopy.primaryNodeLabel)}
           <select name="primaryNodeId" required>${renderers.renderSelectOptions(nodeOptions, defaults.primaryNodeId)}</select>
         </label>
         <label>${escapeHtml(mailCopy.standbyNodeLabel)}
-          <select name="standbyNodeId">${renderers.renderSelectOptions(nodeOptions, defaults.standbyNodeId || undefined, { allowBlank: true, blankLabel: "none" })}</select>
-        </label>
-        <label>${escapeHtml(mailCopy.credentialStrategyLabel)}
-          <select name="credentialStrategy">${renderers.renderSelectOptions(
-            mode === "create"
-              ? [
-                  {
-                    value: "generate",
-                    label: mailCopy.credentialStrategyGenerateLabel
-                  },
-                  {
-                    value: "manual",
-                    label: mailCopy.credentialStrategyManualLabel
-                  },
-                  {
-                    value: "missing",
-                    label: mailCopy.credentialStrategyMissingLabel
-                  }
-                ]
-              : [
-                  {
-                    value: "keep",
-                    label: mailCopy.credentialStrategyKeepLabel
-                  },
-                  {
-                    value: "manual",
-                    label: mailCopy.credentialStrategyManualLabel
-                  },
-                  {
-                    value: "missing",
-                    label: mailCopy.credentialStrategyMissingLabel
-                  }
-                ],
-            mode === "create"
-              ? defaults.credentialState === "missing"
-                ? "missing"
-                : "generate"
-              : defaults.credentialState === "missing" || defaults.credentialState === "reset_required"
-                ? "missing"
-                : "keep"
-          )}</select>
-        </label>
-        <label>${escapeHtml(mailCopy.desiredPasswordLabel)}
-          <input name="desiredPassword" type="password" value="" autocomplete="new-password" />
-        </label>
-        <label>${escapeHtml(mailCopy.quotaBytesLabel)}
-          <input name="storageBytes" type="number" min="1" step="1" inputmode="numeric" value="${escapeHtml(
-            defaults.quotaBytes ? String(defaults.quotaBytes) : ""
-          )}" />
+          <select name="standbyNodeId">${renderers.renderSelectOptions(nodeOptions, standbyNodeId || undefined, { allowBlank: true, blankLabel: "none" })}</select>
         </label>
       </div>
-      <p class="muted section-description">${escapeHtml(
-        mode === "create" ? mailCopy.createMailboxDescription : mailCopy.editMailboxDescription
-      )}</p>
-      <p class="muted section-description">${escapeHtml(mailCopy.manualPasswordHelp)}</p>
+      <div class="grid-two-desktop">
+        <label>${escapeHtml(mailCopy.credentialStrategyLabel)}
+          <select name="credentialStrategy">${renderers.renderSelectOptions(
+            [
+              {
+                value: "generate",
+                label: mailCopy.credentialStrategyGenerateLabel
+              },
+              {
+                value: "manual",
+                label: mailCopy.credentialStrategyManualLabel
+              },
+              {
+                value: "missing",
+                label: mailCopy.credentialStrategyMissingLabel
+              }
+            ],
+            defaults.credentialState === "missing" ? "missing" : "generate"
+          )}</select>
+        </label>
+        ${sharedCredentialField}
+      </div>
+      <div class="grid-two-desktop">
+        ${quotaField}
+      </div>
+      <p class="muted section-description">${escapeHtml(mailCopy.createMailboxDescription)}</p>
+      <p class="muted section-description">${escapeHtml(mailCopy.mailboxAddressHelp)}</p>
+      <p class="muted section-description">${escapeHtml(mailCopy.createMailboxPasswordHelp)}</p>
       <div class="toolbar">
         <button type="submit">${escapeHtml(mailCopy.saveMailboxLabel)}</button>
       </div>
     </form>`;
+  };
 
   const renderAliasEditorForm = (
     defaults: {
@@ -1669,6 +1631,7 @@ export function renderMailSectionContent(args: {
               primaryNodeId: mailbox.primaryNodeId,
               standbyNodeId: mailbox.standbyNodeId ?? "",
               credentialState: mailbox.credentialState,
+              hasCredential: mailbox.hasCredential,
               quotaBytes: mailbox.quotaBytes
             },
             "edit",
@@ -1848,32 +1811,6 @@ export function renderMailSectionContent(args: {
       }
     ])}
     ${credentialRevealPanel}
-    ${antiSpamPolicyPanel}
-    ${renderDataTable({
-      id: "section-mail-deliverability",
-      heading: mailCopy.deliverabilityTitle,
-      description: mailCopy.deliverabilityDescription,
-      headingBadgeClassName: "section-badge-lime",
-      restoreSelectionHref: true,
-      columns: [
-        { label: mailCopy.domainNameLabel, className: "mono" },
-        { label: mailCopy.spfLabel },
-        { label: mailCopy.dkimLabel },
-        { label: mailCopy.dmarcLabel },
-        { label: mailCopy.mtaStsLabel },
-        { label: mailCopy.tlsRptLabel },
-        { label: mailCopy.runtimeTitle },
-        { label: mailCopy.checkedAtLabel }
-      ],
-      rows: deliverabilityRows,
-      emptyMessage: mailCopy.noMailDomains,
-      filterPlaceholder: copy.dataFilterPlaceholder,
-      rowsPerPageLabel: copy.rowsPerPage,
-      showingLabel: copy.showing,
-      ofLabel: copy.of,
-      recordsLabel: copy.records,
-      defaultPageSize: 10
-    })}
     ${renderDataTable({
       id: "section-mail-domains",
       heading: mailCopy.domainsTitle,
@@ -1901,89 +1838,85 @@ export function renderMailSectionContent(args: {
       defaultPageSize: 10
     })}
     <div class="grid-two-desktop">
-      ${selectedDomainPanel}
-      ${selectedObservabilityPanel}
-    </div>
-    <div class="grid-two-desktop">
-      ${selectedBackupPanel}
-      ${selectedValidationPanel}
-    </div>
-    <div class="grid-two-desktop">
-      ${selectedHaPanel}
-      ${selectedActivityPanel}
-    </div>
-    <div class="grid-two-desktop">
-      ${renderDataTable({
-        id: "section-mail-runtime",
-        heading: mailCopy.runtimeTitle,
-        description: mailCopy.runtimeDescription,
-        headingBadgeClassName: "section-badge-lime",
-        columns: [
-          { label: copy.navNodes, className: "mono" },
-          { label: mailCopy.postfixLabel },
-          { label: mailCopy.dovecotLabel },
-          { label: mailCopy.rspamdLabel },
-          { label: mailCopy.redisLabel },
-          { label: mailCopy.webmailLabel },
-          { label: mailCopy.policyDocsLabel },
-          { label: mailCopy.queuedMessagesLabel },
-          { label: mailCopy.recentFailuresLabel },
-          { label: mailCopy.managedDomainsLabel },
-          { label: mailCopy.checkedAtLabel }
-        ],
-        rows: runtimeRows,
-        emptyMessage: mailCopy.noRuntimeNodes,
-        filterPlaceholder: copy.dataFilterPlaceholder,
-        rowsPerPageLabel: copy.rowsPerPage,
-        showingLabel: copy.showing,
-        ofLabel: copy.of,
-        recordsLabel: copy.records,
-        defaultPageSize: 10
-      })}
-    </div>
-    <div class="grid-two-desktop">
-      ${renderDataTable({
-        id: "section-mail-mailboxes",
-        heading: mailCopy.mailboxesTitle,
-        description: mailCopy.formsDescription,
-        headingBadgeClassName: "section-badge-lime",
-        headerActionsHtml: renderHeaderCreateButton(mailboxCreateModalId),
-        columns: [
-          { label: mailCopy.addressLabel, className: "mono" },
-          { label: mailCopy.primaryNodeLabel },
-          { label: mailCopy.hasCredentialLabel },
-          { label: mailCopy.quotaBytesLabel, className: "mono" },
-          { label: mailCopy.actionsLabel }
-        ],
-        rows: mailboxRows,
-        emptyMessage: mailCopy.noMailboxes,
-        filterPlaceholder: copy.dataFilterPlaceholder,
-        rowsPerPageLabel: copy.rowsPerPage,
-        showingLabel: copy.showing,
-        ofLabel: copy.of,
-        recordsLabel: copy.records,
-        defaultPageSize: 10
-      })}
-      ${renderDataTable({
-        id: "section-mail-aliases",
-        heading: mailCopy.aliasesTitle,
-        description: mailCopy.description,
-        headingBadgeClassName: "section-badge-lime",
-        headerActionsHtml: renderHeaderCreateButton(aliasCreateModalId),
-        columns: [
-          { label: mailCopy.addressLabel, className: "mono" },
-          { label: mailCopy.destinationsLabel, className: "mono" },
-          { label: mailCopy.actionsLabel }
-        ],
-        rows: aliasRows,
-        emptyMessage: mailCopy.noAliases,
-        filterPlaceholder: copy.dataFilterPlaceholder,
-        rowsPerPageLabel: copy.rowsPerPage,
-        showingLabel: copy.showing,
-        ofLabel: copy.of,
-        recordsLabel: copy.records,
-        defaultPageSize: 10
-      })}
+      <div class="mail-section-column">
+        ${selectedDomainPanel}
+        ${renderDataTable({
+          id: "section-mail-mailboxes",
+          heading: mailCopy.mailboxesTitle,
+          description: mailCopy.formsDescription,
+          headingBadgeClassName: "section-badge-lime",
+          headerActionsHtml: renderHeaderCreateButton(mailboxCreateModalId),
+          columns: [
+            { label: mailCopy.addressLabel, className: "mono" },
+            { label: mailCopy.hasCredentialLabel },
+            { label: mailCopy.sizeLabel, className: "mono" },
+            { label: mailCopy.quotaBytesLabel, className: "mono" },
+            { label: mailCopy.actionsLabel }
+          ],
+          rows: mailboxRows,
+          emptyMessage: mailCopy.noMailboxes,
+          filterPlaceholder: copy.dataFilterPlaceholder,
+          rowsPerPageLabel: copy.rowsPerPage,
+          showingLabel: copy.showing,
+          ofLabel: copy.of,
+          recordsLabel: copy.records,
+          defaultPageSize: 10
+        })}
+        ${antiSpamPolicyPanel}
+        ${selectedHaPanel}
+      </div>
+      <div class="mail-section-column">
+        ${renderDataTable({
+          id: "section-mail-runtime",
+          heading: mailCopy.runtimeTitle,
+          description: mailCopy.runtimeDescription,
+          headingBadgeClassName: "section-badge-lime",
+          columns: [
+            { label: copy.navNodes, className: "mono" },
+            { label: mailCopy.postfixLabel },
+            { label: mailCopy.dovecotLabel },
+            { label: mailCopy.rspamdLabel },
+            { label: mailCopy.redisLabel },
+            { label: mailCopy.webmailLabel },
+            { label: mailCopy.policyDocsLabel },
+            { label: mailCopy.queuedMessagesLabel },
+            { label: mailCopy.recentFailuresLabel },
+            { label: mailCopy.managedDomainsLabel }
+          ],
+          rows: runtimeRows,
+          emptyMessage: mailCopy.noRuntimeNodes,
+          filterPlaceholder: copy.dataFilterPlaceholder,
+          rowsPerPageLabel: copy.rowsPerPage,
+          showingLabel: copy.showing,
+          ofLabel: copy.of,
+          recordsLabel: copy.records,
+          defaultPageSize: 10
+        })}
+        ${renderDataTable({
+          id: "section-mail-aliases",
+          heading: mailCopy.aliasesTitle,
+          description: mailCopy.description,
+          headingBadgeClassName: "section-badge-lime",
+          headerActionsHtml: renderHeaderCreateButton(aliasCreateModalId),
+          columns: [
+            { label: mailCopy.addressLabel, className: "mono" },
+            { label: mailCopy.destinationsLabel, className: "mono" },
+            { label: mailCopy.actionsLabel }
+          ],
+          rows: aliasRows,
+          emptyMessage: mailCopy.noAliases,
+          filterPlaceholder: copy.dataFilterPlaceholder,
+          rowsPerPageLabel: copy.rowsPerPage,
+          showingLabel: copy.showing,
+          ofLabel: copy.of,
+          recordsLabel: copy.records,
+          defaultPageSize: 10
+        })}
+        ${selectedObservabilityPanel}
+        ${selectedActivityPanel}
+        ${selectedValidationPanel}
+        ${selectedBackupPanel}
+      </div>
     </div>
     ${mailModals}
   </section>`;

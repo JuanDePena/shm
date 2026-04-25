@@ -97,6 +97,15 @@ export interface MailMilterSnapshot {
   listenerReady: boolean;
 }
 
+export interface MailboxUsageSnapshot {
+  address: string;
+  domainName: string;
+  localPart: string;
+  maildirPath: string;
+  usedBytes?: number;
+  checkedAt: string;
+}
+
 export interface MailServiceSnapshot {
   postfixServiceName: string;
   postfixEnabled: boolean;
@@ -140,6 +149,7 @@ export interface MailServiceSnapshot {
   healthyPolicyDocumentCount?: number;
   queue?: MailQueueSnapshot;
   recentDeliveryFailures?: MailDeliveryFailureSnapshot[];
+  mailboxUsage?: MailboxUsageSnapshot[];
   managedDomains: MailManagedDomainSnapshot[];
   checkedAt: string;
 }

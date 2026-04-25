@@ -59,7 +59,7 @@ export function renderSignalStripHtml(
   entries: Array<{ label: string; value: string; tone?: "default" | "success" | "danger" | "muted" }>,
   renderPill: PillRenderer
 ): string {
-  return `<div class="stats stats-compact">
+  return `<div class="signal-strip stats stats-compact">
     ${entries
       .map(
         (entry) => `<article class="stat stat-compact">

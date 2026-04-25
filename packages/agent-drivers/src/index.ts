@@ -122,6 +122,7 @@ export interface DriverExecutionContext {
       roundcubeGroup: string;
       roundcubeConfigPath: string;
       roundcubeDatabasePath: string;
+      roundcubeDatabaseDsn: string | null;
       roundcubePackageRoot: string;
       roundcubeDefaultHttpdConfPath: string;
       firewallServiceName: string;
@@ -524,6 +525,35 @@ async function ensureOwnedPath(
   });
 }
 
+async function ensureSelinuxFileContext(
+  pathExpression: string,
+  typeName: string,
+  targetPath: string
+): Promise<boolean> {
+  const semanageAvailable = await runOptionalCommand("semanage", ["fcontext", "-l"]);
+
+  if (!semanageAvailable.ran) {
+    return false;
+  }
+
+  const modifyResult = await runCommandAllowFailure("semanage", [
+    "fcontext",
+    "-m",
+    "-t",
+    typeName,
+    pathExpression
+  ]);
+
+  if (modifyResult.exitCode !== 0) {
+    await execFileAsync("semanage", ["fcontext", "-a", "-t", typeName, pathExpression], {
+      encoding: "utf8"
+    });
+  }
+
+  const restoreResult = await runOptionalCommand("restorecon", ["-R", targetPath]);
+  return restoreResult.ran;
+}
+
 async function ensurePackageTargetsInstalled(
   targets: string[],
   serviceName?: string
@@ -717,12 +747,29 @@ async function applyPostfixMasterCfConfiguration(content: string): Promise<void>
 async function ensureDovecotLiveConfiguration(sourcePath: string): Promise<void> {
   const content = await readFile(sourcePath, "utf8");
   await writeFileAtomic("/etc/dovecot/conf.d/90-simplehost-mail.conf", content);
+
+  const authConfigPath = "/etc/dovecot/conf.d/10-auth.conf";
+  const authConfig = await readFile(authConfigPath, "utf8");
+  const updatedAuthConfig = authConfig.replace(
+    /^(\s*)!include auth-system\.conf\.ext\s*$/m,
+    "$1#!include auth-system.conf.ext"
+  );
+
+  if (updatedAuthConfig !== authConfig) {
+    await writeFileAtomic(authConfigPath, updatedAuthConfig);
+  }
 }
 
 async function ensureDovecotPasswdFile(sourcePath: string): Promise<void> {
   const content = await readFile(sourcePath, "utf8");
   await writeFileAtomic("/etc/dovecot/passwd", content);
   await chmod("/etc/dovecot/passwd", 0o640);
+
+  if (await commandSucceeded("getent", ["group", "dovecot"])) {
+    await execFileAsync("chown", ["root:dovecot", "/etc/dovecot/passwd"], {
+      encoding: "utf8"
+    });
+  }
 }
 
 async function ensureRspamdLiveConfiguration(
@@ -877,6 +924,150 @@ async function initializeSqliteDatabase(
   return true;
 }
 
+function isRoundcubePostgresDsn(databaseDsn: string | null): databaseDsn is string {
+  return typeof databaseDsn === "string" && /^(?:pgsql|postgres|postgresql):\/\//i.test(databaseDsn);
+}
+
+function normalizePostgresConnectionString(connectionString: string): string {
+  return connectionString.replace(/^pgsql:\/\//i, "postgresql://");
+}
+
+function parseRoundcubePostgresDsn(databaseDsn: string): {
+  connectionString: string;
+  roleName: string;
+  password: string;
+  databaseName: string;
+} {
+  const connectionString = normalizePostgresConnectionString(databaseDsn);
+  const parsed = new URL(connectionString);
+  const roleName = decodeURIComponent(parsed.username);
+  const password = decodeURIComponent(parsed.password);
+  const databaseName = decodeURIComponent(parsed.pathname.replace(/^\/+/, ""));
+
+  if (!roleName || !password || !databaseName) {
+    throw new Error("Roundcube PostgreSQL DSN must include username, password, and database name.");
+  }
+
+  assertSafeIdentifier(roleName, "Roundcube PostgreSQL role");
+  assertSafeIdentifier(databaseName, "Roundcube PostgreSQL database");
+
+  return {
+    connectionString,
+    roleName,
+    password,
+    databaseName
+  };
+}
+
+async function initializePostgresDatabase(
+  adminUrl: string | null,
+  databaseDsn: string,
+  schemaPath: string
+): Promise<boolean> {
+  if (!adminUrl) {
+    throw new Error(
+      "SIMPLEHOST_POSTGRES_ADMIN_URL is required when SIMPLEHOST_MAIL_ROUNDCUBE_DATABASE_DSN points to PostgreSQL."
+    );
+  }
+
+  const { connectionString, roleName, password, databaseName } =
+    parseRoundcubePostgresDsn(databaseDsn);
+  const adminPool = new Pool({
+    connectionString: adminUrl,
+    application_name: "simplehost-agent-roundcube-postgres-admin"
+  });
+
+  try {
+    const roleExists = await adminPool.query<{ exists: number }>(
+      `SELECT 1 AS exists
+       FROM pg_roles
+       WHERE rolname = $1`,
+      [roleName]
+    );
+
+    if (roleExists.rows.length === 0) {
+      await adminPool.query(
+        `CREATE ROLE ${quotePostgresIdentifier(
+          roleName
+        )} LOGIN PASSWORD ${quotePostgresLiteral(password)}`
+      );
+    } else {
+      await adminPool.query(
+        `ALTER ROLE ${quotePostgresIdentifier(
+          roleName
+        )} LOGIN PASSWORD ${quotePostgresLiteral(password)}`
+      );
+    }
+
+    const databaseExists = await adminPool.query<{ exists: number }>(
+      `SELECT 1 AS exists
+       FROM pg_database
+       WHERE datname = $1`,
+      [databaseName]
+    );
+
+    if (databaseExists.rows.length === 0) {
+      await adminPool.query(
+        `CREATE DATABASE ${quotePostgresIdentifier(
+          databaseName
+        )} OWNER ${quotePostgresIdentifier(roleName)}`
+      );
+    }
+
+    await adminPool.query(
+      `REVOKE ALL ON DATABASE ${quotePostgresIdentifier(databaseName)} FROM PUBLIC`
+    );
+    await adminPool.query(
+      `GRANT ALL PRIVILEGES ON DATABASE ${quotePostgresIdentifier(
+        databaseName
+      )} TO ${quotePostgresIdentifier(roleName)}`
+    );
+  } finally {
+    await adminPool.end();
+  }
+
+  const adminDatabaseUrl = new URL(adminUrl);
+  adminDatabaseUrl.pathname = `/${databaseName}`;
+
+  const targetAdminPool = new Pool({
+    connectionString: adminDatabaseUrl.toString(),
+    application_name: "simplehost-agent-roundcube-postgres-schema-admin"
+  });
+
+  try {
+    await targetAdminPool.query(`REVOKE ALL ON SCHEMA public FROM PUBLIC`);
+    await targetAdminPool.query(
+      `GRANT USAGE, CREATE ON SCHEMA public TO ${quotePostgresIdentifier(roleName)}`
+    );
+  } finally {
+    await targetAdminPool.end();
+  }
+
+  const targetRolePool = new Pool({
+    connectionString,
+    application_name: "simplehost-agent-roundcube-postgres-schema"
+  });
+
+  try {
+    const existingSystemTable = await targetRolePool.query<{ exists: number }>(
+      `SELECT 1 AS exists
+       FROM information_schema.tables
+       WHERE table_schema = 'public'
+         AND table_name = 'system'`
+    );
+
+    if (existingSystemTable.rows.length > 0) {
+      return false;
+    }
+
+    const schema = await readFile(schemaPath, "utf8");
+    await targetRolePool.query(schema);
+    return true;
+  } finally {
+    await targetRolePool.end();
+  }
+}
+
 async function disableRoundcubeDefaultHttpdConf(defaultConfPath: string): Promise<string | undefined> {
   if (!(await pathExists(defaultConfPath))) {
     return undefined;
@@ -903,21 +1094,39 @@ async function ensureRoundcubeDeployment(
   sharedRoot: string;
   disabledHttpdConfPath?: string;
 }> {
-  const packageResult = await ensurePackageTargetsInstalled(
-    context.services.mail.roundcubePackageTargets
-  );
+  const databaseDsn = context.services.mail.roundcubeDatabaseDsn;
+  const usesPostgres = isRoundcubePostgresDsn(databaseDsn);
+  const roundcubePackageTargets = usesPostgres
+    ? [
+        ...context.services.mail.roundcubePackageTargets,
+        ...context.services.mail.roundcubePackageTargets.includes("php-pgsql")
+          ? []
+          : ["php-pgsql"]
+      ]
+    : context.services.mail.roundcubePackageTargets;
+  const packageResult = await ensurePackageTargetsInstalled(roundcubePackageTargets);
+  const phpFpmPackages = await ensurePackageTargetsInstalled(["php-fpm"], "php-fpm.service");
   const packageRoot = context.services.mail.roundcubePackageRoot;
   const configPath = context.services.mail.roundcubeConfigPath;
   const databasePath = context.services.mail.roundcubeDatabasePath;
   const sharedRoot = context.services.mail.roundcubeSharedRoot;
-  const schemaPath = path.join(packageRoot, "SQL", "sqlite.initial.sql");
+  const schemaPath = path.join(
+    packageRoot,
+    "SQL",
+    usesPostgres ? "postgres.initial.sql" : "sqlite.initial.sql"
+  );
   const tempDir = path.join(sharedRoot, "temp");
   const logDir = path.join(sharedRoot, "logs");
   const desKeyPath = path.join(sharedRoot, "roundcube.des.key");
 
   if (!(await pathExists(packageRoot)) || !(await pathExists(schemaPath))) {
     return {
-      packageTargets: packageResult.configuredTargets,
+      packageTargets: [
+        ...packageResult.configuredTargets,
+        ...phpFpmPackages.configuredTargets.filter(
+          (target) => !packageResult.configuredTargets.includes(target)
+        )
+      ],
       packageRoot,
       configPath,
       databasePath,
@@ -931,17 +1140,44 @@ async function ensureRoundcubeDeployment(
   await mkdir(logDir, { recursive: true });
 
   const desKey = await ensureRoundcubeDesKey(desKeyPath);
-  await initializeSqliteDatabase(databasePath, schemaPath);
+  if (usesPostgres) {
+    await initializePostgresDatabase(
+      context.services.postgresql.adminUrl,
+      databaseDsn,
+      schemaPath
+    );
+  } else {
+    await initializeSqliteDatabase(databasePath, schemaPath);
+  }
   await writeFileAtomic(
     configPath,
     renderRoundcubeConfig({
       databasePath,
+      databaseDsn,
       tempDir,
       logDir,
       productName: "SimpleHostMan Webmail",
       desKey
     })
   );
+
+  if (
+    (await commandSucceeded("getent", ["passwd", context.services.mail.roundcubeUser])) &&
+    (await commandSucceeded("getent", ["group", context.services.mail.roundcubeGroup]))
+  ) {
+    await ensureOwnedPath(
+      sharedRoot,
+      context.services.mail.roundcubeUser,
+      context.services.mail.roundcubeGroup
+    );
+  }
+
+  await ensureSelinuxFileContext(
+    `${sharedRoot}(/.*)?`,
+    "httpd_sys_rw_content_t",
+    sharedRoot
+  );
+  await ensureServiceEnabledAndRestarted("php-fpm.service");
 
   for (const domain of payload.domains) {
     const roundcubeDomainRoot = path.join(
@@ -955,7 +1191,12 @@ async function ensureRoundcubeDeployment(
   }
 
   return {
-    packageTargets: packageResult.configuredTargets,
+    packageTargets: [
+      ...packageResult.configuredTargets,
+      ...phpFpmPackages.configuredTargets.filter(
+        (target) => !packageResult.configuredTargets.includes(target)
+      )
+    ],
     packageRoot,
     configPath,
     databasePath,
@@ -1940,6 +2181,11 @@ async function executeMailSyncJob(
       context.services.mail.vmailUser,
       context.services.mail.vmailGroup
     );
+    await ensureSelinuxFileContext(
+      `${context.services.mail.vmailRoot}(/.*)?`,
+      "mail_spool_t",
+      context.services.mail.vmailRoot
+    );
 
     if (
       (await commandSucceeded("getent", ["passwd", context.services.mail.roundcubeUser])) &&
@@ -1951,6 +2197,17 @@ async function executeMailSyncJob(
         context.services.mail.roundcubeGroup
       );
     }
+
+    await ensureSelinuxFileContext(
+      `${postfixConfigDir}(/.*)?`,
+      "postfix_etc_t",
+      postfixConfigDir
+    );
+    await ensureSelinuxFileContext(
+      `${context.services.mail.policyRoot}(/.*)?`,
+      "httpd_sys_content_t",
+      context.services.mail.policyRoot
+    );
 
     await applyPostfixMainCfConfiguration(
       renderPostfixMainCf(context.services.mail.configRoot, postmasterAddress)

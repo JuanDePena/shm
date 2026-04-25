@@ -672,6 +672,75 @@ test("buildMailObservabilityModel raises dispatch warnings for ports, firewall a
   );
 });
 
+test("buildMailObservabilityModel does not treat private-only listeners as public-ready", () => {
+  const data = createDashboardData();
+  const mail = data.nodeHealth[0]!.mail!;
+
+  data.nodeHealth[0] = {
+    ...data.nodeHealth[0]!,
+    mail: {
+      ...mail,
+      portListeners: (mail.portListeners ?? []).map((listener) =>
+        listener.exposure === "public"
+          ? { ...listener, addresses: ["10.0.0.10"] }
+          : listener
+      )
+    }
+  };
+
+  const model = buildMailObservabilityModel(data);
+  const row = model.deliverabilityRows[0];
+  const validationRow = model.validationRows[0];
+
+  assert.ok(row);
+  assert.ok(validationRow);
+  assert.equal(row.runtime.status, "warning");
+  assert.equal(validationRow.warningCount, 1);
+  assert.equal(validationRow.dispatchWarningCount, 1);
+  assert.deepEqual(
+    validationRow.warnings.map((warning) => warning.code),
+    ["primary-public-ports"]
+  );
+});
+
+test("buildMailObservabilityModel treats wildcard milter binds as drift", () => {
+  const data = createDashboardData();
+  const mail = data.nodeHealth[0]!.mail!;
+
+  data.nodeHealth[0] = {
+    ...data.nodeHealth[0]!,
+    mail: {
+      ...mail,
+      portListeners: (mail.portListeners ?? []).map((listener) =>
+        listener.port === 11332 ? { ...listener, addresses: ["0.0.0.0"] } : listener
+      ),
+      milter: {
+        ...(mail.milter ?? {
+          endpoint: "inet:127.0.0.1:11332",
+          postfixConfigured: true,
+          rspamdConfigPresent: true,
+          listenerReady: true
+        }),
+        listenerReady: true
+      }
+    }
+  };
+
+  const model = buildMailObservabilityModel(data);
+  const row = model.deliverabilityRows[0];
+  const validationRow = model.validationRows[0];
+
+  assert.ok(row);
+  assert.ok(validationRow);
+  assert.equal(row.runtime.status, "warning");
+  assert.equal(validationRow.warningCount, 1);
+  assert.equal(validationRow.dispatchWarningCount, 1);
+  assert.deepEqual(
+    validationRow.warnings.map((warning) => warning.code),
+    ["primary-milter"]
+  );
+});
+
 test("buildMailObservabilityModel reports standby promotion readiness when both mail roles are present", () => {
   const data = createDashboardData();
 

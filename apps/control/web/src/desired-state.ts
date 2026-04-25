@@ -21,6 +21,13 @@ const hostnamePattern =
   /^(?=.{1,253}$)(?!-)(?:[a-zA-Z0-9-]{1,63}\.)*[a-zA-Z0-9-]{1,63}$/;
 const domainPattern =
   /^(?=.{1,253}$)(?!-)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
+const mailboxLocalPartPattern =
+  /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/i;
+const mailboxQuotaUnitMultipliers = {
+  mb: 1024 ** 2,
+  gb: 1024 ** 3,
+  tb: 1024 ** 4
+} as const;
 const minimumMailboxQuotaBytes = 64 * 1024 * 1024;
 const maximumMailboxQuotaBytes = 10 * 1024 * 1024 * 1024 * 1024;
 
@@ -80,6 +87,44 @@ function assertDomain(value: string, label: string): string {
   }
 
   return normalized;
+}
+
+function assertMailboxLocalPart(value: string, label: string): string {
+  const normalized = assertRequired(value, label).toLowerCase();
+
+  if (!mailboxLocalPartPattern.test(normalized)) {
+    throw new Error(`${label} may only use common mailbox characters before @.`);
+  }
+
+  return normalized;
+}
+
+function parseMailboxAddress(value: string, label: string): {
+  address: string;
+  domainName: string;
+  localPart: string;
+} {
+  const normalized = assertRequired(value, label).toLowerCase();
+  const parts = normalized.split("@");
+
+  if (parts.length !== 2) {
+    throw new Error(`${label} must be a full address like user@example.com.`);
+  }
+
+  const [localPartValue, domainNameValue] = parts;
+
+  if (!localPartValue || !domainNameValue) {
+    throw new Error(`${label} must be a full address like user@example.com.`);
+  }
+
+  const localPart = assertMailboxLocalPart(localPartValue, "Mailbox name");
+  const domainName = assertDomain(domainNameValue, "Mailbox domain");
+
+  return {
+    address: `${localPart}@${domainName}`,
+    domainName,
+    localPart
+  };
 }
 
 function assertIpv4(value: string, label: string): string {
@@ -547,15 +592,36 @@ export function parseMailboxForm(form: URLSearchParams): UpsertMailboxRequest {
     : undefined;
   const desiredPassword = form.get("desiredPassword")?.trim() || undefined;
   const credentialStrategy = (form.get("credentialStrategy")?.trim() ?? "keep").toLowerCase();
+  const domainName = assertDomain(form.get("domainName")?.trim() ?? "", "Mail domain");
+  const addressInput = form.get("address")?.trim() ?? "";
+  const mailboxIdentity =
+    addressInput.length > 0
+      ? parseMailboxAddress(addressInput, "Mailbox address")
+      : (() => {
+          const mailboxName = assertMailboxLocalPart(
+            form.get("localPart")?.trim() ?? "",
+            "Mailbox name"
+          );
+
+          return {
+            address: `${mailboxName}@${domainName}`,
+            domainName,
+            localPart: mailboxName
+          };
+        })();
 
   if (standbyNodeId && standbyNodeId === primaryNodeId) {
     throw new Error("Standby node must differ from primary node.");
   }
 
+  if (mailboxIdentity.domainName !== domainName) {
+    throw new Error(`Mailbox address must stay under ${domainName}.`);
+  }
+
   const request: UpsertMailboxRequest = {
-    address: assertRequired(form.get("address")?.trim() ?? "", "Mailbox address"),
-    domainName: assertDomain(form.get("domainName")?.trim() ?? "", "Mail domain"),
-    localPart: assertRequired(form.get("localPart")?.trim() ?? "", "Local part"),
+    address: mailboxIdentity.address,
+    domainName,
+    localPart: mailboxIdentity.localPart,
     primaryNodeId,
     standbyNodeId
   };
@@ -621,4 +687,43 @@ export function parseMailboxQuotaForm(
     ),
     storageBytes
   };
+}
+
+export function parseMailboxQuotaEditorForm(
+  form: URLSearchParams,
+  mailboxAddress: string
+): UpsertMailboxQuotaRequest | null {
+  const quotaValueRaw = form.get("quotaValue")?.trim() ?? "";
+
+  if (quotaValueRaw.length === 0) {
+    return null;
+  }
+
+  const quotaValue = Number.parseFloat(quotaValueRaw);
+
+  if (!Number.isFinite(quotaValue) || quotaValue < 0) {
+    throw new Error("Quota must be zero or a positive number.");
+  }
+
+  if (quotaValue === 0) {
+    return null;
+  }
+
+  const quotaUnitRaw = (form.get("quotaUnit")?.trim() ?? "gb").toLowerCase();
+
+  if (
+    quotaUnitRaw !== "mb" &&
+    quotaUnitRaw !== "gb" &&
+    quotaUnitRaw !== "tb"
+  ) {
+    throw new Error("Quota unit must be MB, GB, or TB.");
+  }
+
+  const storageBytes = Math.round(
+    quotaValue * mailboxQuotaUnitMultipliers[quotaUnitRaw]
+  );
+  const quotaForm = new URLSearchParams();
+  quotaForm.set("mailboxAddress", mailboxAddress);
+  quotaForm.set("storageBytes", String(storageBytes));
+  return parseMailboxQuotaForm(quotaForm);
 }

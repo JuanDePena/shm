@@ -4,6 +4,7 @@ import {
 import {
   parseMailAliasForm,
   parseMailboxForm,
+  parseMailboxQuotaEditorForm,
   parseMailboxQuotaForm,
   parseMailDomainForm,
   parseMailPolicyForm
@@ -139,19 +140,10 @@ export const handleMailRoute: WebRouteHandler = async ({
     const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const returnTo = readReturnTo(form);
-    const storageBytesRaw = form.get("storageBytes")?.trim() ?? "";
 
     try {
       const next = parseMailboxForm(form);
-      const quotaRequest =
-        storageBytesRaw.length > 0
-          ? (() => {
-              const quotaForm = new URLSearchParams();
-              quotaForm.set("mailboxAddress", next.address);
-              quotaForm.set("storageBytes", storageBytesRaw);
-              return parseMailboxQuotaForm(quotaForm);
-            })()
-          : null;
+      const quotaRequest = parseMailboxQuotaEditorForm(form, next.address);
       const result = await api.upsertMailbox(token, next);
 
       if (quotaRequest) {

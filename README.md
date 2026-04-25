@@ -75,7 +75,7 @@ The platform is intentionally opinionated around the current operating stack:
 - PostgreSQL
 - MariaDB
 - backups
-- mail-domain and mailbox management
+- mail domains, mailbox lifecycle, observability, HA readiness, and recovery readiness
 
 This is a focused product for operating that stack reliably. It is not trying to be a universal hosting panel for every workload model.
 

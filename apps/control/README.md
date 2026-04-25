@@ -260,10 +260,10 @@ From this directory:
 - `apps/control/src/test-harness.ts` now centralizes split/combined fixtures, stubbed API surfaces, and request-handler wiring for runtime validation.
 - `apps/control/src/runtime-parity-harness.ts` now boots split and combined runtime servers behind one reusable HTTP comparison harness.
 - `apps/control/src/preflight-surface.ts` now defines the source-level preflight surface for the combined runtime.
-- `apps/control/src/preflight-runner.ts` now executes a human-readable pre-promotion check sequence over a real ephemeral combined runtime server.
+- `apps/control/src/preflight-runner.ts` now executes a human-readable pre-promotion check sequence over a real ephemeral combined runtime server, including the authenticated mail workspace and a repeatable mail baseline fixture.
 - `apps/control/src/preflight-runner.test.ts` now validates both passing and degraded preflight outcomes.
 - `apps/control/src/release-candidate-config.ts`, `startup-manifest.ts`, and `release-candidate-surface.ts` now define a release-like config and startup manifest for the combined runtime without touching deploy/runtime.
-- `apps/control/src/release-candidate-runner.ts` and `release-candidate-cli.ts` now execute a more release-like combined runtime smoke pass with a structured startup manifest and human-readable report.
+- `apps/control/src/release-candidate-runner.ts` and `release-candidate-cli.ts` now execute a more release-like combined runtime smoke pass with a structured startup manifest and human-readable report, including the repeatable mail baseline fixture.
 - `apps/control/src/release-candidate-runner.test.ts` now validates passing and degraded release-candidate scenarios, including mutation and proxy-preview failures.
 - `apps/control/src/release-sandbox-layout.ts` now defines a workspace-local sandbox layout that simulates a release-shaped filesystem tree without touching `/opt/simplehostman/release`.
 - `apps/control/src/release-sandbox-bundle.ts` now defines the persistent bundle contract and human-readable bundle summary for that sandbox.
@@ -309,15 +309,15 @@ From this directory:
 
 ## Combined pre-promotion checklist
 
-Before `combined` can move beyond source-only validation, all of these still need to hold:
+Before `combined` can move beyond source-only validation, all of these must continue to hold:
 
 - `pnpm test:runtime-parity` passes for representative protected routes
 - `pnpm test:combined-smoke` passes against the real web surface and stubbed in-process API boundary
 - `pnpm test:combined:e2e` passes against a real ephemeral combined runtime server
 - `pnpm test:preflight` passes for both successful and degraded source-level preflight scenarios
-- `pnpm preflight` prints a passing human-readable report for the current combined runtime
+- `pnpm preflight` prints a passing human-readable report for the current combined runtime, including the mail workspace and mail baseline checks
 - `pnpm test:release-candidate` passes for both successful and degraded release-like runtime scenarios
-- `pnpm release-candidate` prints a passing startup manifest plus release-like smoke report for the current combined runtime
+- `pnpm release-candidate` prints a passing startup manifest plus release-like smoke report for the current combined runtime, including the mail baseline checks
 - `pnpm check:release-candidate` stays green from `apps/control`
 - `pnpm test:release-sandbox` passes for the workspace-local release-sandbox smoke and parity scenarios
 - `pnpm test:release-sandbox:bundle-parity` passes for the persistent bundle contract and sandbox metadata

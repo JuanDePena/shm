@@ -67,6 +67,250 @@ const mailSenderDomainPattern =
 const mailSenderAddressPattern =
   /^[a-z0-9._%+-]+@(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63})$/;
 
+function isMissingRelationError(error: unknown, relationName: string): boolean {
+  const candidate = error as { code?: string; message?: string };
+  return (
+    candidate?.code === "42P01" &&
+    typeof candidate.message === "string" &&
+    candidate.message.includes(`"${relationName}"`)
+  );
+}
+
+function isMissingColumnError(error: unknown, columnName: string): boolean {
+  const candidate = error as { code?: string; message?: string };
+  return (
+    candidate?.code === "42703" &&
+    typeof candidate.message === "string" &&
+    candidate.message.includes(columnName)
+  );
+}
+
+async function hasMailPolicyTable(client: PoolClient): Promise<boolean> {
+  const result = await client.query<{ exists: boolean }>(
+    `SELECT to_regclass('public.shp_mail_policy') IS NOT NULL AS exists`
+  );
+
+  return Boolean(result.rows[0]?.exists);
+}
+
+async function hasMailboxCredentialStateColumn(client: PoolClient): Promise<boolean> {
+  const result = await client.query<{ exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = 'shp_mailbox_credentials'
+         AND column_name = 'credential_state'
+     ) AS exists`
+  );
+
+  return Boolean(result.rows[0]?.exists);
+}
+
+async function queryMailPolicyRows(client: PoolClient): Promise<MailPolicyRow[]> {
+  if (!(await hasMailPolicyTable(client))) {
+    return [];
+  }
+
+  const result = await client.query<MailPolicyRow>(
+    `SELECT
+       policy_id,
+       reject_threshold,
+       add_header_threshold,
+       greylist_threshold,
+       sender_allowlist,
+       sender_denylist,
+       rate_limit_burst,
+       rate_limit_period_seconds
+     FROM shp_mail_policy
+     WHERE policy_id = $1`,
+    [mailPolicyId]
+  );
+
+  return result.rows;
+}
+
+async function queryMailboxRows(client: PoolClient): Promise<MailboxRow[]> {
+  const hasCredentialState = await hasMailboxCredentialStateColumn(client);
+  const result = await client.query<MailboxRow>(
+    hasCredentialState
+      ? `SELECT
+         mailboxes.address,
+         domains.domain_name,
+         mailboxes.local_part,
+         mailboxes.primary_node_id,
+         mailboxes.standby_node_id,
+         credentials.secret_payload AS desired_password,
+         credentials.credential_state,
+         credentials.updated_at AS credential_updated_at
+       FROM shp_mailboxes mailboxes
+       INNER JOIN shp_mail_domains domains
+         ON domains.mail_domain_id = mailboxes.mail_domain_id
+       LEFT JOIN shp_mailbox_credentials credentials
+         ON credentials.mailbox_id = mailboxes.mailbox_id
+       ORDER BY mailboxes.address ASC`
+      : `SELECT
+         mailboxes.address,
+         domains.domain_name,
+         mailboxes.local_part,
+         mailboxes.primary_node_id,
+         mailboxes.standby_node_id,
+         credentials.secret_payload AS desired_password,
+         NULL::text AS credential_state,
+         credentials.updated_at AS credential_updated_at
+       FROM shp_mailboxes mailboxes
+       INNER JOIN shp_mail_domains domains
+         ON domains.mail_domain_id = mailboxes.mail_domain_id
+       LEFT JOIN shp_mailbox_credentials credentials
+         ON credentials.mailbox_id = mailboxes.mailbox_id
+       ORDER BY mailboxes.address ASC`
+  );
+
+  return result.rows;
+}
+
+async function queryExistingMailboxCredentialRows(
+  client: PoolClient
+): Promise<
+  Array<{
+    mailbox_id: string;
+    secret_payload: Record<string, unknown>;
+    credential_state: string | null;
+  }>
+> {
+  const hasCredentialState = await hasMailboxCredentialStateColumn(client);
+  const result = await client.query<{
+    mailbox_id: string;
+    secret_payload: Record<string, unknown>;
+    credential_state: string | null;
+  }>(
+    hasCredentialState
+      ? `SELECT mailbox_id, secret_payload, credential_state
+       FROM shp_mailbox_credentials`
+      : `SELECT mailbox_id, secret_payload, NULL::text AS credential_state
+       FROM shp_mailbox_credentials`
+  );
+
+  return result.rows;
+}
+
+async function queryMailboxCredentialRowsByAddress(
+  client: PoolClient
+): Promise<
+  Array<{
+    address: string;
+    credential_state: "missing" | "configured" | "reset_required" | null;
+    updated_at: Date | string | null;
+  }>
+> {
+  const hasCredentialState = await hasMailboxCredentialStateColumn(client);
+  const result = await client.query<{
+    address: string;
+    credential_state: "missing" | "configured" | "reset_required" | null;
+    updated_at: Date | string | null;
+  }>(
+    hasCredentialState
+      ? `SELECT mailboxes.address, credentials.credential_state, credentials.updated_at
+       FROM shp_mailbox_credentials credentials
+       INNER JOIN shp_mailboxes mailboxes
+         ON mailboxes.mailbox_id = credentials.mailbox_id
+       ORDER BY mailboxes.address ASC`
+      : `SELECT
+         mailboxes.address,
+         NULL::text AS credential_state,
+         credentials.updated_at
+       FROM shp_mailbox_credentials credentials
+       INNER JOIN shp_mailboxes mailboxes
+         ON mailboxes.mailbox_id = credentials.mailbox_id
+       ORDER BY mailboxes.address ASC`
+  );
+
+  return result.rows;
+}
+
+async function upsertMailboxCredentialRecord(
+  client: PoolClient,
+  mailboxId: string,
+  secretPayload: Record<string, unknown>,
+  credentialState: string
+): Promise<void> {
+  const hasCredentialState = await hasMailboxCredentialStateColumn(client);
+
+  await client.query(
+    hasCredentialState
+      ? `INSERT INTO shp_mailbox_credentials (
+         mailbox_id,
+         secret_payload,
+         credential_state,
+         updated_at
+       )
+       VALUES ($1, $2::jsonb, $3, NOW())
+       ON CONFLICT (mailbox_id)
+       DO UPDATE SET
+         secret_payload = EXCLUDED.secret_payload,
+         credential_state = EXCLUDED.credential_state,
+         updated_at = EXCLUDED.updated_at`
+      : `INSERT INTO shp_mailbox_credentials (
+         mailbox_id,
+         secret_payload,
+         updated_at
+       )
+       VALUES ($1, $2::jsonb, NOW())
+       ON CONFLICT (mailbox_id)
+       DO UPDATE SET
+         secret_payload = EXCLUDED.secret_payload,
+         updated_at = EXCLUDED.updated_at`,
+    hasCredentialState
+      ? [mailboxId, JSON.stringify(secretPayload), credentialState]
+      : [mailboxId, JSON.stringify(secretPayload)]
+  );
+}
+
+async function upsertMailPolicyIfSupported(
+  client: PoolClient,
+  policy: DesiredStateMailPolicyInput | undefined
+): Promise<void> {
+  if (!(await hasMailPolicyTable(client))) {
+    return;
+  }
+
+  await client.query(
+    `INSERT INTO shp_mail_policy (
+         policy_id,
+         reject_threshold,
+         add_header_threshold,
+         greylist_threshold,
+         sender_allowlist,
+         sender_denylist,
+         rate_limit_burst,
+         rate_limit_period_seconds,
+         created_at,
+         updated_at
+       )
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8, NOW(), NOW())
+       ON CONFLICT (policy_id)
+       DO UPDATE SET
+         reject_threshold = EXCLUDED.reject_threshold,
+         add_header_threshold = EXCLUDED.add_header_threshold,
+         greylist_threshold = EXCLUDED.greylist_threshold,
+         sender_allowlist = EXCLUDED.sender_allowlist,
+         sender_denylist = EXCLUDED.sender_denylist,
+         rate_limit_burst = EXCLUDED.rate_limit_burst,
+         rate_limit_period_seconds = EXCLUDED.rate_limit_period_seconds,
+         updated_at = EXCLUDED.updated_at`,
+      [
+        mailPolicyId,
+        policy?.rejectThreshold ?? createDefaultMailPolicy().rejectThreshold,
+        policy?.addHeaderThreshold ?? createDefaultMailPolicy().addHeaderThreshold,
+        policy?.greylistThreshold ?? null,
+         JSON.stringify(policy?.senderAllowlist ?? []),
+         JSON.stringify(policy?.senderDenylist ?? []),
+         policy?.rateLimit?.burst ?? null,
+         policy?.rateLimit?.periodSeconds ?? null
+      ]
+  );
+}
+
 function normalizeMailPolicy(
   policy: DesiredStateMailPolicyInput | undefined
 ): DesiredStateMailPolicyInput {
@@ -453,20 +697,7 @@ export async function buildDesiredStateSpecFromDatabase(
          ON tenants.tenant_id = policies.tenant_id
        ORDER BY policies.policy_slug ASC`
     ),
-    client.query<MailPolicyRow>(
-      `SELECT
-         policy_id,
-         reject_threshold,
-         add_header_threshold,
-         greylist_threshold,
-         sender_allowlist,
-         sender_denylist,
-         rate_limit_burst,
-         rate_limit_period_seconds
-       FROM shp_mail_policy
-       WHERE policy_id = $1`,
-      [mailPolicyId]
-    ),
+    queryMailPolicyRows(client),
     client.query<MailDomainRow>(
       `SELECT
          domains.domain_name,
@@ -483,23 +714,7 @@ export async function buildDesiredStateSpecFromDatabase(
          ON zones.zone_id = domains.zone_id
        ORDER BY domains.domain_name ASC`
     ),
-    client.query<MailboxRow>(
-      `SELECT
-         mailboxes.address,
-         domains.domain_name,
-         mailboxes.local_part,
-         mailboxes.primary_node_id,
-         mailboxes.standby_node_id,
-         credentials.secret_payload AS desired_password,
-         credentials.credential_state,
-         credentials.updated_at AS credential_updated_at
-       FROM shp_mailboxes mailboxes
-       INNER JOIN shp_mail_domains domains
-         ON domains.mail_domain_id = mailboxes.mail_domain_id
-       LEFT JOIN shp_mailbox_credentials credentials
-         ON credentials.mailbox_id = mailboxes.mailbox_id
-       ORDER BY mailboxes.address ASC`
-    ),
+    queryMailboxRows(client),
     client.query<MailAliasRow>(
       `SELECT
          aliases.address,
@@ -535,7 +750,7 @@ export async function buildDesiredStateSpecFromDatabase(
     recordsByZone.set(row.zone_name, records);
   }
 
-  const mailPolicyRow = mailPolicyResult.rows[0];
+  const mailPolicyRow = mailPolicyResult[0];
   const mailPolicy = normalizeMailPolicy(
     mailPolicyRow
       ? {
@@ -615,7 +830,7 @@ export async function buildDesiredStateSpecFromDatabase(
       mailHost: row.mail_host,
       dkimSelector: row.dkim_selector
     })),
-    mailboxes: mailboxResult.rows.map((row) => ({
+    mailboxes: mailboxResult.map((row) => ({
       address: row.address,
       domainName: row.domain_name,
       localPart: row.local_part,
@@ -627,7 +842,7 @@ export async function buildDesiredStateSpecFromDatabase(
       ),
       desiredPassword:
         normalizeMailboxCredentialState(row.credential_state, Boolean(row.desired_password)) ===
-          "configured" && row.desired_password
+          "configured" && row.desired_password && payloadKey
           ? decodeDesiredPassword(row.desired_password, payloadKey) ?? undefined
           : undefined
     })),
@@ -684,16 +899,9 @@ export async function applyDesiredStateSpec(
   const desiredMailAliasIds = resolvedSpec.mailAliases.map(
     (mailAlias) => `mail-alias-${mailAlias.address}`
   );
-  const existingMailboxCredentialRows = await client.query<{
-    mailbox_id: string;
-    secret_payload: Record<string, unknown>;
-    credential_state: string;
-  }>(
-    `SELECT mailbox_id, secret_payload, credential_state
-     FROM shp_mailbox_credentials`
-  );
+  const existingMailboxCredentialRows = await queryExistingMailboxCredentialRows(client);
   const existingMailboxCredentials = new Map(
-    existingMailboxCredentialRows.rows.map((row) => [row.mailbox_id, row] as const)
+    existingMailboxCredentialRows.map((row) => [row.mailbox_id, row] as const)
   );
 
   for (const tenant of resolvedSpec.tenants) {
@@ -787,41 +995,7 @@ export async function applyDesiredStateSpec(
     }
   }
 
-  await client.query(
-    `INSERT INTO shp_mail_policy (
-       policy_id,
-       reject_threshold,
-       add_header_threshold,
-       greylist_threshold,
-       sender_allowlist,
-       sender_denylist,
-       rate_limit_burst,
-       rate_limit_period_seconds,
-       created_at,
-       updated_at
-     )
-     VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8, NOW(), NOW())
-     ON CONFLICT (policy_id)
-     DO UPDATE SET
-       reject_threshold = EXCLUDED.reject_threshold,
-       add_header_threshold = EXCLUDED.add_header_threshold,
-       greylist_threshold = EXCLUDED.greylist_threshold,
-       sender_allowlist = EXCLUDED.sender_allowlist,
-       sender_denylist = EXCLUDED.sender_denylist,
-       rate_limit_burst = EXCLUDED.rate_limit_burst,
-       rate_limit_period_seconds = EXCLUDED.rate_limit_period_seconds,
-       updated_at = EXCLUDED.updated_at`,
-    [
-      mailPolicyId,
-      resolvedSpec.mailPolicy?.rejectThreshold ?? createDefaultMailPolicy().rejectThreshold,
-      resolvedSpec.mailPolicy?.addHeaderThreshold ?? createDefaultMailPolicy().addHeaderThreshold,
-      resolvedSpec.mailPolicy?.greylistThreshold ?? null,
-      JSON.stringify(resolvedSpec.mailPolicy?.senderAllowlist ?? []),
-      JSON.stringify(resolvedSpec.mailPolicy?.senderDenylist ?? []),
-      resolvedSpec.mailPolicy?.rateLimit?.burst ?? null,
-      resolvedSpec.mailPolicy?.rateLimit?.periodSeconds ?? null
-    ]
-  );
+  await upsertMailPolicyIfSupported(client, resolvedSpec.mailPolicy);
 
   for (const mailDomain of resolvedSpec.mailDomains) {
     const mailDomainId = `mail-domain-${mailDomain.domainName}`;
@@ -906,20 +1080,11 @@ export async function applyDesiredStateSpec(
           : existingCredential?.secret_payload ?? {}
         : {};
 
-    await client.query(
-      `INSERT INTO shp_mailbox_credentials (
-         mailbox_id,
-         secret_payload,
-         credential_state,
-         updated_at
-       )
-       VALUES ($1, $2::jsonb, $3, NOW())
-       ON CONFLICT (mailbox_id)
-       DO UPDATE SET
-         secret_payload = EXCLUDED.secret_payload,
-         credential_state = EXCLUDED.credential_state,
-         updated_at = EXCLUDED.updated_at`,
-      [mailboxId, JSON.stringify(nextSecretPayload), credentialState]
+    await upsertMailboxCredentialRecord(
+      client,
+      mailboxId,
+      nextSecretPayload,
+      credentialState
     );
   }
 
@@ -2241,19 +2406,9 @@ export function removeSpecItem<T>(
 
 export async function buildMailOverview(client: PoolClient): Promise<MailOverview> {
   const spec = await buildDesiredStateSpecFromDatabase(client, null);
-  const credentialResult = await client.query<{
-    address: string;
-    credential_state: "missing" | "configured" | "reset_required" | null;
-    updated_at: Date | string | null;
-  }>(
-    `SELECT mailboxes.address, credentials.credential_state, credentials.updated_at
-     FROM shp_mailbox_credentials credentials
-     INNER JOIN shp_mailboxes mailboxes
-       ON mailboxes.mailbox_id = credentials.mailbox_id
-     ORDER BY mailboxes.address ASC`
-  );
+  const credentialResult = await queryMailboxCredentialRowsByAddress(client);
   const credentialRowsByAddress = new Map(
-    credentialResult.rows.map((row) => [row.address, row] as const)
+    credentialResult.map((row) => [row.address, row] as const)
   );
   const quotasByMailbox = new Map(
     spec.mailboxQuotas.map((quota) => [quota.mailboxAddress, quota.storageBytes] as const)
@@ -2287,11 +2442,11 @@ export async function buildMailOverview(client: PoolClient): Promise<MailOvervie
       hasCredential:
         normalizeMailboxCredentialState(
           credentialRowsByAddress.get(mailbox.address)?.credential_state,
-          Boolean(mailbox.desiredPassword)
+          Boolean(mailbox.desiredPassword) || credentialRowsByAddress.has(mailbox.address)
         ) === "configured",
       credentialState: normalizeMailboxCredentialState(
         credentialRowsByAddress.get(mailbox.address)?.credential_state,
-        Boolean(mailbox.desiredPassword)
+        Boolean(mailbox.desiredPassword) || credentialRowsByAddress.has(mailbox.address)
       ),
       quotaBytes: quotasByMailbox.get(mailbox.address),
       credentialUpdatedAt: credentialRowsByAddress.get(mailbox.address)?.updated_at

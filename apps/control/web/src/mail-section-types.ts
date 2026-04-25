@@ -72,6 +72,7 @@ export interface LocalizedMailCopy {
   mailHostLabel: string;
   webmailHostnameLabel: string;
   dkimSelectorLabel: string;
+  sizeLabel: string;
   quotaBytesLabel: string;
   hasCredentialLabel: string;
   destinationsLabel: string;
@@ -170,7 +171,8 @@ export interface LocalizedMailCopy {
   saveQuotaLabel: string;
   deleteQuotaLabel: string;
   savePolicyLabel: string;
-  desiredPasswordLabel: string;
+  desiredPasswordCreateLabel: string;
+  desiredPasswordUpdateLabel: string;
   credentialStrategyLabel: string;
   credentialStrategyGenerateLabel: string;
   credentialStrategyManualLabel: string;
@@ -178,7 +180,13 @@ export interface LocalizedMailCopy {
   credentialStrategyKeepLabel: string;
   createMailboxDescription: string;
   editMailboxDescription: string;
-  manualPasswordHelp: string;
+  createMailboxPasswordHelp: string;
+  editMailboxPasswordHelp: string;
+  quotaHelp: string;
+  quotaValueLabel: string;
+  quotaUnitLabel: string;
+  mailboxAddressHelp: string;
+  mailboxNameLabel: string;
   localPartLabel: string;
   addressLabel: string;
   tenantSlugLabel: string;
@@ -202,6 +210,8 @@ export interface LocalizedMailCopy {
   serviceActive: string;
   serviceInactive: string;
   serviceDisabled: string;
+  onLabel: string;
+  offLabel: string;
   observabilityReady: string;
   observabilityWarning: string;
   observabilityMissing: string;

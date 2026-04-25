@@ -52,6 +52,23 @@ const expectedPublicMailPorts = [
 const expectedLocalMailPorts = [
   { label: "rspamd-milter", port: 11332, exposure: "local" as const }
 ];
+const mailboxUsageCacheSchemaVersion = 1;
+const mailboxUsageCacheTtlMs = 5 * 60 * 1000;
+
+type MailboxUsageEntry = NonNullable<MailServiceSnapshot["mailboxUsage"]>[number];
+
+interface MailboxUsageTarget {
+  address: string;
+  domainName: string;
+  localPart: string;
+  maildirPath: string;
+}
+
+interface MailboxUsageCachePayload {
+  schemaVersion: typeof mailboxUsageCacheSchemaVersion;
+  generatedAt: string;
+  entries: MailboxUsageEntry[];
+}
 
 async function writeLastAppliedState(
   desiredStateVersion: string,
@@ -165,6 +182,134 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
+function getMailboxUsageCachePath(stateDir: string): string {
+  return path.join(stateDir, "mailbox-usage-cache.json");
+}
+
+function hasFreshMailboxUsageCache(
+  cache: MailboxUsageCachePayload | null,
+  targets: MailboxUsageTarget[],
+  nowMs: number
+): cache is MailboxUsageCachePayload {
+  if (cache?.schemaVersion !== mailboxUsageCacheSchemaVersion) {
+    return false;
+  }
+
+  const generatedAtMs = Date.parse(cache.generatedAt);
+
+  if (!Number.isFinite(generatedAtMs) || nowMs - generatedAtMs > mailboxUsageCacheTtlMs) {
+    return false;
+  }
+
+  if (cache.entries.length !== targets.length) {
+    return false;
+  }
+
+  const cachedPathsByAddress = new Map(
+    cache.entries.map((entry) => [entry.address, entry.maildirPath] as const)
+  );
+
+  return targets.every((target) => cachedPathsByAddress.get(target.address) === target.maildirPath);
+}
+
+function parseDuOutput(output: string, blockSizeBytes: number): Map<string, number> {
+  const sizesByPath = new Map<string, number>();
+
+  for (const rawLine of output.split("\n")) {
+    const line = rawLine.trim();
+
+    if (!line) {
+      continue;
+    }
+
+    const match = /^(\d+)\s+(.+)$/.exec(line);
+
+    if (!match) {
+      continue;
+    }
+
+    const sizeValue = Number.parseInt(match[1] ?? "", 10);
+    const targetPath = match[2]?.trim();
+
+    if (!Number.isFinite(sizeValue) || !targetPath) {
+      continue;
+    }
+
+    sizesByPath.set(targetPath, sizeValue * blockSizeBytes);
+  }
+
+  return sizesByPath;
+}
+
+async function queryDirectorySizes(targetPaths: string[]): Promise<Map<string, number>> {
+  if (targetPaths.length === 0) {
+    return new Map();
+  }
+
+  const candidates: Array<{ args: string[]; blockSizeBytes: number }> = [
+    { args: ["-sB1", "--", ...targetPaths], blockSizeBytes: 1 },
+    { args: ["-sk", "--", ...targetPaths], blockSizeBytes: 1024 }
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      const result = await execFileAsync("du", candidate.args, {
+        encoding: "utf8"
+      });
+      return parseDuOutput(result.stdout, candidate.blockSizeBytes);
+    } catch {
+      continue;
+    }
+  }
+
+  return new Map();
+}
+
+async function collectMailboxUsageSnapshot(
+  stateDir: string,
+  targets: MailboxUsageTarget[]
+): Promise<MailboxUsageEntry[]> {
+  if (targets.length === 0) {
+    return [];
+  }
+
+  const cachePath = getMailboxUsageCachePath(stateDir);
+  const nowMs = Date.now();
+  const cached = await readJsonFile<MailboxUsageCachePayload>(cachePath);
+
+  if (hasFreshMailboxUsageCache(cached, targets, nowMs)) {
+    return cached.entries.map((entry) => ({ ...entry }));
+  }
+
+  const presentTargets = await Promise.all(
+    targets.map(async (target) =>
+      (await pathExists(target.maildirPath)) ? target : undefined
+    )
+  ).then((values) =>
+    values.filter((entry): entry is MailboxUsageTarget => Boolean(entry))
+  );
+  const sizesByPath = await queryDirectorySizes(
+    presentTargets.map((target) => target.maildirPath)
+  );
+  const generatedAt = new Date().toISOString();
+  const entries = targets.map((target) => ({
+    address: target.address,
+    domainName: target.domainName,
+    localPart: target.localPart,
+    maildirPath: target.maildirPath,
+    usedBytes: sizesByPath.get(target.maildirPath),
+    checkedAt: generatedAt
+  }));
+
+  await writeJsonFileAtomic(cachePath, {
+    schemaVersion: mailboxUsageCacheSchemaVersion,
+    generatedAt,
+    entries
+  } satisfies MailboxUsageCachePayload);
+
+  return entries;
+}
+
 async function namedPackageTargetsInstalled(targets: string[]): Promise<boolean> {
   const namedTargets = targets.filter(
     (target) =>
@@ -261,27 +406,71 @@ function isLoopbackAddress(address: string): boolean {
   return normalized === "127.0.0.1" || normalized === "::1" || normalized === "localhost";
 }
 
+function isWildcardAddress(address: string): boolean {
+  const normalized = address.trim().toLowerCase();
+  return normalized === "*" || normalized === "0.0.0.0" || normalized === "::";
+}
+
+function isPrivateIpv4Address(address: string): boolean {
+  const normalized = address.trim().toLowerCase();
+  const candidate = normalized.startsWith("::ffff:") ? normalized.slice(7) : normalized;
+
+  if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(candidate)) {
+    return false;
+  }
+
+  const octets = candidate.split(".").map((segment) => Number.parseInt(segment, 10));
+
+  if (octets.some((segment) => Number.isNaN(segment) || segment < 0 || segment > 255)) {
+    return false;
+  }
+
+  const [first, second] = octets;
+
+  return (
+    first === 10 ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168) ||
+    (first === 169 && second === 254) ||
+    (first === 100 && second >= 64 && second <= 127)
+  );
+}
+
+function isPrivateIpv6Address(address: string): boolean {
+  const normalized = address.trim().toLowerCase();
+
+  if (!normalized.includes(":")) {
+    return false;
+  }
+
+  if (normalized.startsWith("::ffff:")) {
+    return isPrivateIpv4Address(normalized);
+  }
+
+  return (
+    normalized.startsWith("fc") ||
+    normalized.startsWith("fd") ||
+    /^fe[89ab]/.test(normalized)
+  );
+}
+
 function addressAcceptsPublicTraffic(address: string): boolean {
   const normalized = address.trim().toLowerCase();
 
-  if (normalized === "*" || normalized === "0.0.0.0" || normalized === "::") {
+  if (isWildcardAddress(normalized)) {
     return true;
   }
 
-  return normalized.length > 0 && !isLoopbackAddress(normalized);
+  return (
+    normalized.length > 0 &&
+    !isLoopbackAddress(normalized) &&
+    !isPrivateIpv4Address(normalized) &&
+    !isPrivateIpv6Address(normalized)
+  );
 }
 
 function addressAcceptsLoopbackTraffic(address: string): boolean {
-  const normalized = address.trim().toLowerCase();
-
-  return (
-    normalized === "*" ||
-    normalized === "0.0.0.0" ||
-    normalized === "::" ||
-    normalized === "127.0.0.1" ||
-    normalized === "::1" ||
-    normalized === "localhost"
-  );
+  return isLoopbackAddress(address);
 }
 
 function parseFirewallPorts(value: string | undefined): number[] {
@@ -731,13 +920,15 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
     rspamdConfigPresent,
     listenerReady: Boolean(
       milterListener?.listening &&
-        milterListener.addresses.some((address) => addressAcceptsLoopbackTraffic(address))
+        milterListener.addresses.length > 0 &&
+        milterListener.addresses.every((address) => addressAcceptsLoopbackTraffic(address))
     )
   } satisfies NonNullable<MailServiceSnapshot["milter"]>;
   const roundcubePackaged =
     roundcubePackageRootExists && roundcubeConfigExists && roundcubeDatabaseExists;
 
   let managedDomains: MailServiceSnapshot["managedDomains"] = [];
+  let mailboxUsage: MailboxUsageEntry[] = [];
   let configuredMailboxCount = 0;
   let missingMailboxCount = 0;
   let resetRequiredMailboxCount = 0;
@@ -761,9 +952,28 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
           mailboxes?: Array<{ localPart?: string; credentialState?: string }>;
         }>;
       };
+      const parsedDomains = Array.isArray(parsed.domains) ? parsed.domains : [];
+      const mailboxTargets = parsedDomains.flatMap((domain) =>
+        (domain.mailboxes ?? [])
+          .map((mailbox) => {
+            const localPart = mailbox.localPart?.trim();
+
+            if (!localPart) {
+              return undefined;
+            }
+
+            return {
+              address: `${localPart}@${domain.domainName}`,
+              domainName: domain.domainName,
+              localPart,
+              maildirPath: path.join(vmailRoot, domain.domainName, localPart, "Maildir")
+            } satisfies MailboxUsageTarget;
+          })
+          .filter((entry): entry is MailboxUsageTarget => Boolean(entry))
+      );
       managedDomains = Array.isArray(parsed.domains)
         ? await Promise.all(
-            parsed.domains.map(async (domain) => {
+            parsedDomains.map(async (domain) => {
               const webmailDocumentRoot = path.join(
                 roundcubeRoot,
                 domain.tenantSlug,
@@ -887,7 +1097,8 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
             })
           )
         : [];
-      for (const domain of parsed.domains ?? []) {
+      mailboxUsage = await collectMailboxUsageSnapshot(config.stateDir, mailboxTargets);
+      for (const domain of parsedDomains) {
         for (const mailbox of domain.mailboxes ?? []) {
           if (mailbox.credentialState === "configured") {
             configuredMailboxCount += 1;
@@ -900,6 +1111,7 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
       }
     } catch {
       managedDomains = [];
+      mailboxUsage = [];
     }
   }
 
@@ -960,6 +1172,7 @@ async function inspectMail(): Promise<MailServiceSnapshot> {
     healthyPolicyDocumentCount,
     queue,
     recentDeliveryFailures,
+    mailboxUsage,
     managedDomains,
     checkedAt
   };

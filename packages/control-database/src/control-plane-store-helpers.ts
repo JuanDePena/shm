@@ -729,6 +729,36 @@ function normalizeMailMilterSnapshot(
   };
 }
 
+function normalizeMailboxUsageSnapshot(
+  value: unknown
+): NonNullable<MailServiceSnapshot["mailboxUsage"]>[number] | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (
+    typeof record.address !== "string" ||
+    typeof record.domainName !== "string" ||
+    typeof record.localPart !== "string" ||
+    typeof record.maildirPath !== "string" ||
+    typeof record.checkedAt !== "string"
+  ) {
+    return undefined;
+  }
+
+  return {
+    address: record.address,
+    domainName: record.domainName,
+    localPart: record.localPart,
+    maildirPath: record.maildirPath,
+    usedBytes:
+      typeof record.usedBytes === "number" ? Number(record.usedBytes) : undefined,
+    checkedAt: record.checkedAt
+  };
+}
+
 export function normalizeMailSnapshot(value: unknown): MailServiceSnapshot | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return undefined;
@@ -830,6 +860,14 @@ export function normalizeMailSnapshot(value: unknown): MailServiceSnapshot | und
       ? record.recentDeliveryFailures
           .map(normalizeMailDeliveryFailureSnapshot)
           .filter((entry): entry is MailDeliveryFailureSnapshot => Boolean(entry))
+      : undefined,
+    mailboxUsage: Array.isArray(record.mailboxUsage)
+      ? record.mailboxUsage
+          .map(normalizeMailboxUsageSnapshot)
+          .filter(
+            (entry): entry is NonNullable<MailServiceSnapshot["mailboxUsage"]>[number] =>
+              Boolean(entry)
+          )
       : undefined,
     managedDomains,
     checkedAt: typeof record.checkedAt === "string" ? record.checkedAt : new Date(0).toISOString()

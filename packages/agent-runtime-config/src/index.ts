@@ -64,6 +64,7 @@ export interface AgentRuntimeConfig {
       roundcubeGroup: string;
       roundcubeConfigPath: string;
       roundcubeDatabasePath: string;
+      roundcubeDatabaseDsn: string | null;
       roundcubePackageRoot: string;
       roundcubeDefaultHttpdConfPath: string;
       firewallServiceName: string;
@@ -279,6 +280,9 @@ export function createAgentRuntimeConfig(
         roundcubeDatabasePath: readString(
           env.SIMPLEHOST_MAIL_ROUNDCUBE_DATABASE_PATH,
           "/srv/www/roundcube/_shared/roundcube.sqlite"
+        ),
+        roundcubeDatabaseDsn: readOptionalString(
+          env.SIMPLEHOST_MAIL_ROUNDCUBE_DATABASE_DSN
         ),
         roundcubePackageRoot: readString(
           env.SIMPLEHOST_MAIL_ROUNDCUBE_PACKAGE_ROOT,

@@ -1,14 +1,15 @@
 # Mail Migration Runbook
 
-Updated on `2026-04-20`.
+Updated on `2026-04-25`.
 
 This runbook describes the recommended low-risk migration flow for moving a customer domain from a
-legacy cPanel-style mail host into the phase-2 `SimpleHostMan` mail runtime.
+legacy cPanel-style mail host into the current `SimpleHostMan` mail runtime baseline.
 
 Related references:
 
 - [`/opt/simplehostman/src/docs/MAIL.md`](/opt/simplehostman/src/docs/MAIL.md)
 - [`/opt/simplehostman/src/docs/DNS.md`](/opt/simplehostman/src/docs/DNS.md)
+- [`/opt/simplehostman/src/docs/MIGRATIONS/adudoc-mail-migration.md`](/opt/simplehostman/src/docs/MIGRATIONS/adudoc-mail-migration.md)
 
 ## Scope
 
@@ -24,6 +25,8 @@ This runbook assumes:
   managed by `mail.sync`
 - `SimpleHost Control` is the source of truth for domains, mailboxes, aliases, quotas, and mailbox
   credential state
+- `SimpleHostMan` can already report deliverability posture, primary-node runtime readiness, and
+  dispatch-blocking mail warnings
 
 ## Pre-checks
 
@@ -37,7 +40,9 @@ Before touching DNS or copying mailboxes:
    - `Postfix` active
    - `Dovecot` active
    - `Roundcube` deployed
+   - intended public mail ports listening
    - mail firewall policy configured
+   - `Rspamd` milter ready
 6. Confirm the derived DNS payload for:
    - `MX`
    - `mail.<domain>`
@@ -49,6 +54,7 @@ Before touching DNS or copying mailboxes:
    - `_mta-sts`
    - DKIM selector TXT
 7. Confirm DKIM material exists on the active node under `/srv/mail/dkim/<domain>/`.
+8. Confirm the mail domain has no dispatch-blocking warnings in `SimpleHostMan`.
 
 Do not start mailbox copy until those checks pass.
 
@@ -160,3 +166,12 @@ debuggable desired state until the issue is understood.
   - DNS latency
   - user credential rotation
   - rollback muscle memory
+- `adudoc.com` is now the first closed live reference and is documented in [`/opt/simplehostman/src/docs/MIGRATIONS/adudoc-mail-migration.md`](/opt/simplehostman/src/docs/MIGRATIONS/adudoc-mail-migration.md).
+
+## Current baseline status
+
+The migration flow now sits on top of an already complete mail execution and reliability baseline:
+
+- `mail.sync` and the node-local mail runtime are fully implemented
+- `SimpleHostMan` exposes deliverability, runtime, HA, and backup/restore readiness before cutover
+- combined `preflight` and `release-candidate` checks already include a repeatable mail baseline

@@ -1,7 +1,7 @@
 # Mail Service Architecture
 
 Date drafted: 2026-04-11
-Last updated: 2026-04-21
+Last updated: 2026-04-25
 Target OS: AlmaLinux 10.1
 
 ## Scope
@@ -18,8 +18,8 @@ It defines the intended split of responsibilities for:
 - mailbox failover boundaries
 - the future control-plane split between `SimpleHost Control` and `SimpleHost Agent`
 
-This document now describes the implemented phase-2 mail runtime baseline plus the intended
-operational boundaries for later refinement.
+This document now describes the implemented phase-7 mail product baseline plus the current
+operational boundaries of the two-node SimpleHost mail stack.
 
 Related references:
 
@@ -30,7 +30,7 @@ Related references:
 - [`/opt/simplehostman/src/docs/REPO_LAYOUT.md`](/opt/simplehostman/src/docs/REPO_LAYOUT.md)
 - [`/opt/simplehostman/src/apps/control/README.md`](/opt/simplehostman/src/apps/control/README.md)
 
-## Status on 2026-04-21
+## Status on 2026-04-25
 
 - `SimpleHost Control` now implements desired-state objects and operator CRUD for mail domains, mailboxes, aliases, quotas, plus mailbox credential generate / rotate / reset flows.
 - `SimpleHost Control` reconciliation derives baseline mail DNS, `webmail.<domain>`, and `mta-sts.<domain>` proxy scaffolding.
@@ -46,7 +46,7 @@ Related references:
 - `SimpleHostMan` now exposes mail observability directly from control-plane and node snapshots: queue depth, recent delivery failures, defer reasons, per-domain deliverability checks, direct tracing from mail resources into recent jobs and audit history, per-domain standby promotion readiness and blockers, and explicit warnings for port, firewall, or milter drift on the primary mail node.
 - The chosen direction remains self-hosted mail on the two VPS nodes, not a third-party hosted mail backend.
 - The selected persistence model remains filesystem-backed mailbox storage, not message storage inside `PostgreSQL`.
-- `adudoc.com` remains the first pilot mail domain, with `webmaster@adudoc.com` and `notificaciones@adudoc.com` as the initial mailbox set.
+- `adudoc.com` is now the first mail domain migrated end-to-end into the live `SimpleHostMan` mail runtime, with `webmaster@adudoc.com` and `notificaciones@adudoc.com` as the current mailbox set.
 
 ## Design goals
 
@@ -133,11 +133,11 @@ Do not switch to a SQL message store to solve that problem.
 
 `Roundcube` should keep its own metadata store, separate from `SimpleHost Control`.
 
-Implemented runtime baseline:
+Implemented live baseline:
 
-- node-local `SQLite`
-- shared state root under `/srv/www/roundcube/_shared`
-- database path `/srv/www/roundcube/_shared/roundcube.sqlite`
+- dedicated `Roundcube` metadata database on `postgresql-apps` over `5432/tcp`
+- generated DSN rendered into `/etc/roundcubemail/config.inc.php`
+- shared state root under `/srv/www/roundcube/_shared` for logs, temp files, and auxiliary state
 
 That database stores only webmail metadata such as:
 
@@ -148,9 +148,9 @@ That database stores only webmail metadata such as:
 
 It must not be treated as the authoritative message store.
 
-If the platform later needs higher `Roundcube` metadata scale or shared-node access, move this
-metadata to a dedicated `PostgreSQL` database on `postgresql-apps`. That is a scale-up path, not
-the current runtime baseline.
+For lower environments or break-glass fallback, `SimpleHost Agent` still accepts a node-local
+`SQLite` path through `SIMPLEHOST_MAIL_ROUNDCUBE_DATABASE_PATH`. That fallback is no longer the
+preferred live baseline.
 
 ## Runtime split between `SimpleHost Control` and `SimpleHost Agent`
 
@@ -255,7 +255,8 @@ Current rendered runtime artifacts:
 - `/srv/mail/dkim/<domain>/<selector>.dns.txt`
 - `/srv/www/mail-policies/<tenant>/<domain>/public/.well-known/mta-sts.txt`
 - `/etc/roundcubemail/config.inc.php`
-- `/srv/www/roundcube/_shared/roundcube.sqlite`
+- `/srv/www/roundcube/_shared/`
+- dedicated `Roundcube` metadata database on `postgresql-apps`
 - `/etc/firewalld/services/simplehost-mail.xml`
 
 Current credential behavior:
@@ -441,7 +442,7 @@ Recommended public ports on the active mail node:
 - `993/tcp` IMAPS
 - `995/tcp` POP3S
 
-Implemented phase-2 policy:
+Implemented public-port policy:
 
 - `SimpleHost Agent` writes a generated `simplehost-mail` firewalld service definition
 - the service is installed to `/etc/firewalld/services/simplehost-mail.xml`
@@ -567,7 +568,7 @@ Current restore procedures:
 2. Single domain restore
    Restore the domain `Maildir` root, domain DKIM material under `/srv/mail/dkim/<domain>/`, the rendered webmail root for `webmail.<domain>`, and any affected policy documents, then verify submission, `IMAP`, and DKIM signing for that domain before recording a `domain` restore check.
 3. Full mail stack restore
-   Restore `/srv/mail/vmail`, `/srv/mail/config`, `/srv/mail/dkim`, `Roundcube` shared state, and `Roundcube` config, then confirm `Postfix`, `Dovecot`, `Rspamd`, `Redis`, webmail, and policy-doc hosting before recording a `mail-stack` restore check.
+   Restore `/srv/mail/vmail`, `/srv/mail/config`, `/srv/mail/dkim`, the `Roundcube` metadata database, `Roundcube` shared state, and `Roundcube` config, then confirm `Postfix`, `Dovecot`, `Rspamd`, `Redis`, webmail, and policy-doc hosting before recording a `mail-stack` restore check.
 
 Evidence model for restore readiness:
 
@@ -636,11 +637,16 @@ Implemented in the current backend:
 3. `mail.sync`, node runtime reporting, baseline DNS derivation, and `webmail.<domain>` proxy scaffolding
 4. `SimpleHost Agent` renderers and drivers for `Postfix`, `Dovecot`, `Rspamd` config, `Redis`-compatible cache, `Roundcube`, and mail firewall policy
 5. concrete mailbox migration runbook for low-volume cutovers
-6. explicit mail HA readiness reporting and manual promotion criteria for standby nodes
+6. explicit mail deliverability, queue, failure, and runtime observability in `SimpleHostMan`
+7. explicit mail HA readiness reporting and manual promotion criteria for standby nodes
+8. backup coverage plus restore-rehearsal visibility for mailbox, domain, and full mail-stack recovery
+9. repeatable mail release checks inside combined `preflight` and `release-candidate` validation
 
-Follow-on product work now belongs to broader diagnostics, deliverability, audit, and backup improvements rather than the core mail execution backend.
+The core mail execution, observability, validation, recovery-readiness, and release-baseline work is
+now in place. Future work should build on that baseline instead of reopening the first execution
+phase.
 
-## Non-goals for the first mail execution phase
+## Non-goals for the current mail product
 
 - storing email messages in `PostgreSQL`
 - active/active shared-write mailbox delivery across both nodes

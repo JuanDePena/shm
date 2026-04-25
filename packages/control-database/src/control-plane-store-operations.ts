@@ -75,6 +75,129 @@ import type {
   ZoneDispatchRow
 } from "./control-plane-store-types.js";
 
+function isMissingRelationError(error: unknown, relationName: string): boolean {
+  const candidate = error as { code?: string; message?: string };
+  return (
+    candidate?.code === "42P01" &&
+    typeof candidate.message === "string" &&
+    candidate.message.includes(`"${relationName}"`)
+  );
+}
+
+function isMissingColumnError(error: unknown, columnName: string): boolean {
+  const candidate = error as { code?: string; message?: string };
+  return (
+    candidate?.code === "42703" &&
+    typeof candidate.message === "string" &&
+    candidate.message.includes(columnName)
+  );
+}
+
+async function hasMailPolicyTable(client: PoolClient): Promise<boolean> {
+  const result = await client.query<{ exists: boolean }>(
+    `SELECT to_regclass('public.shp_mail_policy') IS NOT NULL AS exists`
+  );
+
+  return Boolean(result.rows[0]?.exists);
+}
+
+async function hasMailboxCredentialStateColumn(client: PoolClient): Promise<boolean> {
+  const result = await client.query<{ exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = 'shp_mailbox_credentials'
+         AND column_name = 'credential_state'
+     ) AS exists`
+  );
+
+  return Boolean(result.rows[0]?.exists);
+}
+
+async function queryMailPolicyRows(client: PoolClient): Promise<MailPolicyRow[]> {
+  if (!(await hasMailPolicyTable(client))) {
+    return [];
+  }
+
+  const result = await client.query<MailPolicyRow>(
+    `SELECT
+       policy_id,
+       reject_threshold,
+       add_header_threshold,
+       greylist_threshold,
+       sender_allowlist,
+       sender_denylist,
+       rate_limit_burst,
+       rate_limit_period_seconds
+     FROM shp_mail_policy
+     WHERE policy_id = 'mail-policy'`
+  );
+
+  return result.rows;
+}
+
+async function queryMailboxRows(client: PoolClient): Promise<MailboxRow[]> {
+  const hasCredentialState = await hasMailboxCredentialStateColumn(client);
+  const result = await client.query<MailboxRow>(
+    hasCredentialState
+      ? `SELECT
+         mailboxes.address,
+         domains.domain_name,
+         mailboxes.local_part,
+         mailboxes.primary_node_id,
+         mailboxes.standby_node_id,
+         credentials.secret_payload AS desired_password,
+         credentials.credential_state,
+         credentials.updated_at AS credential_updated_at
+       FROM shp_mailboxes mailboxes
+       INNER JOIN shp_mail_domains domains
+         ON domains.mail_domain_id = mailboxes.mail_domain_id
+       LEFT JOIN shp_mailbox_credentials credentials
+         ON credentials.mailbox_id = mailboxes.mailbox_id
+       ORDER BY mailboxes.address ASC`
+      : `SELECT
+         mailboxes.address,
+         domains.domain_name,
+         mailboxes.local_part,
+         mailboxes.primary_node_id,
+         mailboxes.standby_node_id,
+         credentials.secret_payload AS desired_password,
+         NULL::text AS credential_state,
+         credentials.updated_at AS credential_updated_at
+       FROM shp_mailboxes mailboxes
+       INNER JOIN shp_mail_domains domains
+         ON domains.mail_domain_id = mailboxes.mail_domain_id
+       LEFT JOIN shp_mailbox_credentials credentials
+         ON credentials.mailbox_id = mailboxes.mailbox_id
+       ORDER BY mailboxes.address ASC`
+  );
+
+  return result.rows;
+}
+
+export function mergeJobHistoryRows(
+  recentRows: JobHistoryRow[],
+  latestAppliedDnsRows: JobHistoryRow[]
+): JobHistoryRow[] {
+  const rowsById = new Map<string, JobHistoryRow>();
+
+  for (const row of [...recentRows, ...latestAppliedDnsRows]) {
+    rowsById.set(row.id, row);
+  }
+
+  return [...rowsById.values()].sort((left, right) => {
+    const createdAtDiff =
+      Date.parse(String(right.created_at)) - Date.parse(String(left.created_at));
+
+    if (createdAtDiff !== 0) {
+      return createdAtDiff;
+    }
+
+    return right.id.localeCompare(left.id);
+  });
+}
+
 export async function buildMailSyncPlans(
   client: PoolClient,
   payloadKey: Buffer | null
@@ -97,23 +220,7 @@ export async function buildMailSyncPlans(
          ON zones.zone_id = domains.zone_id
        ORDER BY domains.domain_name ASC`
     ),
-    client.query<MailboxRow>(
-      `SELECT
-         mailboxes.address,
-         domains.domain_name,
-         mailboxes.local_part,
-         mailboxes.primary_node_id,
-         mailboxes.standby_node_id,
-         credentials.secret_payload AS desired_password,
-         credentials.credential_state,
-         credentials.updated_at AS credential_updated_at
-       FROM shp_mailboxes mailboxes
-       INNER JOIN shp_mail_domains domains
-         ON domains.mail_domain_id = mailboxes.mail_domain_id
-       LEFT JOIN shp_mailbox_credentials credentials
-         ON credentials.mailbox_id = mailboxes.mailbox_id
-       ORDER BY mailboxes.address ASC`
-    ),
+    queryMailboxRows(client),
     client.query<MailAliasRow>(
       `SELECT
          aliases.address,
@@ -134,23 +241,11 @@ export async function buildMailSyncPlans(
          ON mailboxes.mailbox_id = quotas.mailbox_id
        ORDER BY mailboxes.address ASC`
     ),
-    client.query<MailPolicyRow>(
-      `SELECT
-         policy_id,
-         reject_threshold,
-         add_header_threshold,
-         greylist_threshold,
-         sender_allowlist,
-         sender_denylist,
-         rate_limit_burst,
-         rate_limit_period_seconds
-       FROM shp_mail_policy
-       WHERE policy_id = 'mail-policy'`
-    )
+    queryMailPolicyRows(client)
   ]);
 
   const defaultMailPolicy = createDefaultMailPolicy();
-  const mailPolicyRow = mailPolicyResult.rows[0];
+  const mailPolicyRow = mailPolicyResult[0];
   const mailPolicy: MailSyncPayload["policy"] = {
     rejectThreshold: Number(mailPolicyRow?.reject_threshold ?? defaultMailPolicy.rejectThreshold),
     addHeaderThreshold: Number(
@@ -187,7 +282,7 @@ export async function buildMailSyncPlans(
     Array<MailSyncPayload["domains"][number]["aliases"][number]>
   >();
 
-  for (const mailbox of mailboxResult.rows) {
+  for (const mailbox of mailboxResult) {
     const entries = mailboxesByDomain.get(mailbox.domain_name) ?? [];
     const credentialState =
       mailbox.credential_state === "missing" ||
@@ -2004,7 +2099,7 @@ export function createControlPlaneOperationsMethods(
           "platform_operator"
         ]);
         const boundedLimit = Math.max(1, Math.min(limit, 200));
-        const result = await client.query<JobHistoryRow>(
+        const recentResult = await client.query<JobHistoryRow>(
           `SELECT
              jobs.id,
              jobs.desired_state_version,
@@ -2027,7 +2122,33 @@ export function createControlPlaneOperationsMethods(
           [boundedLimit]
         );
 
-        return result.rows.map((row) => toJobHistoryEntry(row, jobPayloadKey));
+        const latestAppliedDnsResult = await client.query<JobHistoryRow>(
+          `SELECT DISTINCT ON (jobs.resource_key)
+             jobs.id,
+             jobs.desired_state_version,
+             jobs.kind,
+             jobs.node_id,
+             jobs.created_at,
+             jobs.claimed_at,
+             jobs.completed_at,
+             jobs.payload,
+             results.status,
+             results.summary,
+             results.details,
+             jobs.dispatch_reason,
+             jobs.resource_key
+           FROM control_plane_jobs jobs
+           INNER JOIN control_plane_job_results results
+             ON results.job_id = jobs.id
+           WHERE jobs.kind = 'dns.sync'
+             AND results.status = 'applied'
+             AND jobs.resource_key IS NOT NULL
+           ORDER BY jobs.resource_key ASC, jobs.created_at DESC`
+        );
+
+        return mergeJobHistoryRows(recentResult.rows, latestAppliedDnsResult.rows).map((row) =>
+          toJobHistoryEntry(row, jobPayloadKey)
+        );
       });
     },
 

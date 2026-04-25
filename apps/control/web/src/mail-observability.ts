@@ -215,32 +215,76 @@ function normalizeTxtRecordValue(value: string): string {
 
 const expectedPublicMailPorts = [25, 465, 587, 993, 995];
 
+function isWildcardAddress(address: string): boolean {
+  const normalized = address.trim().toLowerCase();
+  return normalized === "*" || normalized === "0.0.0.0" || normalized === "::";
+}
+
 function isLoopbackAddress(address: string): boolean {
   const normalized = address.trim().toLowerCase();
   return normalized === "127.0.0.1" || normalized === "::1" || normalized === "localhost";
 }
 
+function isPrivateIpv4Address(address: string): boolean {
+  const normalized = address.trim().toLowerCase();
+  const candidate = normalized.startsWith("::ffff:") ? normalized.slice(7) : normalized;
+
+  if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(candidate)) {
+    return false;
+  }
+
+  const octets = candidate.split(".").map((segment) => Number.parseInt(segment, 10));
+
+  if (octets.some((segment) => Number.isNaN(segment) || segment < 0 || segment > 255)) {
+    return false;
+  }
+
+  const [first, second] = octets;
+
+  return (
+    first === 10 ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168) ||
+    (first === 169 && second === 254) ||
+    (first === 100 && second >= 64 && second <= 127)
+  );
+}
+
+function isPrivateIpv6Address(address: string): boolean {
+  const normalized = address.trim().toLowerCase();
+
+  if (!normalized.includes(":")) {
+    return false;
+  }
+
+  if (normalized.startsWith("::ffff:")) {
+    return isPrivateIpv4Address(normalized);
+  }
+
+  return (
+    normalized.startsWith("fc") ||
+    normalized.startsWith("fd") ||
+    /^fe[89ab]/.test(normalized)
+  );
+}
+
 function addressAcceptsPublicTraffic(address: string): boolean {
   const normalized = address.trim().toLowerCase();
 
-  if (normalized === "*" || normalized === "0.0.0.0" || normalized === "::") {
+  if (isWildcardAddress(normalized)) {
     return true;
   }
 
-  return normalized.length > 0 && !isLoopbackAddress(normalized);
+  return (
+    normalized.length > 0 &&
+    !isLoopbackAddress(normalized) &&
+    !isPrivateIpv4Address(normalized) &&
+    !isPrivateIpv6Address(normalized)
+  );
 }
 
 function addressAcceptsLoopbackTraffic(address: string): boolean {
-  const normalized = address.trim().toLowerCase();
-
-  return (
-    normalized === "*" ||
-    normalized === "0.0.0.0" ||
-    normalized === "::" ||
-    normalized === "127.0.0.1" ||
-    normalized === "::1" ||
-    normalized === "localhost"
-  );
+  return isLoopbackAddress(address);
 }
 
 function getMailPortListener(
@@ -250,16 +294,34 @@ function getMailPortListener(
   return mail.portListeners?.find((listener) => listener.protocol === "tcp" && listener.port === port);
 }
 
+function listenerAcceptsPublicTraffic(
+  listener: ReturnType<typeof getMailPortListener>
+): boolean {
+  return Boolean(
+    listener?.listening &&
+      listener.exposure === "public" &&
+      listener.addresses.some((address) => addressAcceptsPublicTraffic(address))
+  );
+}
+
+function listenerIsLoopbackOnly(
+  listener: ReturnType<typeof getMailPortListener>
+): boolean {
+  return Boolean(
+    listener?.listening &&
+      listener.exposure === "local" &&
+      listener.addresses.length > 0 &&
+      listener.addresses.every((address) => addressAcceptsLoopbackTraffic(address))
+  );
+}
+
 function getMissingPublicMailPorts(
   mail: NonNullable<DashboardData["nodeHealth"][number]["mail"]>
 ): number[] {
   return expectedPublicMailPorts.filter((port) => {
     const listener = getMailPortListener(mail, port);
 
-    return !(
-      listener?.listening &&
-      listener.addresses.some((address) => addressAcceptsPublicTraffic(address))
-    );
+    return !listenerAcceptsPublicTraffic(listener);
   });
 }
 
@@ -298,8 +360,7 @@ function isMailMilterReady(
     mail.milter?.postfixConfigured &&
       mail.milter?.rspamdConfigPresent &&
       mail.milter?.listenerReady &&
-      listener?.listening &&
-      listener.addresses.some((address) => addressAcceptsLoopbackTraffic(address))
+      listenerIsLoopbackOnly(listener)
   );
 }
 

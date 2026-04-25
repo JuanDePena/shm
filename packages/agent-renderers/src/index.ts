@@ -151,8 +151,28 @@ function escapePhpString(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 }
 
+function formatRoundcubeSqliteDsn(databasePath: string): string {
+  const normalizedPath = databasePath.startsWith("/")
+    ? `/${databasePath.replace(/^\/+/, "")}`
+    : databasePath;
+
+  return `sqlite:///${normalizedPath}`;
+}
+
+function formatRoundcubeDatabaseDsn(
+  databasePath: string,
+  databaseDsn?: string | null
+): string {
+  if (!databaseDsn || databaseDsn.trim().length === 0) {
+    return formatRoundcubeSqliteDsn(databasePath);
+  }
+
+  return databaseDsn.replace(/^postgres(?:ql)?:\/\//i, "pgsql://");
+}
+
 export function renderRoundcubeConfig(options: {
   databasePath: string;
+  databaseDsn?: string | null;
   tempDir: string;
   logDir: string;
   productName: string;
@@ -162,13 +182,29 @@ export function renderRoundcubeConfig(options: {
     "<?php",
     "",
     "$config = [];",
-    `$config['db_dsnw'] = 'sqlite:${escapePhpString(options.databasePath)}';`,
+    `$config['db_dsnw'] = '${escapePhpString(
+      formatRoundcubeDatabaseDsn(options.databasePath, options.databaseDsn)
+    )}';`,
     `$config['default_host'] = 'ssl://127.0.0.1';`,
     "$config['default_port'] = 993;",
     `$config['smtp_server'] = 'tls://127.0.0.1';`,
     "$config['smtp_port'] = 587;",
     "$config['smtp_user'] = '%u';",
     "$config['smtp_pass'] = '%p';",
+    "$config['imap_conn_options'] = [",
+    "  'ssl' => [",
+    "    'verify_peer' => false,",
+    "    'verify_peer_name' => false,",
+    "    'allow_self_signed' => true,",
+    "  ],",
+    "];",
+    "$config['smtp_conn_options'] = [",
+    "  'ssl' => [",
+    "    'verify_peer' => false,",
+    "    'verify_peer_name' => false,",
+    "    'allow_self_signed' => true,",
+    "  ],",
+    "];",
     "$config['support_url'] = '';",
     `$config['product_name'] = '${escapePhpString(options.productName)}';`,
     `$config['des_key'] = '${escapePhpString(options.desKey)}';`,

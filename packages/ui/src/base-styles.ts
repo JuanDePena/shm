@@ -174,6 +174,15 @@ export function renderBaseStyleBlock(): string {
         min-height: var(--control-height);
       }
 
+      input[readonly],
+      textarea[readonly],
+      select:disabled {
+        border-color: rgba(16, 39, 68, 0.12);
+        background: linear-gradient(180deg, rgba(236, 241, 247, 0.96), rgba(228, 234, 242, 0.96));
+        color: rgba(16, 39, 68, 0.86);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+      }
+
       select {
         appearance: none;
         -webkit-appearance: none;
@@ -714,6 +723,10 @@ export function renderBaseStyleBlock(): string {
         gap: 0.26rem;
       }
 
+      .detail-shell > .signal-strip + * {
+        margin-top: -0.12rem;
+      }
+
       .filter-shell {
         gap: 0.5rem;
       }
@@ -778,6 +791,80 @@ export function renderBaseStyleBlock(): string {
         font-size: 0.92rem;
       }
 
+      .deliverability-card-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.55rem;
+        margin-top: 0.1rem;
+      }
+
+      .deliverability-status-card,
+      .deliverability-metric-card {
+        padding: 0.62rem 0.72rem;
+      }
+
+      .deliverability-status-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.7rem;
+      }
+
+      .deliverability-status-card dt,
+      .deliverability-metric-card dt {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+      }
+
+      .deliverability-status-card dd,
+      .deliverability-metric-card dd {
+        margin: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex: 0 0 auto;
+      }
+
+      .deliverability-status-card .pill,
+      .deliverability-metric-card .pill {
+        border: 1px solid rgba(13, 32, 56, 0.12);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      }
+
+      .deliverability-status-card .pill-success,
+      .deliverability-metric-card .pill-success {
+        border-color: rgba(126, 207, 41, 0.34);
+      }
+
+      .deliverability-status-card .pill-danger,
+      .deliverability-metric-card .pill-danger {
+        border-color: rgba(212, 68, 47, 0.26);
+      }
+
+      .deliverability-status-card .pill-muted,
+      .deliverability-metric-card .pill-muted {
+        border-color: rgba(13, 32, 56, 0.12);
+      }
+
+      .deliverability-metric-card-wide .deliverability-status-row {
+        align-items: flex-start;
+      }
+
+      .deliverability-metric-card-wide dd {
+        flex: 1 1 auto;
+        min-width: 0;
+        text-align: right;
+      }
+
+      .deliverability-metric-text {
+        display: inline-block;
+        max-width: 100%;
+        text-align: right;
+        overflow-wrap: anywhere;
+      }
+
       .detail-grid-compact .detail-item dt {
         font-size: 0.64rem;
       }
@@ -813,6 +900,49 @@ export function renderBaseStyleBlock(): string {
         padding: var(--space-panel-tight);
         background: rgba(255, 255, 255, 0.72);
         box-shadow: none;
+      }
+
+      .mail-ha-node-panel {
+        gap: 0;
+      }
+
+      .mail-ha-node-columns {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 0.55rem;
+        row-gap: 0;
+        align-items: start;
+      }
+
+      .mail-ha-node-column {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        margin: 0;
+      }
+
+      .mail-ha-node-column .detail-item {
+        border-radius: 0;
+      }
+
+      .mail-ha-node-column .detail-item + .detail-item {
+        margin-top: -1px;
+      }
+
+      .mail-ha-node-column .detail-item:first-child {
+        border-top-left-radius: var(--radius-card);
+        border-top-right-radius: var(--radius-card);
+      }
+
+      .mail-ha-node-column .detail-item:last-child {
+        border-bottom-left-radius: var(--radius-card);
+        border-bottom-right-radius: var(--radius-card);
+      }
+
+      .mail-section-column {
+        display: grid;
+        gap: var(--space-grid);
+        align-content: start;
       }
 
       .feed-list {
@@ -919,6 +1049,8 @@ export function renderBaseStyleBlock(): string {
         display: grid;
         gap: 0.22rem;
         min-width: 0;
+        font-size: 0.78rem;
+        line-height: 1.35;
       }
 
       .mail-node-runtime-head {
@@ -928,8 +1060,31 @@ export function renderBaseStyleBlock(): string {
         gap: 0.32rem;
       }
 
+      .mail-node-runtime-head .pill {
+        padding: 0.08rem 0.34rem;
+        font-size: 0.66rem;
+        line-height: 1.1;
+      }
+
       .mail-node-runtime-head > strong {
         color: var(--ink);
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+
+      .mail-node-runtime-subline {
+        font-size: 0.68rem;
+        line-height: 1.25;
+      }
+
+      #section-mail-runtime th:first-child,
+      #section-mail-runtime td:first-child {
+        width: 18rem;
+      }
+
+      #section-mail-runtime th:not(:first-child) {
+        font-size: 0.64rem;
+        letter-spacing: 0.1em;
       }
 
       table {
@@ -1100,6 +1255,14 @@ export function renderBaseStyleBlock(): string {
           grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
         }
 
+        .mail-ha-node-columns {
+          grid-template-columns: 1fr;
+        }
+
+        .deliverability-card-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .detail-item-span-two,
         .detail-item-span-two-auto {
           grid-column: 1 / -1;
@@ -1129,6 +1292,12 @@ export function renderBaseStyleBlock(): string {
         .resource-workspace-columns {
           grid-template-columns: repeat(2, minmax(0, 1fr));
           align-items: start;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .deliverability-card-grid {
+          grid-template-columns: 1fr;
         }
       }
   `;

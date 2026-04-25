@@ -37,7 +37,7 @@ It is a focused control plane for the current stack:
 - PostgreSQL
 - MariaDB
 - backups
-- future mail-domain and mailbox management
+- mail domains, mailbox lifecycle, observability, HA readiness, and recovery readiness
 
 ## Workspace layout
 
