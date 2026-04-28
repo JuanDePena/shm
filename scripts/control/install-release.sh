@@ -22,7 +22,8 @@ rm -rf "${temp_dir}/.git" "${temp_dir}/node_modules"
 (
   cd "${temp_dir}"
   pnpm install --frozen-lockfile
-  pnpm build:control-runtime
+  pnpm exec tsc -b --force tsconfig.control.json
+  pnpm exec tsc -b --force tsconfig.agent.json
 )
 
 rm -rf "${release_dir}"

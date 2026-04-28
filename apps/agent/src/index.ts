@@ -234,7 +234,11 @@ function parseFirewalldActiveZones(value: string | undefined): string[] {
       continue;
     }
 
-    zones.push(line.trim());
+    const zoneName = line.trim().split(/\s+/)[0];
+
+    if (zoneName) {
+      zones.push(zoneName);
+    }
   }
 
   return [...new Set(zones)].sort((left, right) => left.localeCompare(right));
