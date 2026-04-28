@@ -2,6 +2,8 @@ import {
   type AppReconcileRequest,
   type CodeServerUpdateRequest,
   type DatabaseReconcileRequest,
+  type Fail2BanApplyRequest,
+  type FirewallApplyRequest,
   type InventoryImportSummary,
   type JobDispatchResponse,
   type PackageInstallRequest,
@@ -202,6 +204,59 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
       noticeReturnTo(
         returnTo,
         `Queued ${result.jobs.length} package install job(s).`,
+        "success"
+      )
+    );
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/actions/firewall-apply") {
+    const token = await requireSessionToken({ requireSession });
+    const form = await readFormBody(request);
+    const returnTo = form.get("returnTo") ?? "/";
+    const nodeIds = form.getAll("nodeIds").map((value) => value.trim()).filter(Boolean);
+    const requestBody: FirewallApplyRequest = {
+      nodeIds: nodeIds.length > 0 ? nodeIds : undefined,
+      installPackage: (form.get("installPackage")?.trim() ?? "") === "on",
+      enableService: (form.get("enableService")?.trim() ?? "") === "on",
+      applyPublicZone: (form.get("applyPublicZone")?.trim() ?? "") === "on",
+      applyWireGuardZone: (form.get("applyWireGuardZone")?.trim() ?? "") === "on",
+      reload: (form.get("reload")?.trim() ?? "") === "on"
+    };
+
+    const result = await api.applyFirewall(token, requestBody);
+
+    redirect(
+      response,
+      noticeReturnTo(
+        returnTo,
+        `Queued ${result.jobs.length} firewall apply job(s).`,
+        "success"
+      )
+    );
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/actions/fail2ban-apply") {
+    const token = await requireSessionToken({ requireSession });
+    const form = await readFormBody(request);
+    const returnTo = form.get("returnTo") ?? "/";
+    const nodeIds = form.getAll("nodeIds").map((value) => value.trim()).filter(Boolean);
+    const requestBody: Fail2BanApplyRequest = {
+      nodeIds: nodeIds.length > 0 ? nodeIds : undefined,
+      installPackage: (form.get("installPackage")?.trim() ?? "") === "on",
+      applySshdJail: (form.get("applySshdJail")?.trim() ?? "") === "on",
+      enableService: (form.get("enableService")?.trim() ?? "") === "on",
+      restartService: (form.get("restartService")?.trim() ?? "") === "on"
+    };
+
+    const result = await api.applyFail2Ban(token, requestBody);
+
+    redirect(
+      response,
+      noticeReturnTo(
+        returnTo,
+        `Queued ${result.jobs.length} Fail2Ban apply job(s).`,
         "success"
       )
     );

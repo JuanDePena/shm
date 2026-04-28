@@ -17,6 +17,10 @@ import { renderResourceDriftWorkspace } from "./dashboard-drift.js";
 import { renderJobHistoryWorkspace } from "./dashboard-jobs.js";
 import { renderNodeHealthWorkspace } from "./dashboard-node-health.js";
 import { renderPackagesWorkspace } from "./dashboard-packages.js";
+import {
+  renderFail2BanWorkspace,
+  renderFirewallWorkspace
+} from "./dashboard-security.js";
 import { renderDashboardShell } from "./dashboard-shell.js";
 import { buildDashboardViewModel } from "./dashboard-view-model.js";
 import {
@@ -558,6 +562,24 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
     renderSignalStrip,
     renderFocusLink: renderFocusLinkWithPill
   });
+  const firewallSection = renderFirewallWorkspace({
+    copy,
+    data,
+    locale,
+    currentPath,
+    formatDate,
+    renderPill,
+    renderSignalStrip
+  });
+  const fail2banSection = renderFail2BanWorkspace({
+    copy,
+    data,
+    locale,
+    currentPath,
+    formatDate,
+    renderPill,
+    renderSignalStrip
+  });
   const rustdeskSection = renderRustDeskSection(data, copy, locale, focus, {
     formatDate,
     renderActionFacts,
@@ -683,6 +705,8 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
       mailSection,
       backupPoliciesSection,
       packagesSection,
+      firewallSection,
+      fail2banSection,
       auditSection,
       jobHistorySection,
       nodeHealthSection,

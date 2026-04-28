@@ -308,6 +308,58 @@ export function renderMailFirewalldService(serviceName: string): string {
   ].join("\n");
 }
 
+export function renderHostPublicFirewalldZone(): string {
+  return [
+    '<?xml version="1.0" encoding="utf-8"?>',
+    "<zone>",
+    "  <short>Public</short>",
+    "  <description>Public operator-facing zone for Apache TLS ingress, code-server proxy access, and WireGuard.</description>",
+    '  <interface name="eth0"/>',
+    '  <service name="ssh"/>',
+    '  <service name="http"/>',
+    '  <service name="https"/>',
+    '  <service name="dhcpv6-client"/>',
+    '  <port protocol="udp" port="51820"/>',
+    '  <port protocol="tcp" port="3200"/>',
+    '  <port protocol="tcp" port="8080"/>',
+    "</zone>"
+  ].join("\n");
+}
+
+export function renderHostWireGuardFirewalldZone(): string {
+  return [
+    '<?xml version="1.0" encoding="utf-8"?>',
+    "<zone>",
+    "  <short>WireGuard</short>",
+    "  <description>Private inter-node zone on wg0 for replication and restricted control-plane traffic.</description>",
+    '  <interface name="wg0"/>',
+    '  <port protocol="tcp" port="5432"/>',
+    '  <port protocol="tcp" port="5433"/>',
+    '  <port protocol="tcp" port="3306"/>',
+    '  <port protocol="tcp" port="3100"/>',
+    '  <port protocol="tcp" port="8081"/>',
+    "</zone>"
+  ].join("\n");
+}
+
+export function renderFail2BanSshdJail(): string {
+  return [
+    "[DEFAULT]",
+    "bantime = 1h",
+    "findtime = 10m",
+    "maxretry = 5",
+    "banaction = firewallcmd-rich-rules",
+    "banaction_allports = firewallcmd-rich-rules",
+    "",
+    "[sshd]",
+    "enabled = true",
+    "backend = systemd",
+    "mode = normal",
+    "port = ssh",
+    ""
+  ].join("\n");
+}
+
 interface MailboxPasswordEntry {
   address: string;
   passwordHash: string;

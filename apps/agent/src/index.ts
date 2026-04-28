@@ -16,6 +16,10 @@ import {
   supportedJobKinds,
   type AppServiceSnapshot,
   type CodeServerServiceSnapshot,
+  type Fail2BanJailSnapshot,
+  type Fail2BanSnapshot,
+  type FirewalldZoneSnapshot,
+  type HostFirewallSnapshot,
   type MailServiceSnapshot,
   type MailSyncPayload,
   type RustDeskListenerSnapshot,
@@ -180,6 +184,221 @@ async function pathExists(targetPath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function splitListValue(value: string | undefined): string[] {
+  return (value ?? "")
+    .trim()
+    .split(/\s+/g)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function parseIntegerValue(value: string | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number.parseInt(value.trim(), 10);
+  return Number.isInteger(parsed) ? parsed : undefined;
+}
+
+function parseFirewalldPorts(value: string | undefined): FirewalldZoneSnapshot["ports"] {
+  return splitListValue(value)
+    .map((entry) => {
+      const match = /^(\d+)\/([A-Za-z0-9_-]+)$/.exec(entry);
+
+      if (!match?.[1] || !match[2]) {
+        return undefined;
+      }
+
+      return {
+        port: Number.parseInt(match[1], 10),
+        protocol: match[2]
+      };
+    })
+    .filter((entry): entry is FirewalldZoneSnapshot["ports"][number] => Boolean(entry))
+    .sort((left, right) => left.port - right.port || left.protocol.localeCompare(right.protocol));
+}
+
+function parseFirewalldActiveZones(value: string | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  const zones: string[] = [];
+
+  for (const line of value.split(/\r?\n/g)) {
+    if (line.trim().length === 0 || /^\s/.test(line)) {
+      continue;
+    }
+
+    zones.push(line.trim());
+  }
+
+  return [...new Set(zones)].sort((left, right) => left.localeCompare(right));
+}
+
+function parseFirewalldZone(value: string | undefined, zone: string): FirewalldZoneSnapshot {
+  const details = new Map<string, string>();
+  const richRules: string[] = [];
+
+  for (const rawLine of (value ?? "").split(/\r?\n/g)) {
+    const line = rawLine.trim();
+
+    if (!line) {
+      continue;
+    }
+
+    if (line.startsWith("rule ")) {
+      richRules.push(line);
+      continue;
+    }
+
+    const separatorIndex = line.indexOf(":");
+
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const key = line.slice(0, separatorIndex).trim();
+    const nextValue = line.slice(separatorIndex + 1).trim();
+
+    if ((key === "rule" || key === "rich rules") && nextValue) {
+      richRules.push(nextValue);
+    } else {
+      details.set(key, nextValue);
+    }
+  }
+
+  return {
+    zone,
+    target: details.get("target") || undefined,
+    interfaces: splitListValue(details.get("interfaces")),
+    sources: splitListValue(details.get("sources")),
+    services: splitListValue(details.get("services")),
+    ports: parseFirewalldPorts(details.get("ports")),
+    richRules,
+    masquerade: details.get("masquerade") === "yes"
+  };
+}
+
+async function inspectFirewalldZone(zone: string): Promise<FirewalldZoneSnapshot> {
+  const output = await commandOutput("firewall-cmd", ["--zone", zone, "--list-all"]);
+  return parseFirewalldZone(output, zone);
+}
+
+async function inspectFirewall(): Promise<HostFirewallSnapshot> {
+  const checkedAt = new Date().toISOString();
+  const serviceName = "firewalld";
+  const [enabledState, activeState, state, defaultZone, activeZonesOutput] = await Promise.all([
+    commandOutput("systemctl", ["is-enabled", serviceName]),
+    commandOutput("systemctl", ["is-active", serviceName]),
+    commandOutput("firewall-cmd", ["--state"]),
+    commandOutput("firewall-cmd", ["--get-default-zone"]),
+    commandOutput("firewall-cmd", ["--get-active-zones"])
+  ]);
+  const zoneNames = [
+    ...new Set([
+      ...parseFirewalldActiveZones(activeZonesOutput),
+      ...(defaultZone ? [defaultZone] : [])
+    ])
+  ].sort((left, right) => left.localeCompare(right));
+  const zones =
+    activeState === "active" || state === "running"
+      ? await Promise.all(zoneNames.map((zone) => inspectFirewalldZone(zone)))
+      : [];
+
+  return {
+    serviceName,
+    enabled: enabledState !== undefined && enabledState !== "disabled",
+    active: activeState === "active",
+    state,
+    defaultZone,
+    zones,
+    checkedAt
+  };
+}
+
+function parseFail2BanJails(value: string | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  const match = /Jail list:\s*(.+)$/m.exec(value);
+
+  if (!match?.[1]) {
+    return [];
+  }
+
+  return match[1]
+    .split(/[,\s]+/g)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function parseFail2BanStatusLine(value: string, label: string): string | undefined {
+  const prefix = `${label}:`.toLowerCase();
+
+  for (const rawLine of value.split(/\r?\n/g)) {
+    const normalizedLine = rawLine.replace(/^[\s|`\\-]+/, "");
+
+    if (normalizedLine.toLowerCase().startsWith(prefix)) {
+      return normalizedLine.slice(prefix.length).trim();
+    }
+  }
+
+  return undefined;
+}
+
+async function inspectFail2BanJail(jail: string): Promise<Fail2BanJailSnapshot> {
+  const [status, actions, bantime, findtime, maxRetry] = await Promise.all([
+    commandOutput("fail2ban-client", ["status", jail]),
+    commandOutput("fail2ban-client", ["get", jail, "actions"]),
+    commandOutput("fail2ban-client", ["get", jail, "bantime"]),
+    commandOutput("fail2ban-client", ["get", jail, "findtime"]),
+    commandOutput("fail2ban-client", ["get", jail, "maxretry"])
+  ]);
+
+  return {
+    jail,
+    currentFailed: parseIntegerValue(parseFail2BanStatusLine(status ?? "", "Currently failed")),
+    totalFailed: parseIntegerValue(parseFail2BanStatusLine(status ?? "", "Total failed")),
+    currentBanned: parseIntegerValue(parseFail2BanStatusLine(status ?? "", "Currently banned")),
+    totalBanned: parseIntegerValue(parseFail2BanStatusLine(status ?? "", "Total banned")),
+    bannedIps: splitListValue(parseFail2BanStatusLine(status ?? "", "Banned IP list")),
+    actions: splitListValue(actions),
+    bantimeSeconds: parseIntegerValue(bantime),
+    findtimeSeconds: parseIntegerValue(findtime),
+    maxRetry: parseIntegerValue(maxRetry)
+  };
+}
+
+async function inspectFail2Ban(): Promise<Fail2BanSnapshot> {
+  const checkedAt = new Date().toISOString();
+  const serviceName = "fail2ban";
+  const [enabledState, activeState, versionOutput, status] = await Promise.all([
+    commandOutput("systemctl", ["is-enabled", serviceName]),
+    commandOutput("systemctl", ["is-active", serviceName]),
+    commandOutput("fail2ban-client", ["version"]),
+    commandOutput("fail2ban-client", ["status"])
+  ]);
+  const jailNames = parseFail2BanJails(status);
+  const jails =
+    activeState === "active"
+      ? await Promise.all(jailNames.map((jail) => inspectFail2BanJail(jail)))
+      : [];
+
+  return {
+    serviceName,
+    enabled: enabledState !== undefined && enabledState !== "disabled",
+    active: activeState === "active",
+    version: versionOutput?.replace(/^Fail2Ban\s+v?/i, "").trim() || undefined,
+    jails,
+    checkedAt
+  };
 }
 
 function getMailboxUsageCachePath(stateDir: string): string {
@@ -1256,10 +1475,12 @@ async function inspectAppServices(): Promise<AppServiceSnapshot[]> {
 }
 
 async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
-  const [appServices, codeServer, rustdesk, mail] = await Promise.all([
+  const [appServices, codeServer, rustdesk, firewall, fail2ban, mail] = await Promise.all([
     inspectAppServices(),
     inspectCodeServer(),
     inspectRustDesk(),
+    inspectFirewall(),
+    inspectFail2Ban(),
     inspectMail()
   ]);
 
@@ -1267,6 +1488,8 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     appServices,
     codeServer,
     rustdesk,
+    firewall,
+    fail2ban,
     mail
   };
 }

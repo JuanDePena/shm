@@ -8,6 +8,8 @@ import {
   createDefaultMailPolicy,
   createDispatchedJobEnvelope,
   type DnsSyncPayload,
+  type Fail2BanApplyPayload,
+  type FirewallApplyPayload,
   type PackageInstallPayload,
   type PackageInventoryCollectPayload,
   type MailSyncPayload,
@@ -1759,6 +1761,135 @@ export function createControlPlaneOperationsMethods(
             packageNames,
             rpmUrl: rpmUrl || undefined,
             allowReinstall: request.allowReinstall ?? false
+          }
+        });
+
+        return {
+          desiredStateVersion,
+          jobs: jobs.map((job) => ({
+            ...job.envelope,
+            payload: sanitizePayload(job.envelope.payload) as Record<string, unknown>
+          }))
+        };
+      });
+    },
+
+    async dispatchFirewallApply(request, presentedToken) {
+      return withTransaction(pool, async (client) => {
+        const actor = await requireAuthorizedUser(client, presentedToken, [
+          "platform_admin",
+          "platform_operator"
+        ]);
+        const desiredStateVersion = createDesiredStateVersion();
+        const targetNodeIds = await resolveTargetNodeIds(
+          client,
+          request.nodeIds,
+          "No managed nodes are available for firewall configuration."
+        );
+        const requestedNodeIds = Array.from(
+          new Set((request.nodeIds ?? []).map((value) => value.trim()).filter(Boolean))
+        );
+        const payload: FirewallApplyPayload = {
+          installPackage: request.installPackage ?? false,
+          enableService: request.enableService ?? true,
+          applyPublicZone: request.applyPublicZone ?? true,
+          applyWireGuardZone: request.applyWireGuardZone ?? false,
+          reload: request.reload ?? true
+        };
+        const jobs = targetNodeIds.map((nodeId) =>
+          createQueuedDispatchJob(
+            createDispatchedJobEnvelope(
+              "firewall.apply",
+              nodeId,
+              desiredStateVersion,
+              payload as unknown as Record<string, unknown>
+            ),
+            `node:${nodeId}:firewall`,
+            "service"
+          )
+        );
+
+        await insertDispatchedJobs(
+          client,
+          jobs,
+          actor.userId,
+          `firewall.apply:${requestedNodeIds.length > 0 ? requestedNodeIds.join(",") : "all"}`,
+          jobPayloadKey
+        );
+
+        await insertAuditEvent(client, {
+          actorType: "user",
+          actorId: actor.userId,
+          eventType: "firewall.apply.requested",
+          entityType: "service",
+          entityId: "firewalld",
+          payload: {
+            nodeIds: targetNodeIds,
+            ...payload
+          }
+        });
+
+        return {
+          desiredStateVersion,
+          jobs: jobs.map((job) => ({
+            ...job.envelope,
+            payload: sanitizePayload(job.envelope.payload) as Record<string, unknown>
+          }))
+        };
+      });
+    },
+
+    async dispatchFail2BanApply(request, presentedToken) {
+      return withTransaction(pool, async (client) => {
+        const actor = await requireAuthorizedUser(client, presentedToken, [
+          "platform_admin",
+          "platform_operator"
+        ]);
+        const desiredStateVersion = createDesiredStateVersion();
+        const targetNodeIds = await resolveTargetNodeIds(
+          client,
+          request.nodeIds,
+          "No managed nodes are available for Fail2Ban configuration."
+        );
+        const requestedNodeIds = Array.from(
+          new Set((request.nodeIds ?? []).map((value) => value.trim()).filter(Boolean))
+        );
+        const payload: Fail2BanApplyPayload = {
+          installPackage: request.installPackage ?? false,
+          applySshdJail: request.applySshdJail ?? true,
+          enableService: request.enableService ?? true,
+          restartService: request.restartService ?? true
+        };
+        const jobs = targetNodeIds.map((nodeId) =>
+          createQueuedDispatchJob(
+            createDispatchedJobEnvelope(
+              "fail2ban.apply",
+              nodeId,
+              desiredStateVersion,
+              payload as unknown as Record<string, unknown>
+            ),
+            `node:${nodeId}:fail2ban`,
+            "service"
+          )
+        );
+
+        await insertDispatchedJobs(
+          client,
+          jobs,
+          actor.userId,
+          `fail2ban.apply:${requestedNodeIds.length > 0 ? requestedNodeIds.join(",") : "all"}`,
+          jobPayloadKey
+        );
+
+        await insertAuditEvent(client, {
+          actorType: "user",
+          actorId: actor.userId,
+          eventType: "fail2ban.apply.requested",
+          entityType: "service",
+          entityId: "fail2ban",
+          payload: {
+            nodeIds: targetNodeIds,
+            ...payload
           }
         });
 

@@ -1,6 +1,8 @@
 import type {
   BackupRunRecordRequest,
   CodeServerUpdateRequest,
+  Fail2BanApplyRequest,
+  FirewallApplyRequest,
   NodeHealthSnapshot,
   PackageInstallRequest,
   PackageInventoryRefreshRequest,
@@ -212,6 +214,30 @@ export const handleOperationsRoutes: ApiRouteHandler = async (context) => {
       200,
       await controlPlaneStore.dispatchPackageInstall(
         await readJsonBody<PackageInstallRequest>(request),
+        bearerToken
+      )
+    );
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/v1/firewall/apply") {
+    writeJson(
+      response,
+      200,
+      await controlPlaneStore.dispatchFirewallApply(
+        await readJsonBody<FirewallApplyRequest>(request),
+        bearerToken
+      )
+    );
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/v1/fail2ban/apply") {
+    writeJson(
+      response,
+      200,
+      await controlPlaneStore.dispatchFail2BanApply(
+        await readJsonBody<Fail2BanApplyRequest>(request),
         bearerToken
       )
     );

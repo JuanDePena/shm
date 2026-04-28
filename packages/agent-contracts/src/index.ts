@@ -8,6 +8,8 @@ export const supportedJobKinds = [
   "code-server.update",
   "package.inventory.collect",
   "package.install",
+  "firewall.apply",
+  "fail2ban.apply",
   "backup.trigger",
   "mail.sync"
 ] as const;
@@ -175,6 +177,21 @@ export interface PackageInstallPayload {
   allowReinstall?: boolean;
 }
 
+export interface FirewallApplyPayload {
+  installPackage?: boolean;
+  enableService?: boolean;
+  applyPublicZone?: boolean;
+  applyWireGuardZone?: boolean;
+  reload?: boolean;
+}
+
+export interface Fail2BanApplyPayload {
+  installPackage?: boolean;
+  applySshdJail?: boolean;
+  enableService?: boolean;
+  restartService?: boolean;
+}
+
 export interface InstalledPackageSummary {
   packageName: string;
   epoch?: string;
@@ -213,6 +230,54 @@ export interface RustDeskServiceSnapshot {
   publicKey?: string;
   publicKeyPath?: string;
   listeners: RustDeskListenerSnapshot[];
+  checkedAt: string;
+}
+
+export interface FirewallPortRuleSnapshot {
+  protocol: string;
+  port: number;
+}
+
+export interface FirewalldZoneSnapshot {
+  zone: string;
+  target?: string;
+  interfaces: string[];
+  sources: string[];
+  services: string[];
+  ports: FirewallPortRuleSnapshot[];
+  richRules: string[];
+  masquerade?: boolean;
+}
+
+export interface HostFirewallSnapshot {
+  serviceName: string;
+  enabled: boolean;
+  active: boolean;
+  state?: string;
+  defaultZone?: string;
+  zones: FirewalldZoneSnapshot[];
+  checkedAt: string;
+}
+
+export interface Fail2BanJailSnapshot {
+  jail: string;
+  currentFailed?: number;
+  totalFailed?: number;
+  currentBanned?: number;
+  totalBanned?: number;
+  bannedIps: string[];
+  actions: string[];
+  bantimeSeconds?: number;
+  findtimeSeconds?: number;
+  maxRetry?: number;
+}
+
+export interface Fail2BanSnapshot {
+  serviceName: string;
+  enabled: boolean;
+  active: boolean;
+  version?: string;
+  jails: Fail2BanJailSnapshot[];
   checkedAt: string;
 }
 
@@ -399,6 +464,8 @@ export interface AgentNodeRuntimeSnapshot {
   appServices?: AppServiceSnapshot[];
   codeServer?: CodeServerServiceSnapshot;
   rustdesk?: RustDeskServiceSnapshot;
+  firewall?: HostFirewallSnapshot;
+  fail2ban?: Fail2BanSnapshot;
   mail?: MailServiceSnapshot;
 }
 
@@ -591,6 +658,42 @@ export function isPackageInstallPayload(
     (payload.rpmUrl === undefined || typeof payload.rpmUrl === "string") &&
     (payload.expectedSha256 === undefined || typeof payload.expectedSha256 === "string") &&
     (payload.allowReinstall === undefined || typeof payload.allowReinstall === "boolean")
+  );
+}
+
+export function isFirewallApplyPayload(
+  value: unknown
+): value is FirewallApplyPayload {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const payload = value as Record<string, unknown>;
+
+  return (
+    (payload.installPackage === undefined || typeof payload.installPackage === "boolean") &&
+    (payload.enableService === undefined || typeof payload.enableService === "boolean") &&
+    (payload.applyPublicZone === undefined || typeof payload.applyPublicZone === "boolean") &&
+    (payload.applyWireGuardZone === undefined ||
+      typeof payload.applyWireGuardZone === "boolean") &&
+    (payload.reload === undefined || typeof payload.reload === "boolean")
+  );
+}
+
+export function isFail2BanApplyPayload(
+  value: unknown
+): value is Fail2BanApplyPayload {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const payload = value as Record<string, unknown>;
+
+  return (
+    (payload.installPackage === undefined || typeof payload.installPackage === "boolean") &&
+    (payload.applySshdJail === undefined || typeof payload.applySshdJail === "boolean") &&
+    (payload.enableService === undefined || typeof payload.enableService === "boolean") &&
+    (payload.restartService === undefined || typeof payload.restartService === "boolean")
   );
 }
 

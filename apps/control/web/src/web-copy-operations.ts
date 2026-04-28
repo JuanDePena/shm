@@ -207,6 +207,12 @@ export const operationsCopyByLocale = {
     packagesTitle: "Packages",
     packagesDescription:
       "Installed RPM inventory plus repository and URL-based package rollout across managed nodes.",
+    firewallTitle: "Firewall",
+    firewallDescription:
+      "firewalld service state, active zones, open ports and baseline apply controls by node.",
+    fail2banTitle: "Fail2Ban",
+    fail2banDescription:
+      "Fail2Ban service state, jail counters, banned IPs and baseline apply controls by node.",
     backupsTitle: "Backups",
     backupsDescription: "Latest runs and current backup policy coverage.",
     packagesInventoryTitle: "Installed packages",
@@ -247,7 +253,40 @@ export const operationsCopyByLocale = {
     packageNamesPlaceholder: "e.g. htop jq git",
     packageRpmUrlPlaceholder:
       "https://github.com/coder/code-server/releases/download/v4.115.0/code-server-4.115.0-amd64.rpm",
-    noPackages: "No package records."
+    noPackages: "No package records.",
+    firewallActionsTitle: "Firewall baseline",
+    firewallActionsDescription:
+      "Apply the managed public zone and optionally the private WireGuard zone across selected nodes.",
+    firewallNodesTitle: "Firewall nodes",
+    firewallNodesDescription:
+      "Current firewalld runtime posture reported by each managed node.",
+    fail2banActionsTitle: "Fail2Ban baseline",
+    fail2banActionsDescription:
+      "Apply the managed SSH jail and restart Fail2Ban across selected nodes.",
+    fail2banNodesTitle: "Fail2Ban nodes",
+    fail2banNodesDescription:
+      "Current Fail2Ban runtime posture reported by each managed node.",
+    installPackageLabel: "Install package if missing",
+    enableServiceLabel: "Enable and start service",
+    applyPublicZoneLabel: "Ensure public zone baseline",
+    applyWireGuardZoneLabel: "Ensure WireGuard zone baseline",
+    reloadFirewallLabel: "Reload firewall",
+    applySshdJailLabel: "Apply sshd jail baseline",
+    restartServiceLabel: "Restart service",
+    applyFirewallLabel: "Apply firewall",
+    applyFail2BanLabel: "Apply Fail2Ban",
+    serviceStateLabel: "Service",
+    defaultZoneLabel: "Default zone",
+    activeZonesLabel: "Active zones",
+    openPortsLabel: "Open ports",
+    zoneServicesLabel: "Zone services",
+    jailCountLabel: "Jails",
+    currentFailedLabel: "Current failed",
+    currentBannedLabel: "Current banned",
+    totalBannedLabel: "Total banned",
+    bannedIpsLabel: "Banned IPs",
+    notReportedLabel: "Not reported",
+    allNodesLabel: "All nodes"
   },
   es: {
     dashboardHeading: "Plano de control",
@@ -465,6 +504,12 @@ export const operationsCopyByLocale = {
     packagesTitle: "Paquetes",
     packagesDescription:
       "Inventario RPM instalado más despliegue de paquetes desde repositorios o URL sobre nodos gestionados.",
+    firewallTitle: "Firewall",
+    firewallDescription:
+      "Estado de firewalld, zonas activas, puertos abiertos y controles de baseline por nodo.",
+    fail2banTitle: "Fail2Ban",
+    fail2banDescription:
+      "Estado de Fail2Ban, contadores de jails, IPs baneadas y controles de baseline por nodo.",
     backupsTitle: "Backups",
     backupsDescription: "Últimas ejecuciones y cobertura actual de políticas.",
     packagesInventoryTitle: "Paquetes instalados",
@@ -505,6 +550,39 @@ export const operationsCopyByLocale = {
     packageNamesPlaceholder: "ej. htop jq git",
     packageRpmUrlPlaceholder:
       "https://github.com/coder/code-server/releases/download/v4.115.0/code-server-4.115.0-amd64.rpm",
-    noPackages: "No hay registros de paquetes."
+    noPackages: "No hay registros de paquetes.",
+    firewallActionsTitle: "Baseline de firewall",
+    firewallActionsDescription:
+      "Aplica la zona pública gestionada y opcionalmente la zona privada WireGuard en los nodos seleccionados.",
+    firewallNodesTitle: "Nodos firewall",
+    firewallNodesDescription:
+      "Postura runtime actual de firewalld reportada por cada nodo gestionado.",
+    fail2banActionsTitle: "Baseline de Fail2Ban",
+    fail2banActionsDescription:
+      "Aplica el jail SSH gestionado y reinicia Fail2Ban en los nodos seleccionados.",
+    fail2banNodesTitle: "Nodos Fail2Ban",
+    fail2banNodesDescription:
+      "Postura runtime actual de Fail2Ban reportada por cada nodo gestionado.",
+    installPackageLabel: "Instalar paquete si falta",
+    enableServiceLabel: "Habilitar e iniciar servicio",
+    applyPublicZoneLabel: "Asegurar baseline de zona pública",
+    applyWireGuardZoneLabel: "Asegurar baseline de zona WireGuard",
+    reloadFirewallLabel: "Recargar firewall",
+    applySshdJailLabel: "Aplicar baseline de jail sshd",
+    restartServiceLabel: "Reiniciar servicio",
+    applyFirewallLabel: "Aplicar firewall",
+    applyFail2BanLabel: "Aplicar Fail2Ban",
+    serviceStateLabel: "Servicio",
+    defaultZoneLabel: "Zona default",
+    activeZonesLabel: "Zonas activas",
+    openPortsLabel: "Puertos abiertos",
+    zoneServicesLabel: "Servicios de zona",
+    jailCountLabel: "Jails",
+    currentFailedLabel: "Fallidos actuales",
+    currentBannedLabel: "Baneados actuales",
+    totalBannedLabel: "Baneados total",
+    bannedIpsLabel: "IPs baneadas",
+    notReportedLabel: "Sin reporte",
+    allNodesLabel: "Todos los nodos"
   }
 } satisfies Record<WebLocale, WebCopyDictionary>;

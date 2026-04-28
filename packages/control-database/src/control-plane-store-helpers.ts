@@ -12,6 +12,11 @@ import type {
   BackupsOverview,
   CodeServerServiceSnapshot,
   DispatchedJobEnvelope,
+  Fail2BanJailSnapshot,
+  Fail2BanSnapshot,
+  FirewallPortRuleSnapshot,
+  FirewalldZoneSnapshot,
+  HostFirewallSnapshot,
   InstalledPackageSummary,
   InventoryAppSummary,
   InventoryDatabaseSummary,
@@ -542,6 +547,151 @@ export function normalizeRustDeskSnapshot(
   };
 }
 
+function normalizeFirewallPortRuleSnapshot(
+  value: unknown
+): FirewallPortRuleSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (typeof record.protocol !== "string" || typeof record.port !== "number") {
+    return undefined;
+  }
+
+  return {
+    protocol: record.protocol,
+    port: Number(record.port)
+  };
+}
+
+function normalizeFirewalldZoneSnapshot(
+  value: unknown
+): FirewalldZoneSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (typeof record.zone !== "string") {
+    return undefined;
+  }
+
+  return {
+    zone: record.zone,
+    target: typeof record.target === "string" ? record.target : undefined,
+    interfaces: Array.isArray(record.interfaces)
+      ? record.interfaces.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    sources: Array.isArray(record.sources)
+      ? record.sources.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    services: Array.isArray(record.services)
+      ? record.services.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    ports: Array.isArray(record.ports)
+      ? record.ports
+          .map(normalizeFirewallPortRuleSnapshot)
+          .filter((entry): entry is FirewallPortRuleSnapshot => Boolean(entry))
+      : [],
+    richRules: Array.isArray(record.richRules)
+      ? record.richRules.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    masquerade:
+      typeof record.masquerade === "boolean" ? record.masquerade : undefined
+  };
+}
+
+export function normalizeHostFirewallSnapshot(
+  value: unknown
+): HostFirewallSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (typeof record.serviceName !== "string") {
+    return undefined;
+  }
+
+  return {
+    serviceName: record.serviceName,
+    enabled: Boolean(record.enabled),
+    active: Boolean(record.active),
+    state: typeof record.state === "string" ? record.state : undefined,
+    defaultZone: typeof record.defaultZone === "string" ? record.defaultZone : undefined,
+    zones: Array.isArray(record.zones)
+      ? record.zones
+          .map(normalizeFirewalldZoneSnapshot)
+          .filter((entry): entry is FirewalldZoneSnapshot => Boolean(entry))
+      : [],
+    checkedAt: typeof record.checkedAt === "string" ? record.checkedAt : new Date(0).toISOString()
+  };
+}
+
+function normalizeFail2BanJailSnapshot(value: unknown): Fail2BanJailSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (typeof record.jail !== "string") {
+    return undefined;
+  }
+
+  return {
+    jail: record.jail,
+    currentFailed:
+      typeof record.currentFailed === "number" ? Number(record.currentFailed) : undefined,
+    totalFailed:
+      typeof record.totalFailed === "number" ? Number(record.totalFailed) : undefined,
+    currentBanned:
+      typeof record.currentBanned === "number" ? Number(record.currentBanned) : undefined,
+    totalBanned:
+      typeof record.totalBanned === "number" ? Number(record.totalBanned) : undefined,
+    bannedIps: Array.isArray(record.bannedIps)
+      ? record.bannedIps.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    actions: Array.isArray(record.actions)
+      ? record.actions.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    bantimeSeconds:
+      typeof record.bantimeSeconds === "number" ? Number(record.bantimeSeconds) : undefined,
+    findtimeSeconds:
+      typeof record.findtimeSeconds === "number" ? Number(record.findtimeSeconds) : undefined,
+    maxRetry: typeof record.maxRetry === "number" ? Number(record.maxRetry) : undefined
+  };
+}
+
+export function normalizeFail2BanSnapshot(value: unknown): Fail2BanSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (typeof record.serviceName !== "string") {
+    return undefined;
+  }
+
+  return {
+    serviceName: record.serviceName,
+    enabled: Boolean(record.enabled),
+    active: Boolean(record.active),
+    version: typeof record.version === "string" ? record.version : undefined,
+    jails: Array.isArray(record.jails)
+      ? record.jails
+          .map(normalizeFail2BanJailSnapshot)
+          .filter((entry): entry is Fail2BanJailSnapshot => Boolean(entry))
+      : [],
+    checkedAt: typeof record.checkedAt === "string" ? record.checkedAt : new Date(0).toISOString()
+  };
+}
+
 function normalizeMailManagedDomainSnapshot(
   value: unknown
 ): MailManagedDomainSnapshot | undefined {
@@ -904,6 +1054,12 @@ export function toNodeHealthSnapshot(row: NodeHealthRow): NodeHealthSnapshot {
     ),
     rustdesk: normalizeRustDeskSnapshot(
       (runtimeSnapshot as Record<string, unknown>).rustdesk
+    ),
+    firewall: normalizeHostFirewallSnapshot(
+      (runtimeSnapshot as Record<string, unknown>).firewall
+    ),
+    fail2ban: normalizeFail2BanSnapshot(
+      (runtimeSnapshot as Record<string, unknown>).fail2ban
     ),
     mail: normalizeMailSnapshot((runtimeSnapshot as Record<string, unknown>).mail)
   };

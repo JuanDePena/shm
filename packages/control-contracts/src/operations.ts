@@ -33,6 +33,23 @@ export interface PackageInstallRequest {
   allowReinstall?: boolean;
 }
 
+export interface FirewallApplyRequest {
+  nodeIds?: string[];
+  installPackage?: boolean;
+  enableService?: boolean;
+  applyPublicZone?: boolean;
+  applyWireGuardZone?: boolean;
+  reload?: boolean;
+}
+
+export interface Fail2BanApplyRequest {
+  nodeIds?: string[];
+  installPackage?: boolean;
+  applySshdJail?: boolean;
+  enableService?: boolean;
+  restartService?: boolean;
+}
+
 export interface InstalledPackageSummary {
   nodeId: string;
   hostname: string;

@@ -73,6 +73,12 @@ function createStubApi(
     installPackages: async () => {
       throw new Error("Unexpected package install in test");
     },
+    applyFirewall: async () => {
+      throw new Error("Unexpected firewall apply in test");
+    },
+    applyFail2Ban: async () => {
+      throw new Error("Unexpected Fail2Ban apply in test");
+    },
     loadProxyPreview: async () => {
       throw new Error("Unexpected proxy preview in test");
     },

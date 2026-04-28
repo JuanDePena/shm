@@ -11,6 +11,8 @@ import {
   type DesiredStateApplyRequest,
   type DesiredStateExportResponse,
   type DesiredStateSpec,
+  type Fail2BanApplyRequest,
+  type FirewallApplyRequest,
   type InventoryStateSnapshot,
   type InventoryImportSummary,
   type JobDispatchResponse,
@@ -100,6 +102,14 @@ export interface ControlWebApi extends ControlAuthSurface {
   installPackages(
     token: string,
     request: PackageInstallRequest
+  ): Promise<JobDispatchResponse>;
+  applyFirewall(
+    token: string,
+    request: FirewallApplyRequest
+  ): Promise<JobDispatchResponse>;
+  applyFail2Ban(
+    token: string,
+    request: Fail2BanApplyRequest
   ): Promise<JobDispatchResponse>;
   loadProxyPreview(token: string, slug: string): Promise<ProxyRenderPayload>;
   upsertMailPolicy(token: string, request: UpsertMailPolicyRequest): Promise<void>;
@@ -357,6 +367,26 @@ export function createControlWebApiFromRequest(request: ControlWebApiRequest): C
         method: "POST",
         token,
         body: installRequest
+      });
+    },
+    applyFirewall(
+      token: string,
+      applyRequest: FirewallApplyRequest
+    ): Promise<JobDispatchResponse> {
+      return request<JobDispatchResponse>("/v1/firewall/apply", {
+        method: "POST",
+        token,
+        body: applyRequest
+      });
+    },
+    applyFail2Ban(
+      token: string,
+      applyRequest: Fail2BanApplyRequest
+    ): Promise<JobDispatchResponse> {
+      return request<JobDispatchResponse>("/v1/fail2ban/apply", {
+        method: "POST",
+        token,
+        body: applyRequest
       });
     },
     loadProxyPreview(token: string, slug: string): Promise<ProxyRenderPayload> {

@@ -16,6 +16,8 @@ import type {
   DesiredStateApplyResponse,
   DesiredStateExportResponse,
   DispatchedJobEnvelope,
+  Fail2BanApplyRequest,
+  FirewallApplyRequest,
   InventoryImportRequest,
   InventoryImportSummary,
   InventoryStateSnapshot,
@@ -488,6 +490,14 @@ export interface ControlPlaneStore {
     request: PackageInstallRequest,
     presentedToken: string | null
   ): Promise<JobDispatchResponse>;
+  dispatchFirewallApply(
+    request: FirewallApplyRequest,
+    presentedToken: string | null
+  ): Promise<JobDispatchResponse>;
+  dispatchFail2BanApply(
+    request: Fail2BanApplyRequest,
+    presentedToken: string | null
+  ): Promise<JobDispatchResponse>;
   runReconciliationCycle(presentedToken?: string | null): Promise<ReconciliationRunSummary>;
   getOperationsOverview(presentedToken: string | null): Promise<OperationsOverview>;
   getResourceDrift(presentedToken: string | null): Promise<ResourceDriftSummary[]>;
@@ -607,6 +617,8 @@ export type ControlPlaneOperationsMethods = Pick<
   | "dispatchCodeServerUpdate"
   | "dispatchPackageInventoryRefresh"
   | "dispatchPackageInstall"
+  | "dispatchFirewallApply"
+  | "dispatchFail2BanApply"
   | "runReconciliationCycle"
   | "getOperationsOverview"
   | "getResourceDrift"

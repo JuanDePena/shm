@@ -49,6 +49,8 @@ type DashboardShellCopy = DashboardCopyLabels & {
   navBackups: string;
   navBackupPolicies: string;
   navPackages: string;
+  navFirewall: string;
+  navFail2Ban: string;
   navControlPlane: string;
   navDatabases: string;
   navAudit: string;
@@ -114,6 +116,8 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
     mailSection: string;
     backupPoliciesSection: string;
     packagesSection: string;
+    firewallSection: string;
+    fail2banSection: string;
     auditSection: string;
     jobHistorySection: string;
     nodeHealthSection: string;
@@ -318,6 +322,20 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
           active: view === "packages"
         },
         {
+          id: "firewall",
+          label: copy.navFirewall,
+          href: buildDashboardViewUrl("firewall"),
+          badge: String(data.nodeHealth.filter((node) => node.firewall?.active).length),
+          active: view === "firewall"
+        },
+        {
+          id: "fail2ban",
+          label: copy.navFail2Ban,
+          href: buildDashboardViewUrl("fail2ban"),
+          badge: String(data.nodeHealth.reduce((count, node) => count + (node.fail2ban?.jails.length ?? 0), 0)),
+          active: view === "fail2ban"
+        },
+        {
           id: "audit",
           label: copy.navAudit,
           href: buildDashboardViewUrl("audit"),
@@ -383,6 +401,10 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
         return sections.backupPoliciesSection;
       case "packages":
         return sections.packagesSection;
+      case "firewall":
+        return sections.firewallSection;
+      case "fail2ban":
+        return sections.fail2banSection;
       case "audit":
         return sections.auditSection;
       case "jobs":

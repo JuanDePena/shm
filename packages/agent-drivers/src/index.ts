@@ -22,9 +22,11 @@ import { Pool } from "pg";
 import {
   isPackageInstallPayload,
   isPackageInventoryCollectPayload,
+  isFail2BanApplyPayload,
   isContainerReconcilePayload,
   isCodeServerUpdatePayload,
   isDnsSyncPayload,
+  isFirewallApplyPayload,
   isMailSyncPayload,
   isMariadbReconcilePayload,
   isPostgresReconcilePayload,
@@ -34,6 +36,8 @@ import {
   type CodeServerServiceSnapshot,
   type CodeServerUpdatePayload,
   type DnsSyncPayload,
+  type Fail2BanApplyPayload,
+  type FirewallApplyPayload,
   type InstalledPackageSummary,
   type MailSyncPayload,
   type MariadbReconcilePayload,
@@ -51,6 +55,7 @@ import {
   renderDnsZoneFile,
   renderDovecotMailConf,
   renderDovecotPasswd,
+  renderFail2BanSshdJail,
   renderMailFirewalldService,
   renderMailDesiredState,
   renderMtaStsPolicy,
@@ -3543,6 +3548,184 @@ async function executePackageInstallJob(
   }
 }
 
+async function executeFirewallApplyJob(
+  job: AgentJobEnvelope,
+  context: DriverExecutionContext,
+  payload: FirewallApplyPayload
+): Promise<AgentJobResult> {
+  const installPackage = payload.installPackage === true;
+  const enableService = payload.enableService !== false;
+  const applyPublicZone = payload.applyPublicZone !== false;
+  const applyWireGuardZone = payload.applyWireGuardZone === true;
+  const reload = payload.reload !== false;
+  const commands: string[] = [];
+  const appliedRules: string[] = [];
+
+  const runFirewallCommand = async (args: string[]): Promise<void> => {
+    await execFileAsync("firewall-cmd", args, { encoding: "utf8" });
+    commands.push(`firewall-cmd ${args.join(" ")}`);
+  };
+
+  try {
+    if (installPackage) {
+      await execFileAsync("dnf", ["install", "-y", "firewalld"], { encoding: "utf8" });
+      commands.push("dnf install -y firewalld");
+    }
+
+    if (enableService) {
+      await execFileAsync("systemctl", ["enable", "--now", "firewalld"], {
+        encoding: "utf8"
+      });
+      commands.push("systemctl enable --now firewalld");
+    }
+
+    if (applyPublicZone) {
+      const publicServices = ["ssh", "http", "https", "dhcpv6-client"];
+      const publicPorts = ["51820/udp", "3200/tcp", "8080/tcp"];
+
+      for (const service of publicServices) {
+        await runFirewallCommand([
+          "--permanent",
+          "--zone=public",
+          `--add-service=${service}`
+        ]);
+        appliedRules.push(`public service ${service}`);
+      }
+
+      for (const port of publicPorts) {
+        await runFirewallCommand(["--permanent", "--zone=public", `--add-port=${port}`]);
+        appliedRules.push(`public port ${port}`);
+      }
+    }
+
+    if (applyWireGuardZone) {
+      const existingZones = await execFileAsync("firewall-cmd", ["--permanent", "--get-zones"], {
+        encoding: "utf8"
+      });
+      commands.push("firewall-cmd --permanent --get-zones");
+
+      if (!existingZones.stdout.split(/\s+/g).includes("wireguard")) {
+        await runFirewallCommand(["--permanent", "--new-zone=wireguard"]);
+        appliedRules.push("wireguard zone");
+      }
+
+      for (const port of ["5432/tcp", "5433/tcp", "3306/tcp", "3100/tcp", "8081/tcp"]) {
+        await runFirewallCommand(["--permanent", "--zone=wireguard", `--add-port=${port}`]);
+        appliedRules.push(`wireguard port ${port}`);
+      }
+
+      await runFirewallCommand(["--permanent", "--zone=wireguard", "--add-interface=wg0"]);
+      appliedRules.push("wireguard interface wg0");
+    }
+
+    if (reload) {
+      await execFileAsync("firewall-cmd", ["--reload"], { encoding: "utf8" });
+      commands.push("firewall-cmd --reload");
+    }
+
+    return createCompletedResult(
+      job,
+      context,
+      "applied",
+      `Applied firewalld baseline on ${context.nodeId}.`,
+      {
+        installPackage,
+        enableService,
+        applyPublicZone,
+        applyWireGuardZone,
+        reload,
+        appliedRules,
+        commands
+      }
+    );
+  } catch (error) {
+    return createFailedResult(
+      job,
+      context,
+      error instanceof Error ? error.message : String(error),
+      {
+        installPackage,
+        enableService,
+        applyPublicZone,
+        applyWireGuardZone,
+        reload,
+        appliedRules,
+        commands
+      }
+    );
+  }
+}
+
+async function executeFail2BanApplyJob(
+  job: AgentJobEnvelope,
+  context: DriverExecutionContext,
+  payload: Fail2BanApplyPayload
+): Promise<AgentJobResult> {
+  const installPackage = payload.installPackage === true;
+  const applySshdJail = payload.applySshdJail !== false;
+  const enableService = payload.enableService !== false;
+  const restartService = payload.restartService !== false;
+  const changedFiles: string[] = [];
+  const commands: string[] = [];
+
+  try {
+    if (installPackage) {
+      await execFileAsync("dnf", ["install", "-y", "fail2ban"], { encoding: "utf8" });
+      commands.push("dnf install -y fail2ban");
+    }
+
+    if (applySshdJail) {
+      const jailPath = "/etc/fail2ban/jail.d/sshd.local";
+      await writeFileAtomic(jailPath, renderFail2BanSshdJail());
+      changedFiles.push(jailPath);
+    }
+
+    if (enableService) {
+      await execFileAsync("systemctl", ["enable", "--now", "fail2ban"], {
+        encoding: "utf8"
+      });
+      commands.push("systemctl enable --now fail2ban");
+    } else if (restartService) {
+      await execFileAsync("systemctl", ["restart", "fail2ban"], { encoding: "utf8" });
+      commands.push("systemctl restart fail2ban");
+    }
+
+    if (enableService && restartService) {
+      await execFileAsync("systemctl", ["restart", "fail2ban"], { encoding: "utf8" });
+      commands.push("systemctl restart fail2ban");
+    }
+
+    return createCompletedResult(
+      job,
+      context,
+      "applied",
+      `Applied fail2ban baseline on ${context.nodeId}.`,
+      {
+        installPackage,
+        applySshdJail,
+        enableService,
+        restartService,
+        changedFiles,
+        commands
+      }
+    );
+  } catch (error) {
+    return createFailedResult(
+      job,
+      context,
+      error instanceof Error ? error.message : String(error),
+      {
+        installPackage,
+        applySshdJail,
+        enableService,
+        restartService,
+        changedFiles,
+        commands
+      }
+    );
+  }
+}
+
 export async function executeAllowlistedJob(
   job: AgentJobEnvelope,
   context: DriverExecutionContext
@@ -3658,6 +3841,32 @@ export async function executeAllowlistedJob(
     }
 
     return executePackageInstallJob(job, context, job.payload);
+  }
+
+  if (job.kind === "firewall.apply") {
+    if (!isFirewallApplyPayload(job.payload)) {
+      return createCompletedResult(
+        job,
+        context,
+        "failed",
+        "firewall.apply payload is invalid."
+      );
+    }
+
+    return executeFirewallApplyJob(job, context, job.payload);
+  }
+
+  if (job.kind === "fail2ban.apply") {
+    if (!isFail2BanApplyPayload(job.payload)) {
+      return createCompletedResult(
+        job,
+        context,
+        "failed",
+        "fail2ban.apply payload is invalid."
+      );
+    }
+
+    return executeFail2BanApplyJob(job, context, job.payload);
   }
 
   if (job.kind === "mail.sync") {

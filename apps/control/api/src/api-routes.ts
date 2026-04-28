@@ -51,6 +51,8 @@ const rootEndpoints = [
   "POST /v1/backups/runs",
   "POST /v1/packages/refresh",
   "POST /v1/packages/install",
+  "POST /v1/firewall/apply",
+  "POST /v1/fail2ban/apply",
   "GET /v1/control-plane/state",
   "POST /v1/code-server/update",
   "POST /v1/zones/:zone/sync",

@@ -19,6 +19,8 @@ export const dispatchedJobKinds = [
   "code-server.update",
   "package.inventory.collect",
   "package.install",
+  "firewall.apply",
+  "fail2ban.apply",
   "backup.trigger",
   "mail.sync"
 ] as const;
@@ -98,6 +100,21 @@ export interface PackageInstallPayload {
   rpmUrl?: string;
   expectedSha256?: string;
   allowReinstall?: boolean;
+}
+
+export interface FirewallApplyPayload {
+  installPackage?: boolean;
+  enableService?: boolean;
+  applyPublicZone?: boolean;
+  applyWireGuardZone?: boolean;
+  reload?: boolean;
+}
+
+export interface Fail2BanApplyPayload {
+  installPackage?: boolean;
+  applySshdJail?: boolean;
+  enableService?: boolean;
+  restartService?: boolean;
 }
 
 export interface MailSyncMailboxPayload {

@@ -34,6 +34,54 @@ export interface RustDeskServiceSnapshot {
   checkedAt: string;
 }
 
+export interface FirewallPortRuleSnapshot {
+  protocol: string;
+  port: number;
+}
+
+export interface FirewalldZoneSnapshot {
+  zone: string;
+  target?: string;
+  interfaces: string[];
+  sources: string[];
+  services: string[];
+  ports: FirewallPortRuleSnapshot[];
+  richRules: string[];
+  masquerade?: boolean;
+}
+
+export interface HostFirewallSnapshot {
+  serviceName: string;
+  enabled: boolean;
+  active: boolean;
+  state?: string;
+  defaultZone?: string;
+  zones: FirewalldZoneSnapshot[];
+  checkedAt: string;
+}
+
+export interface Fail2BanJailSnapshot {
+  jail: string;
+  currentFailed?: number;
+  totalFailed?: number;
+  currentBanned?: number;
+  totalBanned?: number;
+  bannedIps: string[];
+  actions: string[];
+  bantimeSeconds?: number;
+  findtimeSeconds?: number;
+  maxRetry?: number;
+}
+
+export interface Fail2BanSnapshot {
+  serviceName: string;
+  enabled: boolean;
+  active: boolean;
+  version?: string;
+  jails: Fail2BanJailSnapshot[];
+  checkedAt: string;
+}
+
 export interface MailManagedDomainSnapshot {
   domainName: string;
   mailHost: string;
@@ -172,6 +220,8 @@ export interface NodeRuntimeSnapshot {
   appServices?: AppServiceSnapshot[];
   codeServer?: CodeServerServiceSnapshot;
   rustdesk?: RustDeskServiceSnapshot;
+  firewall?: HostFirewallSnapshot;
+  fail2ban?: Fail2BanSnapshot;
   mail?: MailServiceSnapshot;
 }
 
@@ -201,6 +251,8 @@ export interface NodeHealthSnapshot {
   appServices?: AppServiceSnapshot[];
   codeServer?: CodeServerServiceSnapshot;
   rustdesk?: RustDeskServiceSnapshot;
+  firewall?: HostFirewallSnapshot;
+  fail2ban?: Fail2BanSnapshot;
   mail?: MailServiceSnapshot;
 }
 

@@ -24,6 +24,8 @@ export const navigationCopyByLocale = {
     navMail: "Mail",
     navBackupPolicies: "Backup policies",
     navPackages: "Packages",
+    navFirewall: "Firewall",
+    navFail2Ban: "Fail2Ban",
     navAudit: "Audit",
     tenantWorkspaceDescription: "Tenant scope, related resources and recent platform activity.",
     nodeWorkspaceDescription: "Health, desired topology and operator actions by node.",
@@ -34,6 +36,10 @@ export const navigationCopyByLocale = {
     mailWorkspaceDescription:
       "Mail domains, mailboxes, aliases, quotas and delivery topology for the platform mail stack.",
     backupWorkspaceDescription: "Policy definition, retention and coverage before backup runs.",
+    firewallWorkspaceDescription:
+      "Monitor firewalld posture and apply the SimpleHost baseline without leaving the control plane.",
+    fail2banWorkspaceDescription:
+      "Monitor jails, failed attempts and bans, then apply the managed SSH jail baseline.",
     rustdeskWorkspaceDescription:
       "Operator-facing RustDesk connection details, node runtime status and manual failover guidance."
   },
@@ -59,6 +65,8 @@ export const navigationCopyByLocale = {
     navMail: "Mail",
     navBackupPolicies: "Políticas de backup",
     navPackages: "Paquetes",
+    navFirewall: "Firewall",
+    navFail2Ban: "Fail2Ban",
     navAudit: "Auditoría",
     tenantWorkspaceDescription:
       "Alcance del tenant, recursos relacionados y actividad reciente de plataforma.",
@@ -74,6 +82,10 @@ export const navigationCopyByLocale = {
       "Dominios mail, buzones, aliases, quotas y topología de entrega para el stack de correo de la plataforma.",
     backupWorkspaceDescription:
       "Definición de políticas, retención y cobertura antes de las ejecuciones.",
+    firewallWorkspaceDescription:
+      "Monitorea la postura de firewalld y aplica el baseline SimpleHost sin salir del plano de control.",
+    fail2banWorkspaceDescription:
+      "Monitorea jails, intentos fallidos y bans, y aplica el baseline SSH gestionado.",
     rustdeskWorkspaceDescription:
       "Detalles operator-facing de conexión RustDesk, estado runtime por nodo y guía de failover manual."
   }
