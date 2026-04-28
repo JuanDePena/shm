@@ -71,10 +71,12 @@ function buildFirewallRows(args: {
   copy: WebCopy;
   data: DashboardData;
   locale: WebLocale;
+  selectedNodeId?: string;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
+  renderFocusLink: (label: string, href: string, active: boolean, activeLabel: string) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): DataTableRow[] {
-  const { copy, data, locale, formatDate, renderPill } = args;
+  const { copy, data, locale, selectedNodeId, formatDate, renderFocusLink, renderPill } = args;
 
   return data.nodeHealth.map((node) => {
     const firewall = node.firewall;
@@ -89,10 +91,18 @@ function buildFirewallRows(args: {
     const uniquePorts = uniqueSorted(ports);
     const uniqueServices = uniqueSorted(services);
 
+    const selected = selectedNodeId === node.nodeId;
+
     return {
       selectionKey: node.nodeId,
+      selected,
       cells: [
-        `<span class="mono">${escapeHtml(node.nodeId)}</span>`,
+        renderFocusLink(
+          node.nodeId,
+          buildDashboardViewUrl("firewall", undefined, node.nodeId),
+          selected,
+          copy.selectedStateLabel
+        ),
         escapeHtml(node.hostname),
         firewall
           ? renderStatusPill(renderPill, firewall.active, firewall.enabled)
@@ -162,80 +172,77 @@ function buildFail2BanRows(args: {
 
 function renderFirewallDetailPanel(args: {
   copy: WebCopy;
-  data: DashboardData;
-  locale: WebLocale;
-  formatDate: (value: string | undefined, locale: WebLocale) => string;
+  selectedNode: DashboardData["nodeHealth"][number] | undefined;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): string {
-  const { copy, data, locale, formatDate, renderPill } = args;
-  const nodeDetails =
-    data.nodeHealth.length === 0
-      ? `<p class="empty">${escapeHtml(copy.noNodes)}</p>`
-      : data.nodeHealth
-          .map((node) => {
-            const firewall = node.firewall;
+  const { copy, selectedNode, renderPill } = args;
+  const firewall = selectedNode?.firewall;
+  const nodeDetails = (() => {
+    if (!selectedNode) {
+      return `<p class="empty">${escapeHtml(copy.noNodes)}</p>`;
+    }
 
-            if (!firewall) {
+    if (!firewall) {
+      return `<div class="section-note stack">
+        <div class="section-head">
+          <div>
+            <p><strong>${escapeHtml(selectedNode.nodeId)}</strong></p>
+            <p class="muted">${escapeHtml(selectedNode.hostname)}</p>
+          </div>
+          ${renderPill(copy.notReportedLabel, "muted")}
+        </div>
+      </div>`;
+    }
+
+    const zoneCards =
+      firewall.zones.length === 0
+        ? `<p class="empty">${escapeHtml(copy.none)}</p>`
+        : [...firewall.zones]
+            .sort((left, right) => left.zone.localeCompare(right.zone))
+            .map((zone) => {
+              const ports = uniqueSorted(
+                zone.ports.map((port) => `${port.port}/${port.protocol}`)
+              );
+              const services = uniqueSorted(zone.services);
+
               return `<div class="section-note stack">
                 <div class="section-head">
                   <div>
-                    <p><strong>${escapeHtml(node.nodeId)}</strong></p>
-                    <p class="muted">${escapeHtml(node.hostname)}</p>
+                    <p><strong class="mono">${escapeHtml(zone.zone)}</strong></p>
                   </div>
-                  ${renderPill(copy.notReportedLabel, "muted")}
+                  <div class="toolbar">
+                    ${renderCountPill(ports.length, renderPill)}
+                    ${renderCountPill(services.length, renderPill)}
+                  </div>
                 </div>
+                ${renderActionFacts(
+                  [
+                    {
+                      label: copy.openPortsLabel,
+                      value: `<span class="mono">${escapeHtml(formatList(ports, copy.none))}</span>`
+                    },
+                    {
+                      label: copy.zoneServicesLabel,
+                      value: `<span class="mono">${escapeHtml(formatList(services, copy.none))}</span>`
+                    }
+                  ],
+                  { className: "action-card-facts-wide-labels" }
+                )}
               </div>`;
-            }
+            })
+            .join("");
 
-            const zones = firewall.zones ?? [];
-            const zoneNames = uniqueSorted(zones.map((zone) => zone.zone));
-            const ports = uniqueSorted(
-              zones.flatMap((zone) =>
-                zone.ports.map((port) => `${port.port}/${port.protocol}`)
-              )
-            );
-            const services = uniqueSorted(
-              zones.flatMap((zone) =>
-                zone.services.map((service) => `${zone.zone}:${service}`)
-              )
-            );
-
-            return `<div class="section-note stack">
-              <div class="section-head">
-                <div>
-                  <p><strong>${escapeHtml(node.nodeId)}</strong></p>
-                  <p class="muted">${escapeHtml(node.hostname)}</p>
-                </div>
-                ${renderStatusPill(renderPill, firewall.active, firewall.enabled)}
-              </div>
-              ${renderActionFacts(
-                [
-                  {
-                    label: copy.defaultZoneLabel,
-                    value: escapeHtml(firewall.defaultZone ?? copy.none)
-                  },
-                  {
-                    label: copy.activeZonesLabel,
-                    value: `<span class="mono">${escapeHtml(formatList(zoneNames, copy.none))}</span>`
-                  },
-                  {
-                    label: copy.openPortsLabel,
-                    value: `<span class="mono">${escapeHtml(formatList(ports, copy.none))}</span>`
-                  },
-                  {
-                    label: copy.zoneServicesLabel,
-                    value: `<span class="mono">${escapeHtml(formatList(services, copy.none))}</span>`
-                  },
-                  {
-                    label: copy.generatedAt,
-                    value: escapeHtml(formatDate(firewall.checkedAt, locale))
-                  }
-                ],
-                { className: "action-card-facts-wide-labels" }
-              )}
-            </div>`;
-          })
-          .join("");
+    return `<div class="section-note">
+      <div class="section-head">
+        <div>
+          <p><strong>${escapeHtml(selectedNode.nodeId)}</strong></p>
+          <p class="muted">${escapeHtml(selectedNode.hostname)}</p>
+        </div>
+        ${renderStatusPill(renderPill, firewall.active, firewall.enabled)}
+      </div>
+    </div>
+    <div class="stack">${zoneCards}</div>`;
+  })();
 
   return `<article class="panel detail-shell">
     <div class="section-head">
@@ -253,7 +260,9 @@ export function renderFirewallWorkspace(args: {
   data: DashboardData;
   locale: WebLocale;
   currentPath: string;
+  focus?: string;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
+  renderFocusLink: (label: string, href: string, active: boolean, activeLabel: string) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
   renderSignalStrip: (
     items: Array<{
@@ -263,9 +272,20 @@ export function renderFirewallWorkspace(args: {
     }>
   ) => string;
 }): string {
-  const { copy, data, locale, currentPath, formatDate, renderPill, renderSignalStrip } = args;
+  const {
+    copy,
+    data,
+    locale,
+    currentPath,
+    focus,
+    formatDate,
+    renderFocusLink,
+    renderPill,
+    renderSignalStrip
+  } = args;
   const reportedNodes = data.nodeHealth.filter((node) => node.firewall);
   const activeNodes = reportedNodes.filter((node) => node.firewall?.active);
+  const selectedNode = data.nodeHealth.find((node) => node.nodeId === focus) ?? data.nodeHealth[0];
   const openPortCount = new Set(
     reportedNodes.flatMap((node) =>
       (node.firewall?.zones ?? []).flatMap((zone) =>
@@ -273,12 +293,18 @@ export function renderFirewallWorkspace(args: {
       )
     )
   ).size;
-  const rows = buildFirewallRows({ copy, data, locale, formatDate, renderPill });
-  const detailPanel = renderFirewallDetailPanel({
+  const rows = buildFirewallRows({
     copy,
     data,
     locale,
+    selectedNodeId: selectedNode?.nodeId,
     formatDate,
+    renderFocusLink,
+    renderPill
+  });
+  const detailPanel = renderFirewallDetailPanel({
+    copy,
+    selectedNode,
     renderPill
   });
 
@@ -287,6 +313,7 @@ export function renderFirewallWorkspace(args: {
     heading: copy.firewallNodesTitle,
     description: copy.firewallNodesDescription,
     headingBadgeClassName: "section-badge-lime",
+    restoreSelectionHref: true,
     columns: [
       { label: copy.filterNodeLabel, className: "mono" },
       { label: copy.packageColHostname },

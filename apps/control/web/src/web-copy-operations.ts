@@ -259,7 +259,7 @@ export const operationsCopyByLocale = {
       "Apply the managed public zone and optionally the private WireGuard zone across selected nodes.",
     firewallDetailTitle: "Firewall detail",
     firewallDetailDescription:
-      "Ports, services and zones reported by each node's firewalld runtime.",
+      "Ports and services grouped by zone for the selected node.",
     firewallNodesTitle: "Firewall nodes",
     firewallNodesDescription:
       "Current firewalld runtime posture reported by each managed node.",
@@ -562,7 +562,7 @@ export const operationsCopyByLocale = {
       "Aplica la zona pública gestionada y opcionalmente la zona privada WireGuard en los nodos seleccionados.",
     firewallDetailTitle: "Detalle de firewall",
     firewallDetailDescription:
-      "Puertos, servicios y zonas reportados por el runtime firewalld de cada nodo.",
+      "Puertos y servicios agrupados por zona para el nodo seleccionado.",
     firewallNodesTitle: "Nodos firewall",
     firewallNodesDescription:
       "Postura runtime actual de firewalld reportada por cada nodo gestionado.",
