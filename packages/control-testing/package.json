@@ -1,6 +1,6 @@
 {
   "name": "@simplehost/control-testing",
-  "version": "2604.20.16",
+  "version": "2604.28.18",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
