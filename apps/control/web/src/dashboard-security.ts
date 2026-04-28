@@ -6,11 +6,23 @@ import {
 
 import { type DashboardData } from "./api-client.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
+import { renderActionFacts } from "./panel-renderers.js";
 import { type WebLocale } from "./request.js";
 import { type WebCopy } from "./web-copy.js";
 
 function formatList(values: string[], emptyLabel: string): string {
   return values.length > 0 ? values.join(", ") : emptyLabel;
+}
+
+function uniqueSorted(values: string[]): string[] {
+  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+}
+
+function renderCountPill(
+  count: number,
+  renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string
+): string {
+  return renderPill(String(count), count > 0 ? "success" : "muted");
 }
 
 function renderNodeSelectionFieldset(
@@ -73,6 +85,9 @@ function buildFirewallRows(args: {
     const services = zones.flatMap((zone) =>
       zone.services.map((service) => `${zone.zone}:${service}`)
     );
+    const uniqueZones = uniqueSorted(zones.map((zone) => zone.zone));
+    const uniquePorts = uniqueSorted(ports);
+    const uniqueServices = uniqueSorted(services);
 
     return {
       selectionKey: node.nodeId,
@@ -83,9 +98,9 @@ function buildFirewallRows(args: {
           ? renderStatusPill(renderPill, firewall.active, firewall.enabled)
           : renderPill(copy.notReportedLabel, "muted"),
         escapeHtml(firewall?.defaultZone ?? copy.none),
-        escapeHtml(formatList(zones.map((zone) => zone.zone), copy.none)),
-        `<span class="mono">${escapeHtml(formatList([...new Set(ports)].sort(), copy.none))}</span>`,
-        escapeHtml(formatList([...new Set(services)].sort(), copy.none)),
+        renderCountPill(uniqueZones.length, renderPill),
+        renderCountPill(uniquePorts.length, renderPill),
+        renderCountPill(uniqueServices.length, renderPill),
         escapeHtml(formatDate(firewall?.checkedAt, locale))
       ],
       searchText: [
@@ -145,6 +160,94 @@ function buildFail2BanRows(args: {
   });
 }
 
+function renderFirewallDetailPanel(args: {
+  copy: WebCopy;
+  data: DashboardData;
+  locale: WebLocale;
+  formatDate: (value: string | undefined, locale: WebLocale) => string;
+  renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
+}): string {
+  const { copy, data, locale, formatDate, renderPill } = args;
+  const nodeDetails =
+    data.nodeHealth.length === 0
+      ? `<p class="empty">${escapeHtml(copy.noNodes)}</p>`
+      : data.nodeHealth
+          .map((node) => {
+            const firewall = node.firewall;
+
+            if (!firewall) {
+              return `<div class="section-note stack">
+                <div class="section-head">
+                  <div>
+                    <p><strong>${escapeHtml(node.nodeId)}</strong></p>
+                    <p class="muted">${escapeHtml(node.hostname)}</p>
+                  </div>
+                  ${renderPill(copy.notReportedLabel, "muted")}
+                </div>
+              </div>`;
+            }
+
+            const zones = firewall.zones ?? [];
+            const zoneNames = uniqueSorted(zones.map((zone) => zone.zone));
+            const ports = uniqueSorted(
+              zones.flatMap((zone) =>
+                zone.ports.map((port) => `${port.port}/${port.protocol}`)
+              )
+            );
+            const services = uniqueSorted(
+              zones.flatMap((zone) =>
+                zone.services.map((service) => `${zone.zone}:${service}`)
+              )
+            );
+
+            return `<div class="section-note stack">
+              <div class="section-head">
+                <div>
+                  <p><strong>${escapeHtml(node.nodeId)}</strong></p>
+                  <p class="muted">${escapeHtml(node.hostname)}</p>
+                </div>
+                ${renderStatusPill(renderPill, firewall.active, firewall.enabled)}
+              </div>
+              ${renderActionFacts(
+                [
+                  {
+                    label: copy.defaultZoneLabel,
+                    value: escapeHtml(firewall.defaultZone ?? copy.none)
+                  },
+                  {
+                    label: copy.activeZonesLabel,
+                    value: `<span class="mono">${escapeHtml(formatList(zoneNames, copy.none))}</span>`
+                  },
+                  {
+                    label: copy.openPortsLabel,
+                    value: `<span class="mono">${escapeHtml(formatList(ports, copy.none))}</span>`
+                  },
+                  {
+                    label: copy.zoneServicesLabel,
+                    value: `<span class="mono">${escapeHtml(formatList(services, copy.none))}</span>`
+                  },
+                  {
+                    label: copy.generatedAt,
+                    value: escapeHtml(formatDate(firewall.checkedAt, locale))
+                  }
+                ],
+                { className: "action-card-facts-wide-labels" }
+              )}
+            </div>`;
+          })
+          .join("");
+
+  return `<article class="panel detail-shell">
+    <div class="section-head">
+      <div>
+        <h3>${escapeHtml(copy.firewallDetailTitle)}</h3>
+        <p class="muted section-description">${escapeHtml(copy.firewallDetailDescription)}</p>
+      </div>
+    </div>
+    <div class="stack">${nodeDetails}</div>
+  </article>`;
+}
+
 export function renderFirewallWorkspace(args: {
   copy: WebCopy;
   data: DashboardData;
@@ -171,6 +274,13 @@ export function renderFirewallWorkspace(args: {
     )
   ).size;
   const rows = buildFirewallRows({ copy, data, locale, formatDate, renderPill });
+  const detailPanel = renderFirewallDetailPanel({
+    copy,
+    data,
+    locale,
+    formatDate,
+    renderPill
+  });
 
   const table = renderDataTable({
     id: "section-firewall-table",
@@ -229,7 +339,10 @@ export function renderFirewallWorkspace(args: {
       { label: copy.openPortsLabel, value: String(openPortCount), tone: "muted" }
     ])}
     ${table}
-    ${actionsPanel}
+    <div class="grid-two-desktop">
+      ${detailPanel}
+      ${actionsPanel}
+    </div>
   </section>`;
 }
 

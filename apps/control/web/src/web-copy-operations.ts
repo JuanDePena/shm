@@ -257,6 +257,9 @@ export const operationsCopyByLocale = {
     firewallActionsTitle: "Firewall baseline",
     firewallActionsDescription:
       "Apply the managed public zone and optionally the private WireGuard zone across selected nodes.",
+    firewallDetailTitle: "Firewall detail",
+    firewallDetailDescription:
+      "Ports, services and zones reported by each node's firewalld runtime.",
     firewallNodesTitle: "Firewall nodes",
     firewallNodesDescription:
       "Current firewalld runtime posture reported by each managed node.",
@@ -554,6 +557,9 @@ export const operationsCopyByLocale = {
     firewallActionsTitle: "Baseline de firewall",
     firewallActionsDescription:
       "Aplica la zona pública gestionada y opcionalmente la zona privada WireGuard en los nodos seleccionados.",
+    firewallDetailTitle: "Detalle de firewall",
+    firewallDetailDescription:
+      "Puertos, servicios y zonas reportados por el runtime firewalld de cada nodo.",
     firewallNodesTitle: "Nodos firewall",
     firewallNodesDescription:
       "Postura runtime actual de firewalld reportada por cada nodo gestionado.",

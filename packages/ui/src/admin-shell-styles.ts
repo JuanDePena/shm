@@ -725,9 +725,11 @@ export function renderAdminShellStyleBlock(): string {
 
       .action-card-facts dd {
         margin: 0;
+        min-width: 0;
         color: var(--ink);
         font-weight: 600;
         font-size: 0.9rem;
+        overflow-wrap: anywhere;
       }
 
       .action-card-strong {
