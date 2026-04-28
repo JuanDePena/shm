@@ -578,7 +578,9 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
     data,
     locale,
     currentPath,
+    focus,
     formatDate,
+    renderFocusLink: renderFocusLinkWithPill,
     renderPill,
     renderSignalStrip
   });

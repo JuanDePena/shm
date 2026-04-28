@@ -265,7 +265,7 @@ export const operationsCopyByLocale = {
       "Current firewalld runtime posture reported by each managed node.",
     fail2banDetailTitle: "Fail2Ban detail",
     fail2banDetailDescription:
-      "Jail counters and banned IPs reported by each node's Fail2Ban runtime.",
+      "Banned IPs and counters grouped by jail for the selected node.",
     fail2banActionsTitle: "Fail2Ban baseline",
     fail2banActionsDescription:
       "Apply the managed SSH jail and restart Fail2Ban across selected nodes.",
@@ -568,7 +568,7 @@ export const operationsCopyByLocale = {
       "Postura runtime actual de firewalld reportada por cada nodo gestionado.",
     fail2banDetailTitle: "Detalle de Fail2Ban",
     fail2banDetailDescription:
-      "Contadores de jails e IPs baneadas reportados por el runtime Fail2Ban de cada nodo.",
+      "IPs baneadas y contadores agrupados por jail para el nodo seleccionado.",
     fail2banActionsTitle: "Baseline de Fail2Ban",
     fail2banActionsDescription:
       "Aplica el jail SSH gestionado y reinicia Fail2Ban en los nodos seleccionados.",

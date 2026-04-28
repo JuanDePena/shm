@@ -130,10 +130,12 @@ function buildFail2BanRows(args: {
   copy: WebCopy;
   data: DashboardData;
   locale: WebLocale;
+  selectedNodeId?: string;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
+  renderFocusLink: (label: string, href: string, active: boolean, activeLabel: string) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): DataTableRow[] {
-  const { copy, data, locale, formatDate, renderPill } = args;
+  const { copy, data, locale, selectedNodeId, formatDate, renderFocusLink, renderPill } = args;
 
   return data.nodeHealth.map((node) => {
     const fail2ban = node.fail2ban;
@@ -141,17 +143,25 @@ function buildFail2BanRows(args: {
     const currentFailed = jails.reduce((total, jail) => total + (jail.currentFailed ?? 0), 0);
     const currentBanned = jails.reduce((total, jail) => total + (jail.currentBanned ?? 0), 0);
     const totalBanned = jails.reduce((total, jail) => total + (jail.totalBanned ?? 0), 0);
+    const jailNames = uniqueSorted(jails.map((jail) => jail.jail));
     const bannedIps = uniqueSorted(jails.flatMap((jail) => jail.bannedIps));
+    const selected = selectedNodeId === node.nodeId;
 
     return {
       selectionKey: node.nodeId,
+      selected,
       cells: [
-        `<span class="mono">${escapeHtml(node.nodeId)}</span>`,
+        renderFocusLink(
+          node.nodeId,
+          buildDashboardViewUrl("fail2ban", undefined, node.nodeId),
+          selected,
+          copy.selectedStateLabel
+        ),
         escapeHtml(node.hostname),
         fail2ban
           ? renderStatusPill(renderPill, fail2ban.active, fail2ban.enabled)
           : renderPill(copy.notReportedLabel, "muted"),
-        escapeHtml(formatList(jails.map((jail) => jail.jail), copy.none)),
+        renderCountPill(jailNames.length, renderPill),
         `<span class="mono">${escapeHtml(String(currentFailed))}</span>`,
         `<span class="mono">${escapeHtml(String(currentBanned))}</span>`,
         `<span class="mono">${escapeHtml(String(totalBanned))}</span>`,
@@ -163,7 +173,7 @@ function buildFail2BanRows(args: {
         node.hostname,
         fail2ban?.serviceName ?? "",
         fail2ban?.version ?? "",
-        jails.map((jail) => jail.jail).join(" "),
+        jailNames.join(" "),
         bannedIps.join(" ")
       ].join(" ")
     };
@@ -371,87 +381,78 @@ export function renderFirewallWorkspace(args: {
 
 function renderFail2BanDetailPanel(args: {
   copy: WebCopy;
-  data: DashboardData;
-  locale: WebLocale;
-  formatDate: (value: string | undefined, locale: WebLocale) => string;
+  selectedNode: DashboardData["nodeHealth"][number] | undefined;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): string {
-  const { copy, data, locale, formatDate, renderPill } = args;
-  const nodeDetails =
-    data.nodeHealth.length === 0
-      ? `<p class="empty">${escapeHtml(copy.noNodes)}</p>`
-      : data.nodeHealth
-          .map((node) => {
-            const fail2ban = node.fail2ban;
+  const { copy, selectedNode, renderPill } = args;
+  const fail2ban = selectedNode?.fail2ban;
+  const nodeDetails = (() => {
+    if (!selectedNode) {
+      return `<p class="empty">${escapeHtml(copy.noNodes)}</p>`;
+    }
 
-            if (!fail2ban) {
+    if (!fail2ban) {
+      return `<div class="section-note stack">
+        <div class="section-head">
+          <div>
+            <p><strong>${escapeHtml(selectedNode.nodeId)}</strong></p>
+            <p class="muted">${escapeHtml(selectedNode.hostname)}</p>
+          </div>
+          ${renderPill(copy.notReportedLabel, "muted")}
+        </div>
+      </div>`;
+    }
+
+    const jailCards =
+      fail2ban.jails.length === 0
+        ? `<p class="empty">${escapeHtml(copy.none)}</p>`
+        : [...fail2ban.jails]
+            .sort((left, right) => left.jail.localeCompare(right.jail))
+            .map((jail) => {
+              const bannedIps = uniqueSorted(jail.bannedIps);
+
               return `<div class="section-note stack">
                 <div class="section-head">
                   <div>
-                    <p><strong>${escapeHtml(node.nodeId)}</strong></p>
-                    <p class="muted">${escapeHtml(node.hostname)}</p>
+                    <p><strong class="mono">${escapeHtml(jail.jail)}</strong></p>
                   </div>
-                  ${renderPill(copy.notReportedLabel, "muted")}
                 </div>
+                ${renderActionFacts(
+                  [
+                    {
+                      label: copy.currentFailedLabel,
+                      value: `<span class="mono">${escapeHtml(String(jail.currentFailed ?? 0))}</span>`
+                    },
+                    {
+                      label: copy.currentBannedLabel,
+                      value: `<span class="mono">${escapeHtml(String(jail.currentBanned ?? 0))}</span>`
+                    },
+                    {
+                      label: copy.totalBannedLabel,
+                      value: `<span class="mono">${escapeHtml(String(jail.totalBanned ?? 0))}</span>`
+                    },
+                    {
+                      label: copy.bannedIpsLabel,
+                      value: `<span class="mono">${escapeHtml(formatList(bannedIps, copy.none))}</span>`
+                    }
+                  ],
+                  { className: "action-card-facts-wide-labels" }
+                )}
               </div>`;
-            }
+            })
+            .join("");
 
-            const jails = fail2ban.jails ?? [];
-            const jailNames = uniqueSorted(jails.map((jail) => jail.jail));
-            const bannedIps = uniqueSorted(jails.flatMap((jail) => jail.bannedIps));
-            const currentFailed = jails.reduce(
-              (total, jail) => total + (jail.currentFailed ?? 0),
-              0
-            );
-            const currentBanned = jails.reduce(
-              (total, jail) => total + (jail.currentBanned ?? 0),
-              0
-            );
-            const totalBanned = jails.reduce(
-              (total, jail) => total + (jail.totalBanned ?? 0),
-              0
-            );
-
-            return `<div class="section-note stack">
-              <div class="section-head">
-                <div>
-                  <p><strong>${escapeHtml(node.nodeId)}</strong></p>
-                  <p class="muted">${escapeHtml(node.hostname)}</p>
-                </div>
-                ${renderStatusPill(renderPill, fail2ban.active, fail2ban.enabled)}
-              </div>
-              ${renderActionFacts(
-                [
-                  {
-                    label: copy.jailCountLabel,
-                    value: `<span class="mono">${escapeHtml(formatList(jailNames, copy.none))}</span>`
-                  },
-                  {
-                    label: copy.currentFailedLabel,
-                    value: `<span class="mono">${escapeHtml(String(currentFailed))}</span>`
-                  },
-                  {
-                    label: copy.currentBannedLabel,
-                    value: `<span class="mono">${escapeHtml(String(currentBanned))}</span>`
-                  },
-                  {
-                    label: copy.totalBannedLabel,
-                    value: `<span class="mono">${escapeHtml(String(totalBanned))}</span>`
-                  },
-                  {
-                    label: copy.bannedIpsLabel,
-                    value: `<span class="mono">${escapeHtml(formatList(bannedIps, copy.none))}</span>`
-                  },
-                  {
-                    label: copy.generatedAt,
-                    value: escapeHtml(formatDate(fail2ban.checkedAt, locale))
-                  }
-                ],
-                { className: "action-card-facts-wide-labels" }
-              )}
-            </div>`;
-          })
-          .join("");
+    return `<div class="section-note">
+      <div class="section-head">
+        <div>
+          <p><strong>${escapeHtml(selectedNode.nodeId)}</strong></p>
+          <p class="muted">${escapeHtml(selectedNode.hostname)}</p>
+        </div>
+        ${renderStatusPill(renderPill, fail2ban.active, fail2ban.enabled)}
+      </div>
+    </div>
+    <div class="stack">${jailCards}</div>`;
+  })();
 
   return `<article class="panel detail-shell">
     <div class="section-head">
@@ -469,7 +470,9 @@ export function renderFail2BanWorkspace(args: {
   data: DashboardData;
   locale: WebLocale;
   currentPath: string;
+  focus?: string;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
+  renderFocusLink: (label: string, href: string, active: boolean, activeLabel: string) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
   renderSignalStrip: (
     items: Array<{
@@ -479,18 +482,35 @@ export function renderFail2BanWorkspace(args: {
     }>
   ) => string;
 }): string {
-  const { copy, data, locale, currentPath, formatDate, renderPill, renderSignalStrip } = args;
-  const reportedNodes = data.nodeHealth.filter((node) => node.fail2ban);
-  const activeNodes = reportedNodes.filter((node) => node.fail2ban?.active);
-  const jails = reportedNodes.flatMap((node) => node.fail2ban?.jails ?? []);
-  const currentBanned = jails.reduce((total, jail) => total + (jail.currentBanned ?? 0), 0);
-  const currentFailed = jails.reduce((total, jail) => total + (jail.currentFailed ?? 0), 0);
-  const rows = buildFail2BanRows({ copy, data, locale, formatDate, renderPill });
-  const detailPanel = renderFail2BanDetailPanel({
+  const {
     copy,
     data,
     locale,
+    currentPath,
+    focus,
     formatDate,
+    renderFocusLink,
+    renderPill,
+    renderSignalStrip
+  } = args;
+  const reportedNodes = data.nodeHealth.filter((node) => node.fail2ban);
+  const activeNodes = reportedNodes.filter((node) => node.fail2ban?.active);
+  const selectedNode = data.nodeHealth.find((node) => node.nodeId === focus) ?? data.nodeHealth[0];
+  const jails = reportedNodes.flatMap((node) => node.fail2ban?.jails ?? []);
+  const currentBanned = jails.reduce((total, jail) => total + (jail.currentBanned ?? 0), 0);
+  const currentFailed = jails.reduce((total, jail) => total + (jail.currentFailed ?? 0), 0);
+  const rows = buildFail2BanRows({
+    copy,
+    data,
+    locale,
+    selectedNodeId: selectedNode?.nodeId,
+    formatDate,
+    renderFocusLink,
+    renderPill
+  });
+  const detailPanel = renderFail2BanDetailPanel({
+    copy,
+    selectedNode,
     renderPill
   });
 
@@ -499,6 +519,7 @@ export function renderFail2BanWorkspace(args: {
     heading: copy.fail2banNodesTitle,
     description: copy.fail2banNodesDescription,
     headingBadgeClassName: "section-badge-lime",
+    restoreSelectionHref: true,
     columns: [
       { label: copy.filterNodeLabel, className: "mono" },
       { label: copy.packageColHostname },
