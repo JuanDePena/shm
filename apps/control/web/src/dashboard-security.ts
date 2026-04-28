@@ -210,10 +210,6 @@ function renderFirewallDetailPanel(args: {
                   <div>
                     <p><strong class="mono">${escapeHtml(zone.zone)}</strong></p>
                   </div>
-                  <div class="toolbar">
-                    ${renderCountPill(ports.length, renderPill)}
-                    ${renderCountPill(services.length, renderPill)}
-                  </div>
                 </div>
                 ${renderActionFacts(
                   [
