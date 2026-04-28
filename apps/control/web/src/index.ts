@@ -10,6 +10,10 @@ import { createHttpControlWebApi, type ControlWebApi } from "./api-client.js";
 import { renderLoginPage } from "./auth-pages.js";
 import { createDashboardHandler } from "./dashboard-page-routes.js";
 import {
+  createOverviewMetricsCollector,
+  type OverviewMetricsCollector
+} from "./overview-metrics.js";
+import {
   createRequestHandler,
   createServerRequestListener,
   startControlWebServer,
@@ -37,20 +41,26 @@ export interface ControlWebProcessContext {
 
 export interface ControlWebSurface extends StartControlWebServerArgs {
   context: ControlWebProcessContext;
+  overviewMetrics: OverviewMetricsCollector;
   requestHandler: ReturnType<typeof createRequestHandler>;
   requestListener: ReturnType<typeof createServerRequestListener>;
+  close: () => Promise<void>;
 }
 
 export function createControlWebSurface(
   context: ControlWebProcessContext = createControlProcessContext(),
   api: ControlWebApi = createHttpControlWebApi(context.config)
 ): ControlWebSurface {
+  const overviewMetrics = createOverviewMetricsCollector({
+    config: context.config
+  });
   const serverArgs: StartControlWebServerArgs = {
     api,
     config: context.config,
     handleDashboard: createDashboardHandler({
       api,
       defaultImportPath: context.config.inventory.importPath,
+      overviewMetrics,
       renderLoginPage,
       version: context.config.version
     }),
@@ -60,9 +70,13 @@ export function createControlWebSurface(
 
   return {
     context,
+    overviewMetrics,
     ...serverArgs,
     requestHandler: createRequestHandler(serverArgs),
-    requestListener: createServerRequestListener(serverArgs)
+    requestListener: createServerRequestListener(serverArgs),
+    close: async () => {
+      overviewMetrics.close();
+    }
   };
 }
 
@@ -87,6 +101,7 @@ export function createControlWebRuntime(
     server,
     close: async () => {
       await closeHttpServer(server);
+      await surface.close();
     }
   };
 }

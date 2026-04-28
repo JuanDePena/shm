@@ -20,7 +20,8 @@ Current product assumptions:
 
 Reference used for this palette:
 
-- white background
+- official brand package uploaded under `/srv/containers/apps/gomezrosado/app/public/media/brand`
+- color guide: `GR-Codigo-Colores.jpg` and `GR-Codigo-Colores-Detalle.pdf`
 - warm metallic gold monogram
 - soft neutral gray wordmark
 - restrained, elegant, high-contrast legal identity
@@ -54,15 +55,15 @@ Implications:
 
 ## Core Palette
 
-These are the base brand tones derived from the wallpaper and normalized for web use.
+These are the official brand tones from the uploaded color guide, plus derived UI fills for the static site.
 
 | Token | Hex | Intent |
 | --- | --- | --- |
-| `gold-700` | `#A97A2F` | deep metallic gold, linework, hover depth |
-| `gold-600` | `#BE8E3E` | strong brand gold |
-| `gold-500` | `#D3A64E` | primary gold accent |
-| `gold-400` | `#E3BF74` | soft gold highlight |
-| `amber-300` | `#EBD7A6` | subtle warm fill |
+| `brand-gold-light` | `#E0B86D` | official light gold, primary accent |
+| `brand-gold-deep` | `#B7975F` | official deeper gold, hover depth and lines |
+| `brand-gray` | `#7F7F7E` | official gray wordmark tone |
+| `gold-soft` | `#F0D6A3` | derived highlight for UI gradients |
+| `amber-soft` | `#F1E2C4` | derived subtle warm fill |
 | `brown-700` | `#4C3928` | dark warm brown |
 | `brown-600` | `#6B5137` | secondary accent brown |
 | `stone-900` | `#1E1A17` | near-black warm base |
@@ -75,6 +76,23 @@ These are the base brand tones derived from the wallpaper and normalized for web
 | `stone-100` | `#F5F1EB` | warm light fill |
 | `ivory-50` | `#FCFAF7` | main light canvas |
 | `white` | `#FFFFFF` | elevated light surface |
+
+## Typography
+
+The uploaded editable logo PDF does not expose a clear licensed wordmark font; the
+logo artwork appears to be mostly outlined. The live site therefore uses
+`Montserrat`, self-hosted from `/assets/fonts/montserrat-latin.woff2`, as the
+closest open web family for the wordmark direction.
+
+Usage:
+
+- body, navigation, buttons, headings, and cards: `Montserrat`
+- brand name: uppercase, `600`
+- tagline: uppercase, `400`
+- hero and page headings: `600`
+- body copy: `400`
+- content copy sizing is isolated from the header through `--content-copy-size`
+  and `--content-lede-size`, applied under `main` and content text selectors
 
 ## Light Theme
 
@@ -96,20 +114,21 @@ Recommended light theme variables:
   --text-muted: #70685F;
   --text-subtle: #90887F;
 
-  --brand: #D3A64E;
-  --brand-strong: #BE8E3E;
-  --brand-deep: #A97A2F;
-  --brand-soft: #EBD7A6;
+  --brand: #E0B86D;
+  --brand-strong: #F0D6A3;
+  --brand-deep: #B7975F;
+  --brand-soft: #F1E2C4;
+  --brand-neutral: #7F7F7E;
 
   --accent-brown: #6B5137;
   --accent-brown-deep: #4C3928;
 
-  --link: #A97A2F;
-  --link-hover: #8E6727;
+  --link: #B7975F;
+  --link-hover: #8B7044;
 
-  --button-primary-bg: #D3A64E;
+  --button-primary-bg: #E0B86D;
   --button-primary-text: #1E1A17;
-  --button-primary-hover: #BE8E3E;
+  --button-primary-hover: #B7975F;
 
   --button-secondary-bg: transparent;
   --button-secondary-text: #4A443D;
@@ -138,7 +157,7 @@ Current status note:
 
 - keep the current dark theme direction as the active baseline for now
 - the palette is intentionally darker than the first draft and should stay in this deeper espresso range unless final brand assets later suggest otherwise
-- in dark mode, the `GR` monogram should sit slightly brighter than the surrounding header controls so the brand mark stays legible at a glance
+- in dark mode, the official mark image should sit slightly brighter than the surrounding header controls so the brand mark stays legible at a glance
 
 Recommended dark theme variables:
 
@@ -157,20 +176,21 @@ Recommended dark theme variables:
   --text-muted: #B1A698;
   --text-subtle: #8D8377;
 
-  --brand: #E6BF66;
-  --brand-strong: #F1D58E;
-  --brand-deep: #D4A142;
-  --brand-soft: #544014;
+  --brand: #E0B86D;
+  --brand-strong: #F0D6A3;
+  --brand-deep: #B7975F;
+  --brand-soft: #4B3A1E;
+  --brand-neutral: #C8C5BF;
 
   --accent-brown: #705638;
   --accent-brown-deep: #4C3B2A;
 
-  --link: #F1D58E;
-  --link-hover: #F6E1AB;
+  --link: #F0D6A3;
+  --link-hover: #E0B86D;
 
-  --button-primary-bg: #E6BF66;
+  --button-primary-bg: #E0B86D;
   --button-primary-text: #1A1612;
-  --button-primary-hover: #F1D58E;
+  --button-primary-hover: #F0D6A3;
 
   --button-secondary-bg: transparent;
   --button-secondary-text: #DDD2C4;

@@ -68,6 +68,11 @@ export async function createControlCombinedSurface(
         routeSurface
       }
     }),
-    close: apiSurface.close
+    close: async () => {
+      await Promise.all([
+        apiSurface.close(),
+        webSurface.close()
+      ]);
+    }
   };
 }

@@ -24,10 +24,12 @@ import {
 } from "./request.js";
 import { redirectToLogin, renderLoginError } from "./web-auth-helpers.js";
 import type { WebRouteHandler } from "./web-route-context.js";
+import type { OverviewMetricsCollector } from "./overview-metrics.js";
 
 export function createDashboardHandler(args: {
   api: ControlWebApi;
   defaultImportPath: string;
+  overviewMetrics: OverviewMetricsCollector;
   renderLoginPage: (locale: WebLocale, notice?: PanelNotice) => string;
   version: string;
 }): WebRouteHandler {
@@ -99,6 +101,7 @@ export function createDashboardHandler(args: {
           locale,
           mailCredentialReveal,
           notice: getNoticeFromUrl(url),
+          overviewMetrics: args.overviewMetrics.getSnapshot(),
           version: args.version,
           view
         })

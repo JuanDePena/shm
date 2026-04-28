@@ -14,6 +14,7 @@ import {
   type DashboardView,
   type DesiredStateTabId
 } from "./dashboard-routing.js";
+import type { OverviewMetricsSnapshot } from "./overview-metrics.js";
 import { type WebLocale } from "./request.js";
 
 type DashboardShellCopy = DashboardCopyLabels & {
@@ -26,6 +27,24 @@ type DashboardShellCopy = DashboardCopyLabels & {
   languageLabel: string;
   latestReconciliation: string;
   managedNodes: string;
+  metricsApiService: string;
+  metricsCpuCores: string;
+  metricsCpuLoad: string;
+  metricsCurrentIpv4: string;
+  metricsDirectories: string;
+  metricsFiles: string;
+  metricsHostname: string;
+  metricsLines: string;
+  metricsMemoryFree: string;
+  metricsMemoryTotal: string;
+  metricsSourceCodeTitle: string;
+  metricsSourceSize: string;
+  metricsStorageAvailable: string;
+  metricsStorageTotal: string;
+  metricsSystemTitle: string;
+  metricsUiService: string;
+  metricsUpdatedAt: string;
+  metricsVersion: string;
   navApps: string;
   navBackups: string;
   navBackupPolicies: string;
@@ -77,6 +96,12 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
       tone?: "default" | "success" | "danger" | "muted";
     }>
   ) => string;
+  overviewMetrics: OverviewMetricsSnapshot;
+  renderOverviewMetrics: (
+    overviewMetrics: OverviewMetricsSnapshot,
+    copy: Copy,
+    locale: WebLocale
+  ) => string;
   renderStats: (overview: DashboardData["overview"], copy: Copy, locale: WebLocale) => string;
   sections: {
     desiredStateSection: string;
@@ -114,7 +139,9 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
     bootstrapInventoryPanel,
     topbarUserPanelHtml,
     userToggleIconHtml,
+    overviewMetrics,
     renderSignalStrip,
+    renderOverviewMetrics,
     renderStats,
     sections
   } = args;
@@ -315,20 +342,25 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
         <p class="muted section-description">${escapeHtml(copy.overviewDescription)}</p>
       </div>
     </div>
-    ${renderStats(data.overview, copy, locale)}
-    <div class="stack">
-      <div>
-        <h3>${escapeHtml(copy.operationalSignalsTitle)}</h3>
+    <div class="overview-layout">
+      <div class="overview-main">
+        ${renderStats(data.overview, copy, locale)}
+        <div class="stack">
+          <div>
+            <h3>${escapeHtml(copy.operationalSignalsTitle)}</h3>
+          </div>
+          ${renderSignalStrip([
+            { label: copy.healthyNodes, value: String(healthyNodeCount), tone: healthyNodeCount > 0 ? "success" : "muted" },
+            { label: copy.staleNodes, value: String(staleNodeCount), tone: staleNodeCount > 0 ? "danger" : "success" },
+            { label: copy.driftMissingSecrets, value: String(driftMissingSecretCount), tone: driftMissingSecretCount > 0 ? "danger" : "success" },
+            { label: copy.failedBackups, value: String(backupFailedCount), tone: backupFailedCount > 0 ? "danger" : "success" }
+          ])}
+        </div>
+        ${actionBar}
+        ${bootstrapInventoryPanel}
       </div>
-      ${renderSignalStrip([
-        { label: copy.healthyNodes, value: String(healthyNodeCount), tone: healthyNodeCount > 0 ? "success" : "muted" },
-        { label: copy.staleNodes, value: String(staleNodeCount), tone: staleNodeCount > 0 ? "danger" : "success" },
-        { label: copy.driftMissingSecrets, value: String(driftMissingSecretCount), tone: driftMissingSecretCount > 0 ? "danger" : "success" },
-        { label: copy.failedBackups, value: String(backupFailedCount), tone: backupFailedCount > 0 ? "danger" : "success" }
-      ])}
+      ${renderOverviewMetrics(overviewMetrics, copy, locale)}
     </div>
-    ${actionBar}
-    ${bootstrapInventoryPanel}
   </section>`;
 
   const body = (() => {

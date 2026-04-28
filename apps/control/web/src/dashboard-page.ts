@@ -31,6 +31,7 @@ import {
   readStringPayloadValue,
   renderPill,
   renderSelectOptions,
+  renderOverviewMetrics,
   renderStats
 } from "./dashboard-formatters.js";
 import {
@@ -58,6 +59,7 @@ import { renderDesiredStateSection as renderDesiredStateWorkspace } from "./desi
 import { renderMailSection } from "./mail-section.js";
 import { renderActionFacts, renderDetailGrid, renderSignalStripHtml } from "./panel-renderers.js";
 import { renderRustDeskSection } from "./rustdesk-section.js";
+import type { OverviewMetricsSnapshot } from "./overview-metrics.js";
 import {
   createComparisonDeltaItems,
   createComparisonRow,
@@ -77,6 +79,7 @@ type RenderDashboardArgs = {
   locale: WebLocale;
   mailCredentialReveal?: MailboxCredentialReveal | null;
   notice?: PanelNotice;
+  overviewMetrics: OverviewMetricsSnapshot;
   version: string;
   view: DashboardView;
 };
@@ -203,6 +206,7 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
     locale,
     mailCredentialReveal,
     notice,
+    overviewMetrics,
     version,
     view
   } = args;
@@ -664,7 +668,9 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
     bootstrapInventoryPanel,
     topbarUserPanelHtml,
     userToggleIconHtml: renderUserIconSvg(),
+    overviewMetrics,
     renderSignalStrip,
+    renderOverviewMetrics,
     renderStats,
     sections: {
       desiredStateSection,

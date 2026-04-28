@@ -5,6 +5,7 @@ import {
   type OperationsOverview
 } from "@simplehost/control-contracts";
 
+import type { OverviewMetricsSnapshot } from "./overview-metrics.js";
 import { type WebLocale } from "./request.js";
 import { type SelectOption, type PillTone } from "./web-types.js";
 
@@ -15,6 +16,27 @@ type StatsCopy = {
   resourcesWithDrift: string;
   backupPolicies: string;
   generatedAt: string;
+};
+
+type OverviewMetricsCopy = {
+  metricsApiService: string;
+  metricsCpuCores: string;
+  metricsCpuLoad: string;
+  metricsCurrentIpv4: string;
+  metricsDirectories: string;
+  metricsFiles: string;
+  metricsHostname: string;
+  metricsLines: string;
+  metricsMemoryFree: string;
+  metricsMemoryTotal: string;
+  metricsSourceCodeTitle: string;
+  metricsSourceSize: string;
+  metricsStorageAvailable: string;
+  metricsStorageTotal: string;
+  metricsSystemTitle: string;
+  metricsUiService: string;
+  metricsUpdatedAt: string;
+  metricsVersion: string;
 };
 
 export function formatDate(value: string | undefined, locale: WebLocale): string {
@@ -31,6 +53,24 @@ export function formatDate(value: string | undefined, locale: WebLocale): string
 
 export function formatList(values: string[], emptyValue = "-"): string {
   return values.length > 0 ? values.join(", ") : emptyValue;
+}
+
+export function formatBytes(value: number): string {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let amount = value;
+  let unitIndex = 0;
+
+  while (amount >= 1024 && unitIndex < units.length - 1) {
+    amount /= 1024;
+    unitIndex += 1;
+  }
+
+  const maximumFractionDigits = unitIndex === 0 ? 0 : 2;
+
+  return `${new Intl.NumberFormat("en-US", {
+    maximumFractionDigits,
+    minimumFractionDigits: unitIndex === 0 ? 0 : maximumFractionDigits
+  }).format(amount)} ${units[unitIndex]}`;
 }
 
 export function getInitials(value: string): string {
@@ -130,6 +170,51 @@ export function renderStats<Copy extends StatsCopy>(
   <p class="muted">${escapeHtml(copy.generatedAt)} ${escapeHtml(
     formatDate(overview.generatedAt, locale)
   )}</p>`;
+}
+
+export function renderOverviewMetrics<Copy extends OverviewMetricsCopy>(
+  overviewMetrics: OverviewMetricsSnapshot,
+  copy: Copy,
+  locale: WebLocale
+): string {
+  const numberFormatter = new Intl.NumberFormat(locale === "es" ? "es-DO" : "en-GB");
+  const percentFormatter = new Intl.NumberFormat(locale === "es" ? "es-DO" : "en-GB", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 1
+  });
+  const metric = (label: string, value: string, className = ""): string => `<div class="overview-metric${className ? ` ${className}` : ""}">
+    <span>${escapeHtml(label)}</span>
+    <strong>${escapeHtml(value)}</strong>
+  </div>`;
+
+  return `<aside class="overview-metrics-column" aria-label="${escapeHtml(copy.metricsSystemTitle)}">
+    <article class="overview-metric-panel">
+      <h3>${escapeHtml(copy.metricsSourceCodeTitle)}</h3>
+      <div class="overview-metric-grid">
+        ${metric(copy.metricsLines, numberFormatter.format(overviewMetrics.sourceCode.lineCount))}
+        ${metric(copy.metricsSourceSize, formatBytes(overviewMetrics.sourceCode.sizeBytes))}
+        ${metric(copy.metricsFiles, numberFormatter.format(overviewMetrics.sourceCode.fileCount))}
+        ${metric(copy.metricsDirectories, numberFormatter.format(overviewMetrics.sourceCode.directoryCount))}
+        ${metric(copy.metricsHostname, overviewMetrics.system.hostname)}
+        ${metric(copy.metricsUpdatedAt, formatDate(overviewMetrics.generatedAt, locale))}
+        ${metric(copy.metricsVersion, overviewMetrics.system.version, "overview-metric-wide")}
+      </div>
+    </article>
+    <article class="overview-metric-panel">
+      <h3>${escapeHtml(copy.metricsSystemTitle)}</h3>
+      <div class="overview-metric-grid">
+        ${metric(copy.metricsCpuCores, numberFormatter.format(overviewMetrics.system.cpuCores))}
+        ${metric(copy.metricsCpuLoad, `${percentFormatter.format(overviewMetrics.system.cpuLoadPercent)}%`)}
+        ${metric(copy.metricsMemoryTotal, formatBytes(overviewMetrics.system.memoryTotalBytes))}
+        ${metric(copy.metricsMemoryFree, formatBytes(overviewMetrics.system.memoryFreeBytes))}
+        ${metric(copy.metricsStorageTotal, formatBytes(overviewMetrics.system.storageTotalBytes))}
+        ${metric(copy.metricsStorageAvailable, formatBytes(overviewMetrics.system.storageAvailableBytes))}
+        ${metric(copy.metricsApiService, overviewMetrics.system.apiService)}
+        ${metric(copy.metricsUiService, overviewMetrics.system.uiService)}
+        ${metric(copy.metricsCurrentIpv4, overviewMetrics.system.currentIpv4 ?? "-")}
+      </div>
+    </article>
+  </aside>`;
 }
 
 export function readStringPayloadValue(

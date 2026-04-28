@@ -1021,6 +1021,88 @@ export function renderBaseStyleBlock(): string {
         font-size: var(--font-size-stat-compact);
       }
 
+      .overview-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(23rem, 0.95fr);
+        gap: 0.9rem;
+        align-items: start;
+      }
+
+      .overview-main,
+      .overview-metrics-column {
+        display: grid;
+        gap: 0.9rem;
+        min-width: 0;
+      }
+
+      .overview-metric-panel {
+        overflow: hidden;
+        border: 1px solid rgba(13, 32, 56, 0.1);
+        border-radius: var(--radius-card);
+        background: rgba(255, 255, 255, 0.84);
+      }
+
+      .overview-metric-panel h3 {
+        margin: 0;
+        padding: 0.75rem 0.9rem;
+        border-bottom: 1px solid rgba(13, 32, 56, 0.08);
+        background: rgba(235, 242, 250, 0.78);
+        color: var(--ink);
+        font-size: var(--font-size-heading-sm);
+      }
+
+      .overview-metric-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.58rem;
+        padding: 0.78rem;
+      }
+
+      .overview-metric {
+        display: grid;
+        gap: 0.22rem;
+        min-width: 0;
+        min-height: 3.42rem;
+        align-content: center;
+        padding: 0.56rem 0.64rem;
+        border: 1px solid rgba(13, 32, 56, 0.1);
+        border-radius: var(--radius-card);
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .overview-metric span {
+        color: var(--muted);
+        font-size: var(--font-size-label);
+        font-weight: 650;
+        letter-spacing: 0;
+        line-height: 1.2;
+        text-transform: uppercase;
+      }
+
+      .overview-metric strong {
+        min-width: 0;
+        color: var(--ink);
+        font-size: var(--font-size-stat-compact);
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+      }
+
+      .overview-metric-wide {
+        grid-column: 1 / -1;
+      }
+
+      @media (max-width: 980px) {
+        .overview-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .overview-metric-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
       .table-wrap {
         overflow-x: auto;
         border: 1px solid rgba(13, 32, 56, 0.08);
