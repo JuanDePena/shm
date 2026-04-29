@@ -7,11 +7,16 @@ import {
 import { type DashboardData } from "./api-client.js";
 import { formatBytes } from "./dashboard-formatters.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
+import {
+  isRuntimeRecordSelected,
+  selectRuntimeRecord,
+  type RuntimeSelectionRecord
+} from "./dashboard-runtime-selection.js";
 import { renderActionFacts } from "./panel-renderers.js";
-import { type WebLocale } from "./request.js";
 import { type WebCopy } from "./web-copy.js";
 
 type Filesystem = NonNullable<DashboardData["nodeHealth"][number]["storage"]>["filesystems"][number];
+type FilesystemRecord = RuntimeSelectionRecord<Filesystem>;
 
 function usageTone(percent: number | undefined): "default" | "success" | "danger" | "muted" {
   if (percent === undefined) {
@@ -23,21 +28,25 @@ function usageTone(percent: number | undefined): "default" | "success" | "danger
 
 function buildFilesystemRows(args: {
   copy: WebCopy;
-  data: DashboardData;
+  records: FilesystemRecord[];
+  selectedRecord: FilesystemRecord | undefined;
   renderFocusLink: (label: string, href: string, active: boolean, activeLabel: string) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): DataTableRow[] {
-  const { copy, data, renderFocusLink, renderPill } = args;
+  const { copy, records, selectedRecord, renderFocusLink, renderPill } = args;
 
-  return data.nodeHealth.flatMap((node) => {
-    return (node.storage?.filesystems ?? []).map((filesystem) => ({
-      selectionKey: `${node.nodeId}:${filesystem.mountpoint}`,
-      selected: false,
+  return records.map((record) => {
+    const { node, item: filesystem, key } = record;
+    const selected = isRuntimeRecordSelected(record, selectedRecord);
+
+    return {
+      selectionKey: key,
+      selected,
       cells: [
         renderFocusLink(
           node.nodeId,
-          buildDashboardViewUrl("storage", undefined, node.nodeId),
-          false,
+          buildDashboardViewUrl("storage", undefined, key),
+          selected,
           copy.selectedStateLabel
         ),
         `<span class="mono">${escapeHtml(filesystem.mountpoint)}</span>`,
@@ -59,7 +68,7 @@ function buildFilesystemRows(args: {
         filesystem.mountpoint,
         filesystem.type ?? ""
       ].join(" ")
-    }));
+    };
   });
 }
 
@@ -93,46 +102,17 @@ function renderFilesystemCard(copy: WebCopy, renderPill: (value: string, tone?: 
 
 function renderSelectedNodeStoragePanel(args: {
   copy: WebCopy;
-  selectedNode: DashboardData["nodeHealth"][number] | undefined;
+  selectedRecord: FilesystemRecord | undefined;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): string {
-  const { copy, selectedNode, renderPill } = args;
+  const { copy, selectedRecord, renderPill } = args;
 
-  if (!selectedNode) {
-    return `<article class="panel"><p class="empty">${escapeHtml(copy.noNodes)}</p></article>`;
+  if (!selectedRecord) {
+    return `<article class="panel"><p class="empty">${escapeHtml(copy.noStorage)}</p></article>`;
   }
 
-  const filesystems = selectedNode.storage?.filesystems ?? [];
-  const paths = selectedNode.storage?.paths ?? [];
-  const filesystemCards =
-    filesystems.length === 0
-      ? `<p class="empty">${escapeHtml(copy.noStorage)}</p>`
-      : filesystems.map((filesystem) => renderFilesystemCard(copy, renderPill, filesystem)).join("");
-  const pathRows =
-    paths.length === 0
-      ? `<p class="empty">${escapeHtml(copy.noStorage)}</p>`
-      : `<div class="grid grid-two">
-          ${paths
-            .map(
-              (entry) => `<article class="panel panel-nested detail-shell">
-                <h3>${escapeHtml(entry.path)}</h3>
-                ${renderActionFacts(
-                  [
-                    {
-                      label: copy.storageUsedLabel,
-                      value: escapeHtml(entry.usedBytes === undefined ? copy.none : formatBytes(entry.usedBytes))
-                    },
-                    {
-                      label: copy.storageMountLabel,
-                      value: `<span class="mono">${escapeHtml(entry.mountpoint ?? copy.none)}</span>`
-                    }
-                  ],
-                  { className: "action-card-facts-wide-labels" }
-                )}
-              </article>`
-            )
-            .join("")}
-        </div>`;
+  const { node: selectedNode, item: filesystem } = selectedRecord;
+  const filesystemCard = renderFilesystemCard(copy, renderPill, filesystem);
 
   return `<article class="panel detail-shell">
     <div class="section-head">
@@ -144,16 +124,7 @@ function renderSelectedNodeStoragePanel(args: {
         buildDashboardViewUrl("node-health", undefined, selectedNode.nodeId)
       )}">${escapeHtml(copy.openNodeHealth)}</a>
     </div>
-    <div class="stack">${filesystemCards}</div>
-    <article class="panel panel-nested detail-shell">
-      <div class="section-head">
-        <div>
-          <h3>${escapeHtml(copy.storagePathsTitle)}</h3>
-          <p class="muted section-description">${escapeHtml(copy.storagePathsDescription)}</p>
-        </div>
-      </div>
-      ${pathRows}
-    </article>
+    <div class="stack">${filesystemCard}</div>
   </article>`;
 }
 
@@ -172,7 +143,14 @@ export function renderStorageWorkspace(args: {
   ) => string;
 }): string {
   const { copy, data, focus, renderFocusLink, renderPill, renderSignalStrip } = args;
-  const selectedNode = data.nodeHealth.find((node) => node.nodeId === focus) ?? data.nodeHealth[0];
+  const filesystemRecords = data.nodeHealth.flatMap((node) =>
+    (node.storage?.filesystems ?? []).map((filesystem) => ({
+      node,
+      item: filesystem,
+      key: `${node.nodeId}:${filesystem.mountpoint}`
+    }))
+  );
+  const selectedFilesystem = selectRuntimeRecord(filesystemRecords, focus);
   const filesystems = data.nodeHealth.flatMap((node) => node.storage?.filesystems ?? []);
   const pathCount = data.nodeHealth.reduce((count, node) => count + (node.storage?.paths.length ?? 0), 0);
   const warningFilesystems = filesystems.filter(
@@ -181,7 +159,8 @@ export function renderStorageWorkspace(args: {
   );
   const rows = buildFilesystemRows({
     copy,
-    data,
+    records: filesystemRecords,
+    selectedRecord: selectedFilesystem,
     renderFocusLink,
     renderPill
   });
@@ -220,7 +199,7 @@ export function renderStorageWorkspace(args: {
     ${table}
     ${renderSelectedNodeStoragePanel({
       copy,
-      selectedNode,
+      selectedRecord: selectedFilesystem,
       renderPill
     })}
   </section>`;

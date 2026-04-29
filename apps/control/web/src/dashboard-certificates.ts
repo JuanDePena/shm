@@ -6,11 +6,17 @@ import {
 
 import { type DashboardData } from "./api-client.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
+import {
+  isRuntimeRecordSelected,
+  selectRuntimeRecord,
+  type RuntimeSelectionRecord
+} from "./dashboard-runtime-selection.js";
 import { renderActionFacts } from "./panel-renderers.js";
 import { type WebLocale } from "./request.js";
 import { type WebCopy } from "./web-copy.js";
 
 type Certificate = NonNullable<DashboardData["nodeHealth"][number]["tls"]>["certificates"][number];
+type CertificateRecord = RuntimeSelectionRecord<Certificate>;
 
 function daysUntil(value: string | undefined): number | undefined {
   if (!value) {
@@ -33,26 +39,28 @@ function certificateTone(days: number | undefined): "default" | "success" | "dan
 
 function buildCertificateRows(args: {
   copy: WebCopy;
-  data: DashboardData;
+  records: CertificateRecord[];
+  selectedRecord: CertificateRecord | undefined;
   locale: WebLocale;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderFocusLink: (label: string, href: string, active: boolean, activeLabel: string) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): DataTableRow[] {
-  const { copy, data, locale, formatDate, renderFocusLink, renderPill } = args;
+  const { copy, records, selectedRecord, locale, formatDate, renderFocusLink, renderPill } = args;
 
-  return data.nodeHealth.flatMap((node) => {
-    return (node.tls?.certificates ?? []).map((certificate) => {
+  return records.map((record) => {
+    const { node, item: certificate, key } = record;
+    const selected = isRuntimeRecordSelected(record, selectedRecord);
       const days = daysUntil(certificate.notAfter);
 
       return {
-        selectionKey: `${node.nodeId}:${certificate.name}`,
-        selected: false,
+        selectionKey: key,
+        selected,
         cells: [
           renderFocusLink(
             node.nodeId,
-            buildDashboardViewUrl("certificates", undefined, node.nodeId),
-            false,
+            buildDashboardViewUrl("certificates", undefined, key),
+            selected,
             copy.selectedStateLabel
           ),
           `<span class="mono">${escapeHtml(certificate.name)}</span>`,
@@ -71,63 +79,54 @@ function buildCertificateRows(args: {
           certificate.path
         ].join(" ")
       };
-    });
   });
 }
 
-function renderSelectedNodeCertificatesPanel(args: {
+function renderSelectedCertificatePanel(args: {
   copy: WebCopy;
   locale: WebLocale;
-  selectedNode: DashboardData["nodeHealth"][number] | undefined;
+  selectedRecord: CertificateRecord | undefined;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): string {
-  const { copy, locale, selectedNode, formatDate, renderPill } = args;
+  const { copy, locale, selectedRecord, formatDate, renderPill } = args;
 
-  if (!selectedNode) {
-    return `<article class="panel"><p class="empty">${escapeHtml(copy.noNodes)}</p></article>`;
+  if (!selectedRecord) {
+    return `<article class="panel"><p class="empty">${escapeHtml(copy.noCertificates)}</p></article>`;
   }
 
-  const certificates = selectedNode.tls?.certificates ?? [];
-  const cards =
-    certificates.length === 0
-      ? `<p class="empty">${escapeHtml(copy.noCertificates)}</p>`
-      : certificates
-          .map((certificate) => {
-            const days = daysUntil(certificate.notAfter);
-
-            return `<article class="panel panel-nested detail-shell">
-              <div class="section-head">
-                <div>
-                  <h3>${escapeHtml(certificate.name)}</h3>
-                  <p class="muted section-description">${escapeHtml(certificate.path)}</p>
-                </div>
-                ${renderPill(days === undefined ? copy.none : `${days}d`, certificateTone(days))}
-              </div>
-              ${renderActionFacts(
-                [
-                  {
-                    label: copy.certificateDnsNamesLabel,
-                    value: escapeHtml(certificate.dnsNames.join(", ") || copy.none)
-                  },
-                  {
-                    label: copy.certificateExpiresLabel,
-                    value: escapeHtml(formatDate(certificate.notAfter, locale))
-                  },
-                  {
-                    label: copy.certificateIssuerLabel,
-                    value: escapeHtml(certificate.issuer ?? copy.none)
-                  },
-                  {
-                    label: copy.certificateFingerprintLabel,
-                    value: `<span class="mono">${escapeHtml(certificate.fingerprintSha256 ?? copy.none)}</span>`
-                  }
-                ],
-                { className: "action-card-facts-wide-labels" }
-              )}
-            </article>`;
-          })
-          .join("");
+  const { node: selectedNode, item: certificate } = selectedRecord;
+  const days = daysUntil(certificate.notAfter);
+  const card = `<article class="panel panel-nested detail-shell">
+    <div class="section-head">
+      <div>
+        <h3>${escapeHtml(certificate.name)}</h3>
+        <p class="muted section-description">${escapeHtml(certificate.path)}</p>
+      </div>
+      ${renderPill(days === undefined ? copy.none : `${days}d`, certificateTone(days))}
+    </div>
+    ${renderActionFacts(
+      [
+        {
+          label: copy.certificateDnsNamesLabel,
+          value: escapeHtml(certificate.dnsNames.join(", ") || copy.none)
+        },
+        {
+          label: copy.certificateExpiresLabel,
+          value: escapeHtml(formatDate(certificate.notAfter, locale))
+        },
+        {
+          label: copy.certificateIssuerLabel,
+          value: escapeHtml(certificate.issuer ?? copy.none)
+        },
+        {
+          label: copy.certificateFingerprintLabel,
+          value: `<span class="mono">${escapeHtml(certificate.fingerprintSha256 ?? copy.none)}</span>`
+        }
+      ],
+      { className: "action-card-facts-wide-labels" }
+    )}
+  </article>`;
 
   return `<article class="panel detail-shell">
     <div class="section-head">
@@ -139,7 +138,7 @@ function renderSelectedNodeCertificatesPanel(args: {
         buildDashboardViewUrl("node-health", undefined, selectedNode.nodeId)
       )}">${escapeHtml(copy.openNodeHealth)}</a>
     </div>
-    <div class="stack">${cards}</div>
+    <div class="stack">${card}</div>
   </article>`;
 }
 
@@ -169,7 +168,14 @@ export function renderCertificatesWorkspace(args: {
     renderPill,
     renderSignalStrip
   } = args;
-  const selectedNode = data.nodeHealth.find((node) => node.nodeId === focus) ?? data.nodeHealth[0];
+  const certificateRecords = data.nodeHealth.flatMap((node) =>
+    (node.tls?.certificates ?? []).map((certificate) => ({
+      node,
+      item: certificate,
+      key: `${node.nodeId}:${certificate.name}`
+    }))
+  );
+  const selectedCertificate = selectRuntimeRecord(certificateRecords, focus);
   const certificates = data.nodeHealth.flatMap((node) => node.tls?.certificates ?? []);
   const expiringCount = certificates.filter((certificate) => {
     const days = daysUntil(certificate.notAfter);
@@ -177,7 +183,8 @@ export function renderCertificatesWorkspace(args: {
   }).length;
   const rows = buildCertificateRows({
     copy,
-    data,
+    records: certificateRecords,
+    selectedRecord: selectedCertificate,
     locale,
     formatDate,
     renderFocusLink,
@@ -215,10 +222,10 @@ export function renderCertificatesWorkspace(args: {
       { label: copy.certificatesExpiringLabel, value: String(expiringCount), tone: expiringCount > 0 ? "danger" : "success" }
     ])}
     ${table}
-    ${renderSelectedNodeCertificatesPanel({
+    ${renderSelectedCertificatePanel({
       copy,
       locale,
-      selectedNode,
+      selectedRecord: selectedCertificate,
       formatDate,
       renderPill
     })}

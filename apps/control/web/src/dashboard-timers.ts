@@ -6,11 +6,17 @@ import {
 
 import { type DashboardData } from "./api-client.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
+import {
+  isRuntimeRecordSelected,
+  selectRuntimeRecord,
+  type RuntimeSelectionRecord
+} from "./dashboard-runtime-selection.js";
 import { renderActionFacts } from "./panel-renderers.js";
 import { type WebLocale } from "./request.js";
 import { type WebCopy } from "./web-copy.js";
 
 type SystemTimer = NonNullable<DashboardData["nodeHealth"][number]["timers"]>["timers"][number];
+type TimerRecord = RuntimeSelectionRecord<SystemTimer>;
 
 function timerTone(timer: SystemTimer): "default" | "success" | "danger" | "muted" {
   if (!timer.nextElapse && !timer.left) {
@@ -22,19 +28,23 @@ function timerTone(timer: SystemTimer): "default" | "success" | "danger" | "mute
 
 function buildTimerRows(args: {
   copy: WebCopy;
-  data: DashboardData;
+  records: TimerRecord[];
+  selectedRecord: TimerRecord | undefined;
   locale: WebLocale;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): DataTableRow[] {
-  const { copy, data, locale, formatDate, renderPill } = args;
+  const { copy, records, selectedRecord, locale, formatDate, renderPill } = args;
 
-  return data.nodeHealth.flatMap((node) =>
-    (node.timers?.timers ?? []).map((timer) => ({
-      selectionKey: `${node.nodeId}:${timer.timerName}`,
-      selected: false,
+  return records.map((record) => {
+    const { node, item: timer, key } = record;
+    const selected = isRuntimeRecordSelected(record, selectedRecord);
+
+    return {
+      selectionKey: key,
+      selected,
       cells: [
-        `<a href="${escapeHtml(buildDashboardViewUrl("timers", undefined, node.nodeId))}" class="mono detail-link">${escapeHtml(node.nodeId)}</a>`,
+        `<a href="${escapeHtml(buildDashboardViewUrl("timers", undefined, key))}" class="mono detail-link">${escapeHtml(node.nodeId)}</a>${selected ? ` ${renderPill(copy.selectedStateLabel, "success")}` : ""}`,
         escapeHtml(node.hostname),
         `<span class="mono">${escapeHtml(timer.timerName)}</span>`,
         escapeHtml(timer.activates ?? copy.none),
@@ -50,49 +60,41 @@ function buildTimerRows(args: {
         timer.left ?? "",
         timer.passed ?? ""
       ].join(" ")
-    }))
-  );
+    };
+  });
 }
 
 function renderSelectedNodeTimersPanel(args: {
   copy: WebCopy;
   locale: WebLocale;
-  selectedNode: DashboardData["nodeHealth"][number] | undefined;
+  selectedRecord: TimerRecord | undefined;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): string {
-  const { copy, locale, selectedNode, formatDate, renderPill } = args;
+  const { copy, locale, selectedRecord, formatDate, renderPill } = args;
 
-  if (!selectedNode) {
-    return `<article class="panel"><p class="empty">${escapeHtml(copy.noNodes)}</p></article>`;
+  if (!selectedRecord) {
+    return `<article class="panel"><p class="empty">${escapeHtml(copy.noTimers)}</p></article>`;
   }
 
-  const timers = selectedNode.timers?.timers ?? [];
-  const cards =
-    timers.length === 0
-      ? `<p class="empty">${escapeHtml(copy.noTimers)}</p>`
-      : timers
-          .slice(0, 24)
-          .map(
-            (timer) => `<article class="panel panel-nested detail-shell">
-              <div class="section-head">
-                <div>
-                  <h3>${escapeHtml(timer.timerName)}</h3>
-                  <p class="muted section-description">${escapeHtml(timer.activates ?? copy.none)}</p>
-                </div>
-                ${renderPill(timer.left ?? copy.none, timerTone(timer))}
-              </div>
-              ${renderActionFacts(
-                [
-                  { label: copy.timerNextLabel, value: escapeHtml(formatDate(timer.nextElapse, locale)) },
-                  { label: copy.timerLastLabel, value: escapeHtml(formatDate(timer.lastTrigger, locale)) },
-                  { label: copy.timerPassedLabel, value: escapeHtml(timer.passed ?? copy.none) }
-                ],
-                { className: "action-card-facts-wide-labels" }
-              )}
-            </article>`
-          )
-          .join("");
+  const { node: selectedNode, item: timer } = selectedRecord;
+  const card = `<article class="panel panel-nested detail-shell">
+    <div class="section-head">
+      <div>
+        <h3>${escapeHtml(timer.timerName)}</h3>
+        <p class="muted section-description">${escapeHtml(timer.activates ?? copy.none)}</p>
+      </div>
+      ${renderPill(timer.left ?? copy.none, timerTone(timer))}
+    </div>
+    ${renderActionFacts(
+      [
+        { label: copy.timerNextLabel, value: escapeHtml(formatDate(timer.nextElapse, locale)) },
+        { label: copy.timerLastLabel, value: escapeHtml(formatDate(timer.lastTrigger, locale)) },
+        { label: copy.timerPassedLabel, value: escapeHtml(timer.passed ?? copy.none) }
+      ],
+      { className: "action-card-facts-wide-labels" }
+    )}
+  </article>`;
 
   return `<article class="panel detail-shell">
     <div class="section-head">
@@ -106,12 +108,12 @@ function renderSelectedNodeTimersPanel(args: {
     </div>
     ${renderActionFacts(
       [
-        { label: copy.timersInventoryTitle, value: escapeHtml(String(timers.length)) },
+        { label: copy.timersInventoryTitle, value: escapeHtml("1") },
         { label: copy.generatedAt, value: escapeHtml(formatDate(selectedNode.timers?.checkedAt, locale)) }
       ],
       { className: "action-card-facts-wide-labels" }
     )}
-    <div class="stack">${cards}</div>
+    <div class="stack">${card}</div>
   </article>`;
 }
 
@@ -131,11 +133,25 @@ export function renderTimersWorkspace(args: {
   ) => string;
 }): string {
   const { copy, data, locale, focus, formatDate, renderPill, renderSignalStrip } = args;
-  const selectedNode = data.nodeHealth.find((node) => node.nodeId === focus) ?? data.nodeHealth[0];
+  const timerRecords = data.nodeHealth.flatMap((node) =>
+    (node.timers?.timers ?? []).map((timer) => ({
+      node,
+      item: timer,
+      key: `${node.nodeId}:${timer.timerName}`
+    }))
+  );
+  const selectedTimer = selectRuntimeRecord(timerRecords, focus);
   const timers = data.nodeHealth.flatMap((node) => node.timers?.timers ?? []);
   const scheduledCount = timers.filter((timer) => timer.nextElapse || timer.left).length;
   const serviceCount = new Set(timers.map((timer) => timer.activates).filter(Boolean)).size;
-  const rows = buildTimerRows({ copy, data, locale, formatDate, renderPill });
+  const rows = buildTimerRows({
+    copy,
+    records: timerRecords,
+    selectedRecord: selectedTimer,
+    locale,
+    formatDate,
+    renderPill
+  });
 
   const table = renderDataTable({
     id: "section-timers-table",
@@ -172,7 +188,7 @@ export function renderTimersWorkspace(args: {
     ${renderSelectedNodeTimersPanel({
       copy,
       locale,
-      selectedNode,
+      selectedRecord: selectedTimer,
       formatDate,
       renderPill
     })}

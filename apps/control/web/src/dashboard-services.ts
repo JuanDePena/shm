@@ -6,11 +6,17 @@ import {
 
 import { type DashboardData } from "./api-client.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
+import {
+  isRuntimeRecordSelected,
+  selectRuntimeRecord,
+  type RuntimeSelectionRecord
+} from "./dashboard-runtime-selection.js";
 import { renderActionFacts } from "./panel-renderers.js";
 import { type WebLocale } from "./request.js";
 import { type WebCopy } from "./web-copy.js";
 
 type ServiceUnit = NonNullable<DashboardData["nodeHealth"][number]["services"]>["units"][number];
+type ServiceRecord = RuntimeSelectionRecord<ServiceUnit>;
 
 function serviceTone(
   unit: ServiceUnit | undefined
@@ -40,25 +46,27 @@ function serviceEnabledLabel(unit: ServiceUnit | undefined, copy: WebCopy): stri
 
 function buildServiceRows(args: {
   copy: WebCopy;
-  data: DashboardData;
+  records: ServiceRecord[];
+  selectedRecord: ServiceRecord | undefined;
   locale: WebLocale;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderFocusLink: (label: string, href: string, active: boolean, activeLabel: string) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): DataTableRow[] {
-  const { copy, data, locale, formatDate, renderFocusLink, renderPill } = args;
+  const { copy, records, selectedRecord, locale, formatDate, renderFocusLink, renderPill } = args;
 
-  return data.nodeHealth.flatMap((node) => {
-    const services = node.services?.units ?? [];
+  return records.map((record) => {
+    const { node, item: unit, key } = record;
+    const selected = isRuntimeRecordSelected(record, selectedRecord);
 
-    return services.map((unit) => ({
-      selectionKey: `${node.nodeId}:${unit.serviceName}`,
-      selected: false,
+    return {
+      selectionKey: key,
+      selected,
       cells: [
         renderFocusLink(
           node.nodeId,
-          buildDashboardViewUrl("services", undefined, node.nodeId),
-          false,
+          buildDashboardViewUrl("services", undefined, key),
+          selected,
           copy.selectedStateLabel
         ),
         escapeHtml(node.hostname),
@@ -80,57 +88,50 @@ function buildServiceRows(args: {
         unit.subState ?? "",
         unit.unitFileState ?? ""
       ].join(" ")
-    }));
+    };
   });
 }
 
-function renderSelectedNodeServicesPanel(args: {
+function renderSelectedServicePanel(args: {
   copy: WebCopy;
   locale: WebLocale;
-  selectedNode: DashboardData["nodeHealth"][number] | undefined;
+  selectedRecord: ServiceRecord | undefined;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): string {
-  const { copy, locale, selectedNode, formatDate, renderPill } = args;
+  const { copy, locale, selectedRecord, formatDate, renderPill } = args;
 
-  if (!selectedNode) {
-    return `<article class="panel"><p class="empty">${escapeHtml(copy.noNodes)}</p></article>`;
+  if (!selectedRecord) {
+    return `<article class="panel"><p class="empty">${escapeHtml(copy.noServices)}</p></article>`;
   }
 
-  const units = selectedNode.services?.units ?? [];
-  const serviceCards =
-    units.length === 0
-      ? `<p class="empty">${escapeHtml(copy.notReportedLabel)}</p>`
-      : units
-          .map(
-            (unit) => `<article class="panel panel-nested detail-shell">
-              <div class="section-head">
-                <div>
-                  <h3>${escapeHtml(unit.serviceName)}</h3>
-                  <p class="muted section-description">${escapeHtml(unit.description ?? copy.none)}</p>
-                </div>
-                ${renderPill(serviceStateLabel(unit, copy), serviceTone(unit))}
-              </div>
-              ${renderActionFacts(
-                [
-                  { label: copy.enabledStateLabel, value: escapeHtml(serviceEnabledLabel(unit, copy)) },
-                  { label: copy.loadStateLabel, value: escapeHtml(unit.loadState ?? copy.none) },
-                  { label: copy.mainPidLabel, value: escapeHtml(String(unit.mainPid ?? copy.none)) },
-                  { label: copy.restartCountLabel, value: escapeHtml(String(unit.restartCount ?? 0)) },
-                  {
-                    label: copy.activeSinceLabel,
-                    value: escapeHtml(formatDate(unit.activeEnterTimestamp, locale))
-                  },
-                  {
-                    label: copy.unitPathLabel,
-                    value: `<span class="mono">${escapeHtml(unit.fragmentPath ?? copy.none)}</span>`
-                  }
-                ],
-                { className: "action-card-facts-wide-labels" }
-              )}
-            </article>`
-          )
-          .join("");
+  const { node: selectedNode, item: unit } = selectedRecord;
+  const serviceCard = `<article class="panel panel-nested detail-shell">
+    <div class="section-head">
+      <div>
+        <h3>${escapeHtml(unit.serviceName)}</h3>
+        <p class="muted section-description">${escapeHtml(unit.description ?? copy.none)}</p>
+      </div>
+      ${renderPill(serviceStateLabel(unit, copy), serviceTone(unit))}
+    </div>
+    ${renderActionFacts(
+      [
+        { label: copy.enabledStateLabel, value: escapeHtml(serviceEnabledLabel(unit, copy)) },
+        { label: copy.loadStateLabel, value: escapeHtml(unit.loadState ?? copy.none) },
+        { label: copy.mainPidLabel, value: escapeHtml(String(unit.mainPid ?? copy.none)) },
+        { label: copy.restartCountLabel, value: escapeHtml(String(unit.restartCount ?? 0)) },
+        {
+          label: copy.activeSinceLabel,
+          value: escapeHtml(formatDate(unit.activeEnterTimestamp, locale))
+        },
+        {
+          label: copy.unitPathLabel,
+          value: `<span class="mono">${escapeHtml(unit.fragmentPath ?? copy.none)}</span>`
+        }
+      ],
+      { className: "action-card-facts-wide-labels" }
+    )}
+  </article>`;
 
   return `<article class="panel detail-shell">
     <div class="section-head">
@@ -142,7 +143,7 @@ function renderSelectedNodeServicesPanel(args: {
         buildDashboardViewUrl("node-health", undefined, selectedNode.nodeId)
       )}">${escapeHtml(copy.openNodeHealth)}</a>
     </div>
-    <div class="stack">${serviceCards}</div>
+    <div class="stack">${serviceCard}</div>
   </article>`;
 }
 
@@ -172,7 +173,14 @@ export function renderServicesWorkspace(args: {
     renderPill,
     renderSignalStrip
   } = args;
-  const selectedNode = data.nodeHealth.find((node) => node.nodeId === focus) ?? data.nodeHealth[0];
+  const serviceRecords = data.nodeHealth.flatMap((node) =>
+    (node.services?.units ?? []).map((unit) => ({
+      node,
+      item: unit,
+      key: `${node.nodeId}:${unit.serviceName}`
+    }))
+  );
+  const selectedService = selectRuntimeRecord(serviceRecords, focus);
   const serviceUnits = data.nodeHealth.flatMap((node) => node.services?.units ?? []);
   const activeCount = serviceUnits.filter((unit) => unit.activeState === "active").length;
   const failedCount = serviceUnits.filter((unit) => unit.activeState === "failed").length;
@@ -181,7 +189,8 @@ export function renderServicesWorkspace(args: {
   ).length;
   const rows = buildServiceRows({
     copy,
-    data,
+    records: serviceRecords,
+    selectedRecord: selectedService,
     locale,
     formatDate,
     renderFocusLink,
@@ -220,10 +229,10 @@ export function renderServicesWorkspace(args: {
       { label: copy.failedServicesLabel, value: String(failedCount), tone: failedCount > 0 ? "danger" : "success" }
     ])}
     ${table}
-    ${renderSelectedNodeServicesPanel({
+    ${renderSelectedServicePanel({
       copy,
       locale,
-      selectedNode,
+      selectedRecord: selectedService,
       formatDate,
       renderPill
     })}

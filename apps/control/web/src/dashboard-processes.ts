@@ -7,11 +7,17 @@ import {
 import { type DashboardData } from "./api-client.js";
 import { formatBytes } from "./dashboard-formatters.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
+import {
+  isRuntimeRecordSelected,
+  selectRuntimeRecord,
+  type RuntimeSelectionRecord
+} from "./dashboard-runtime-selection.js";
 import { renderActionFacts } from "./panel-renderers.js";
 import { type WebLocale } from "./request.js";
 import { type WebCopy } from "./web-copy.js";
 
 type ProcessEntry = NonNullable<DashboardData["nodeHealth"][number]["processes"]>["processes"][number];
+type ProcessRecord = RuntimeSelectionRecord<ProcessEntry>;
 
 function formatPercent(value: number | undefined, copy: WebCopy): string {
   return value === undefined ? copy.none : `${value.toFixed(1)}%`;
@@ -39,20 +45,24 @@ function formatDuration(seconds: number | undefined, copy: WebCopy): string {
 
 function buildProcessRows(args: {
   copy: WebCopy;
-  data: DashboardData;
+  records: ProcessRecord[];
+  selectedRecord: ProcessRecord | undefined;
   renderFocusLink: (label: string, href: string, active: boolean, activeLabel: string) => string;
 }): DataTableRow[] {
-  const { copy, data, renderFocusLink } = args;
+  const { copy, records, selectedRecord, renderFocusLink } = args;
 
-  return data.nodeHealth.flatMap((node) => {
-    return (node.processes?.processes ?? []).map((process) => ({
-      selectionKey: `${node.nodeId}:${process.pid}:${process.command}`,
-      selected: false,
+  return records.map((record) => {
+    const { node, item: process, key } = record;
+    const selected = isRuntimeRecordSelected(record, selectedRecord);
+
+    return {
+      selectionKey: key,
+      selected,
       cells: [
         renderFocusLink(
           node.nodeId,
-          buildDashboardViewUrl("processes", undefined, node.nodeId),
-          false,
+          buildDashboardViewUrl("processes", undefined, key),
+          selected,
           copy.selectedStateLabel
         ),
         escapeHtml(node.hostname),
@@ -74,7 +84,7 @@ function buildProcessRows(args: {
         process.user ?? "",
         process.command
       ].join(" ")
-    }));
+    };
   });
 }
 
@@ -119,24 +129,19 @@ function renderProcessCard(args: {
 function renderSelectedNodeProcessesPanel(args: {
   copy: WebCopy;
   locale: WebLocale;
-  selectedNode: DashboardData["nodeHealth"][number] | undefined;
+  selectedRecord: ProcessRecord | undefined;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): string {
-  const { copy, locale, selectedNode, formatDate, renderPill } = args;
+  const { copy, locale, selectedRecord, formatDate, renderPill } = args;
 
-  if (!selectedNode) {
-    return `<article class="panel"><p class="empty">${escapeHtml(copy.noNodes)}</p></article>`;
+  if (!selectedRecord) {
+    return `<article class="panel"><p class="empty">${escapeHtml(copy.noProcesses)}</p></article>`;
   }
 
+  const { node: selectedNode, item: selectedProcess } = selectedRecord;
   const processes = selectedNode.processes;
-  const processCards =
-    processes?.processes.length
-      ? processes.processes
-          .slice(0, 12)
-          .map((process) => renderProcessCard({ copy, process, renderPill }))
-          .join("")
-      : `<p class="empty">${escapeHtml(copy.noProcesses)}</p>`;
+  const processCard = renderProcessCard({ copy, process: selectedProcess, renderPill });
 
   return `<article class="panel detail-shell">
     <div class="section-head">
@@ -187,7 +192,7 @@ function renderSelectedNodeProcessesPanel(args: {
       ],
       { className: "action-card-facts-wide-labels" }
     )}
-    <div class="stack">${processCards}</div>
+    <div class="stack">${processCard}</div>
   </article>`;
 }
 
@@ -217,7 +222,14 @@ export function renderProcessesWorkspace(args: {
     renderPill,
     renderSignalStrip
   } = args;
-  const selectedNode = data.nodeHealth.find((node) => node.nodeId === focus) ?? data.nodeHealth[0];
+  const processRecords = data.nodeHealth.flatMap((node) =>
+    (node.processes?.processes ?? []).map((process) => ({
+      node,
+      item: process,
+      key: `${node.nodeId}:${process.pid}:${process.command}`
+    }))
+  );
+  const selectedProcess = selectRuntimeRecord(processRecords, focus);
   const processEntries = data.nodeHealth.flatMap((node) => node.processes?.processes ?? []);
   const maxLoad1m = data.nodeHealth.reduce(
     (max, node) => Math.max(max, node.processes?.loadAverage1m ?? 0),
@@ -226,7 +238,8 @@ export function renderProcessesWorkspace(args: {
   const highCpuCount = processEntries.filter((process) => (process.cpuPercent ?? 0) >= 80).length;
   const rows = buildProcessRows({
     copy,
-    data,
+    records: processRecords,
+    selectedRecord: selectedProcess,
     renderFocusLink
   });
 
@@ -266,7 +279,7 @@ export function renderProcessesWorkspace(args: {
     ${renderSelectedNodeProcessesPanel({
       copy,
       locale,
-      selectedNode,
+      selectedRecord: selectedProcess,
       formatDate,
       renderPill
     })}

@@ -27,34 +27,39 @@ function selinuxTone(mode: string | undefined): "default" | "success" | "danger"
 function buildSelinuxRows(args: {
   copy: WebCopy;
   data: DashboardData;
+  selectedNode: DashboardData["nodeHealth"][number] | undefined;
   locale: WebLocale;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): DataTableRow[] {
-  const { copy, data, locale, formatDate, renderPill } = args;
+  const { copy, data, selectedNode, locale, formatDate, renderPill } = args;
 
-  return data.nodeHealth.map((node) => ({
-    selectionKey: node.nodeId,
-    selected: false,
-    cells: [
-      `<a href="${escapeHtml(buildDashboardViewUrl("selinux", undefined, node.nodeId))}" class="mono detail-link">${escapeHtml(node.nodeId)}</a>`,
-      escapeHtml(node.hostname),
-      renderPill(node.selinux?.currentMode ?? copy.notReportedLabel, selinuxTone(node.selinux?.currentMode)),
-      escapeHtml(node.selinux?.configuredMode ?? copy.none),
-      escapeHtml(node.selinux?.policyName ?? copy.none),
-      escapeHtml(node.selinux?.policyVersion ?? copy.none),
-      escapeHtml(formatDate(node.selinux?.checkedAt, locale))
-    ],
-    searchText: [
-      node.nodeId,
-      node.hostname,
-      node.selinux?.status ?? "",
-      node.selinux?.currentMode ?? "",
-      node.selinux?.configuredMode ?? "",
-      node.selinux?.policyName ?? "",
-      node.selinux?.policyVersion ?? ""
-    ].join(" ")
-  }));
+  return data.nodeHealth.map((node) => {
+    const selected = selectedNode?.nodeId === node.nodeId;
+
+    return {
+      selectionKey: node.nodeId,
+      selected,
+      cells: [
+        `<a href="${escapeHtml(buildDashboardViewUrl("selinux", undefined, node.nodeId))}" class="mono detail-link">${escapeHtml(node.nodeId)}</a>${selected ? ` ${renderPill(copy.selectedStateLabel, "success")}` : ""}`,
+        escapeHtml(node.hostname),
+        renderPill(node.selinux?.currentMode ?? copy.notReportedLabel, selinuxTone(node.selinux?.currentMode)),
+        escapeHtml(node.selinux?.configuredMode ?? copy.none),
+        escapeHtml(node.selinux?.policyName ?? copy.none),
+        escapeHtml(node.selinux?.policyVersion ?? copy.none),
+        escapeHtml(formatDate(node.selinux?.checkedAt, locale))
+      ],
+      searchText: [
+        node.nodeId,
+        node.hostname,
+        node.selinux?.status ?? "",
+        node.selinux?.currentMode ?? "",
+        node.selinux?.configuredMode ?? "",
+        node.selinux?.policyName ?? "",
+        node.selinux?.policyVersion ?? ""
+      ].join(" ")
+    };
+  });
 }
 
 function renderSelectedNodeSelinuxPanel(args: {
@@ -123,7 +128,7 @@ export function renderSelinuxWorkspace(args: {
     ["permissive", "disabled"].includes(node.selinux?.currentMode?.toLowerCase() ?? "")
   ).length;
   const reportedCount = data.nodeHealth.filter((node) => node.selinux).length;
-  const rows = buildSelinuxRows({ copy, data, locale, formatDate, renderPill });
+  const rows = buildSelinuxRows({ copy, data, selectedNode, locale, formatDate, renderPill });
 
   const table = renderDataTable({
     id: "section-selinux-table",

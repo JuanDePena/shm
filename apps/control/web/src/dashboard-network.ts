@@ -6,28 +6,17 @@ import {
 
 import { type DashboardData } from "./api-client.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
+import {
+  isRuntimeRecordSelected,
+  selectRuntimeRecord,
+  type RuntimeSelectionRecord
+} from "./dashboard-runtime-selection.js";
 import { renderActionFacts } from "./panel-renderers.js";
 import { type WebLocale } from "./request.js";
 import { type WebCopy } from "./web-copy.js";
 
-type NetworkInterface = NonNullable<DashboardData["nodeHealth"][number]["network"]>["interfaces"][number];
 type NetworkListener = NonNullable<DashboardData["nodeHealth"][number]["network"]>["listeners"][number];
-type NetworkRoute = NonNullable<DashboardData["nodeHealth"][number]["network"]>["routes"][number];
-
-function formatInterfaceAddresses(networkInterface: NetworkInterface, copy: WebCopy): string {
-  if (networkInterface.addresses.length === 0) {
-    return copy.none;
-  }
-
-  return networkInterface.addresses
-    .map((address) =>
-      [
-        address.family,
-        `${address.address}${address.prefixLength === undefined ? "" : `/${address.prefixLength}`}`
-      ].join(" ")
-    )
-    .join(", ");
-}
+type NetworkListenerRecord = RuntimeSelectionRecord<NetworkListener>;
 
 function formatListenerAddress(listener: NetworkListener): string {
   return listener.port === undefined
@@ -49,23 +38,27 @@ function isExposedListener(listener: NetworkListener): boolean {
 
 function buildNetworkListenerRows(args: {
   copy: WebCopy;
-  data: DashboardData;
+  records: NetworkListenerRecord[];
+  selectedRecord: NetworkListenerRecord | undefined;
   locale: WebLocale;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderFocusLink: (label: string, href: string, active: boolean, activeLabel: string) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): DataTableRow[] {
-  const { copy, data, locale, formatDate, renderFocusLink, renderPill } = args;
+  const { copy, records, selectedRecord, locale, formatDate, renderFocusLink, renderPill } = args;
 
-  return data.nodeHealth.flatMap((node) => {
-    return (node.network?.listeners ?? []).map((listener) => ({
-      selectionKey: `${node.nodeId}:${listener.protocol}:${formatListenerAddress(listener)}:${listener.process ?? ""}`,
-      selected: false,
+  return records.map((record) => {
+    const { node, item: listener, key } = record;
+    const selected = isRuntimeRecordSelected(record, selectedRecord);
+
+    return {
+      selectionKey: key,
+      selected,
       cells: [
         renderFocusLink(
           node.nodeId,
-          buildDashboardViewUrl("network", undefined, node.nodeId),
-          false,
+          buildDashboardViewUrl("network", undefined, key),
+          selected,
           copy.selectedStateLabel
         ),
         escapeHtml(node.hostname),
@@ -85,98 +78,31 @@ function buildNetworkListenerRows(args: {
         listener.state ?? "",
         listener.process ?? ""
       ].join(" ")
-    }));
+    };
   });
-}
-
-function renderInterfaceCard(args: {
-  copy: WebCopy;
-  networkInterface: NetworkInterface;
-  renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
-}): string {
-  const { copy, networkInterface, renderPill } = args;
-  const state = networkInterface.state ?? copy.none;
-
-  return `<article class="panel panel-nested detail-shell">
-    <div class="section-head">
-      <div>
-        <h3>${escapeHtml(networkInterface.name)}</h3>
-        <p class="muted section-description">${escapeHtml(formatInterfaceAddresses(networkInterface, copy))}</p>
-      </div>
-      ${renderPill(state, state.toLowerCase() === "up" ? "success" : "muted")}
-    </div>
-    ${renderActionFacts(
-      [
-        { label: copy.networkAddressLabel, value: escapeHtml(formatInterfaceAddresses(networkInterface, copy)) },
-        { label: copy.networkMtuLabel, value: escapeHtml(String(networkInterface.mtu ?? copy.none)) },
-        {
-          label: copy.networkMacLabel,
-          value: `<span class="mono">${escapeHtml(networkInterface.macAddress ?? copy.none)}</span>`
-        }
-      ],
-      { className: "action-card-facts-wide-labels" }
-    )}
-  </article>`;
-}
-
-function renderRouteCard(copy: WebCopy, route: NetworkRoute): string {
-  return `<article class="panel panel-nested detail-shell">
-    <h3>${escapeHtml(route.destination)}</h3>
-    ${renderActionFacts(
-      [
-        {
-          label: copy.networkGatewayLabel,
-          value: `<span class="mono">${escapeHtml(route.gateway ?? copy.none)}</span>`
-        },
-        {
-          label: copy.networkDeviceLabel,
-          value: `<span class="mono">${escapeHtml(route.device ?? copy.none)}</span>`
-        },
-        { label: copy.networkProtocolLabel, value: escapeHtml(route.protocol ?? route.family ?? copy.none) },
-        {
-          label: copy.networkAddressLabel,
-          value: `<span class="mono">${escapeHtml(route.source ?? copy.none)}</span>`
-        }
-      ],
-      { className: "action-card-facts-wide-labels" }
-    )}
-  </article>`;
 }
 
 function renderSelectedNodeNetworkPanel(args: {
   copy: WebCopy;
   locale: WebLocale;
-  selectedNode: DashboardData["nodeHealth"][number] | undefined;
+  selectedRecord: NetworkListenerRecord | undefined;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): string {
-  const { copy, locale, selectedNode, formatDate, renderPill } = args;
+  const { copy, locale, selectedRecord, formatDate, renderPill } = args;
 
-  if (!selectedNode) {
-    return `<article class="panel"><p class="empty">${escapeHtml(copy.noNodes)}</p></article>`;
+  if (!selectedRecord) {
+    return `<article class="panel"><p class="empty">${escapeHtml(copy.noNetwork)}</p></article>`;
   }
 
+  const { node: selectedNode, item: listener } = selectedRecord;
   const network = selectedNode.network;
-  const interfaces = network?.interfaces ?? [];
-  const routes = network?.routes ?? [];
-  const interfaceCards =
-    interfaces.length === 0
-      ? `<p class="empty">${escapeHtml(copy.noNetwork)}</p>`
-      : interfaces
-          .map((networkInterface) =>
-            renderInterfaceCard({ copy, networkInterface, renderPill })
-          )
-          .join("");
-  const routeCards =
-    routes.length === 0
-      ? `<p class="empty">${escapeHtml(copy.noNetwork)}</p>`
-      : `<div class="grid grid-two">${routes.map((route) => renderRouteCard(copy, route)).join("")}</div>`;
 
   return `<article class="panel detail-shell">
     <div class="section-head">
       <div>
         <h3>${escapeHtml(copy.networkSelectedNodeTitle)}</h3>
-        <p class="muted section-description">${escapeHtml(selectedNode.hostname)}</p>
+        <p class="muted section-description">${escapeHtml(`${selectedNode.hostname} · ${formatListenerAddress(listener)}`)}</p>
       </div>
       <a class="button-link secondary" href="${escapeHtml(
         buildDashboardViewUrl("node-health", undefined, selectedNode.nodeId)
@@ -184,8 +110,17 @@ function renderSelectedNodeNetworkPanel(args: {
     </div>
     ${renderActionFacts(
       [
-        { label: copy.networkInterfacesTitle, value: escapeHtml(String(interfaces.length)) },
-        { label: copy.networkRoutesTitle, value: escapeHtml(String(routes.length)) },
+        { label: copy.networkProtocolLabel, value: renderPill(listener.protocol.toUpperCase(), "muted") },
+        {
+          label: copy.networkAddressLabel,
+          value: `<span class="mono">${escapeHtml(listener.localAddress)}</span>`
+        },
+        {
+          label: copy.networkPortLabel,
+          value: `<span class="mono">${escapeHtml(String(listener.port ?? copy.none))}</span>`
+        },
+        { label: copy.networkStateLabel, value: escapeHtml(listener.state ?? copy.none) },
+        { label: copy.networkProcessLabel, value: escapeHtml(listener.process ?? copy.none) },
         {
           label: copy.generatedAt,
           value: escapeHtml(formatDate(network?.checkedAt, locale))
@@ -193,24 +128,6 @@ function renderSelectedNodeNetworkPanel(args: {
       ],
       { className: "action-card-facts-wide-labels" }
     )}
-    <article class="panel panel-nested detail-shell">
-      <div class="section-head">
-        <div>
-          <h3>${escapeHtml(copy.networkInterfacesTitle)}</h3>
-          <p class="muted section-description">${escapeHtml(copy.networkSelectedNodeTitle)}</p>
-        </div>
-      </div>
-      <div class="stack">${interfaceCards}</div>
-    </article>
-    <article class="panel panel-nested detail-shell">
-      <div class="section-head">
-        <div>
-          <h3>${escapeHtml(copy.networkRoutesTitle)}</h3>
-          <p class="muted section-description">${escapeHtml(selectedNode.nodeId)}</p>
-        </div>
-      </div>
-      ${routeCards}
-    </article>
   </article>`;
 }
 
@@ -240,14 +157,22 @@ export function renderNetworkWorkspace(args: {
     renderPill,
     renderSignalStrip
   } = args;
-  const selectedNode = data.nodeHealth.find((node) => node.nodeId === focus) ?? data.nodeHealth[0];
+  const listenerRecords = data.nodeHealth.flatMap((node) =>
+    (node.network?.listeners ?? []).map((listener) => ({
+      node,
+      item: listener,
+      key: `${node.nodeId}:${listener.protocol}:${formatListenerAddress(listener)}:${listener.process ?? ""}`
+    }))
+  );
+  const selectedListener = selectRuntimeRecord(listenerRecords, focus);
   const interfaces = data.nodeHealth.flatMap((node) => node.network?.interfaces ?? []);
   const listeners = data.nodeHealth.flatMap((node) => node.network?.listeners ?? []);
   const routes = data.nodeHealth.flatMap((node) => node.network?.routes ?? []);
   const exposedListenerCount = listeners.filter(isExposedListener).length;
   const rows = buildNetworkListenerRows({
     copy,
-    data,
+    records: listenerRecords,
+    selectedRecord: selectedListener,
     locale,
     formatDate,
     renderFocusLink,
@@ -291,7 +216,7 @@ export function renderNetworkWorkspace(args: {
     ${renderSelectedNodeNetworkPanel({
       copy,
       locale,
-      selectedNode,
+      selectedRecord: selectedListener,
       formatDate,
       renderPill
     })}

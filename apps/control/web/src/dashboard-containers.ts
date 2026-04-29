@@ -6,11 +6,17 @@ import {
 
 import { type DashboardData } from "./api-client.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
+import {
+  isRuntimeRecordSelected,
+  selectRuntimeRecord,
+  type RuntimeSelectionRecord
+} from "./dashboard-runtime-selection.js";
 import { renderActionFacts } from "./panel-renderers.js";
 import { type WebLocale } from "./request.js";
 import { type WebCopy } from "./web-copy.js";
 
 type ContainerEntry = NonNullable<DashboardData["nodeHealth"][number]["containers"]>["containers"][number];
+type ContainerRecord = RuntimeSelectionRecord<ContainerEntry>;
 
 function containerStateTone(
   state: string | undefined
@@ -59,21 +65,25 @@ function formatContainerPorts(container: ContainerEntry, copy: WebCopy): string 
 
 function buildContainerRows(args: {
   copy: WebCopy;
-  data: DashboardData;
+  records: ContainerRecord[];
+  selectedRecord: ContainerRecord | undefined;
   renderFocusLink: (label: string, href: string, active: boolean, activeLabel: string) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): DataTableRow[] {
-  const { copy, data, renderFocusLink, renderPill } = args;
+  const { copy, records, selectedRecord, renderFocusLink, renderPill } = args;
 
-  return data.nodeHealth.flatMap((node) => {
-    return (node.containers?.containers ?? []).map((container) => ({
-      selectionKey: `${node.nodeId}:${container.id}`,
-      selected: false,
+  return records.map((record) => {
+    const { node, item: container, key } = record;
+    const selected = isRuntimeRecordSelected(record, selectedRecord);
+
+    return {
+      selectionKey: key,
+      selected,
       cells: [
         renderFocusLink(
           node.nodeId,
-          buildDashboardViewUrl("containers", undefined, node.nodeId),
-          false,
+          buildDashboardViewUrl("containers", undefined, key),
+          selected,
           copy.selectedStateLabel
         ),
         escapeHtml(node.hostname),
@@ -95,7 +105,7 @@ function buildContainerRows(args: {
         container.networks.join(" "),
         formatContainerPorts(container, copy)
       ].join(" ")
-    }));
+    };
   });
 }
 
@@ -138,25 +148,18 @@ function renderContainerCard(args: {
 function renderSelectedNodeContainersPanel(args: {
   copy: WebCopy;
   locale: WebLocale;
-  selectedNode: DashboardData["nodeHealth"][number] | undefined;
+  selectedRecord: ContainerRecord | undefined;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): string {
-  const { copy, locale, selectedNode, formatDate, renderPill } = args;
+  const { copy, locale, selectedRecord, formatDate, renderPill } = args;
 
-  if (!selectedNode) {
-    return `<article class="panel"><p class="empty">${escapeHtml(copy.noNodes)}</p></article>`;
+  if (!selectedRecord) {
+    return `<article class="panel"><p class="empty">${escapeHtml(copy.noContainers)}</p></article>`;
   }
 
-  const containers = selectedNode.containers?.containers ?? [];
-  const containerCards =
-    containers.length === 0
-      ? `<p class="empty">${escapeHtml(copy.noContainers)}</p>`
-      : containers
-          .map((container) =>
-            renderContainerCard({ copy, container, locale, formatDate, renderPill })
-          )
-          .join("");
+  const { node: selectedNode, item: container } = selectedRecord;
+  const containerCard = renderContainerCard({ copy, container, locale, formatDate, renderPill });
 
   return `<article class="panel detail-shell">
     <div class="section-head">
@@ -170,7 +173,7 @@ function renderSelectedNodeContainersPanel(args: {
     </div>
     ${renderActionFacts(
       [
-        { label: copy.containersInventoryTitle, value: escapeHtml(String(containers.length)) },
+        { label: copy.containersInventoryTitle, value: escapeHtml("1") },
         {
           label: copy.generatedAt,
           value: escapeHtml(formatDate(selectedNode.containers?.checkedAt, locale))
@@ -178,7 +181,7 @@ function renderSelectedNodeContainersPanel(args: {
       ],
       { className: "action-card-facts-wide-labels" }
     )}
-    <div class="stack">${containerCards}</div>
+    <div class="stack">${containerCard}</div>
   </article>`;
 }
 
@@ -208,7 +211,14 @@ export function renderContainersWorkspace(args: {
     renderPill,
     renderSignalStrip
   } = args;
-  const selectedNode = data.nodeHealth.find((node) => node.nodeId === focus) ?? data.nodeHealth[0];
+  const containerRecords = data.nodeHealth.flatMap((node) =>
+    (node.containers?.containers ?? []).map((container) => ({
+      node,
+      item: container,
+      key: `${node.nodeId}:${container.id}`
+    }))
+  );
+  const selectedContainer = selectRuntimeRecord(containerRecords, focus);
   const containers = data.nodeHealth.flatMap((node) => node.containers?.containers ?? []);
   const runningCount = containers.filter((container) => container.state?.toLowerCase() === "running").length;
   const stoppedCount = containers.filter((container) =>
@@ -217,7 +227,8 @@ export function renderContainersWorkspace(args: {
   const imageCount = new Set(containers.map((container) => container.image).filter(Boolean)).size;
   const rows = buildContainerRows({
     copy,
-    data,
+    records: containerRecords,
+    selectedRecord: selectedContainer,
     renderFocusLink,
     renderPill
   });
@@ -259,7 +270,7 @@ export function renderContainersWorkspace(args: {
     ${renderSelectedNodeContainersPanel({
       copy,
       locale,
-      selectedNode,
+      selectedRecord: selectedContainer,
       formatDate,
       renderPill
     })}

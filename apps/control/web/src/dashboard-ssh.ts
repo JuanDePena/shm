@@ -29,20 +29,22 @@ function sshRiskTone(value: string | undefined): "default" | "success" | "danger
 function buildSshRows(args: {
   copy: WebCopy;
   data: DashboardData;
+  selectedNode: DashboardData["nodeHealth"][number] | undefined;
   locale: WebLocale;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): DataTableRow[] {
-  const { copy, data, locale, formatDate, renderPill } = args;
+  const { copy, data, selectedNode, locale, formatDate, renderPill } = args;
 
   return data.nodeHealth.map((node) => {
     const ssh = node.ssh;
+    const selected = selectedNode?.nodeId === node.nodeId;
 
     return {
       selectionKey: node.nodeId,
-      selected: false,
+      selected,
       cells: [
-        `<a href="${escapeHtml(buildDashboardViewUrl("ssh", undefined, node.nodeId))}" class="mono detail-link">${escapeHtml(node.nodeId)}</a>`,
+        `<a href="${escapeHtml(buildDashboardViewUrl("ssh", undefined, node.nodeId))}" class="mono detail-link">${escapeHtml(node.nodeId)}</a>${selected ? ` ${renderPill(copy.selectedStateLabel, "success")}` : ""}`,
         escapeHtml(node.hostname),
         renderPill(ssh?.active ? "active" : copy.notReportedLabel, sshServiceTone(ssh?.active)),
         escapeHtml(String(ssh?.effective.port ?? copy.none)),
@@ -134,7 +136,7 @@ export function renderSshWorkspace(args: {
   const rootLoginCount = data.nodeHealth.filter(
     (node) => node.ssh?.effective.permitRootLogin?.toLowerCase() === "yes"
   ).length;
-  const rows = buildSshRows({ copy, data, locale, formatDate, renderPill });
+  const rows = buildSshRows({ copy, data, selectedNode, locale, formatDate, renderPill });
 
   const table = renderDataTable({
     id: "section-ssh-table",

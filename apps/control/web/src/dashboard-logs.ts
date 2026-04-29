@@ -6,11 +6,17 @@ import {
 
 import { type DashboardData } from "./api-client.js";
 import { buildDashboardViewUrl } from "./dashboard-routing.js";
+import {
+  isRuntimeRecordSelected,
+  selectRuntimeRecord,
+  type RuntimeSelectionRecord
+} from "./dashboard-runtime-selection.js";
 import { renderActionFacts } from "./panel-renderers.js";
 import { type WebLocale } from "./request.js";
 import { type WebCopy } from "./web-copy.js";
 
 type LogEntry = NonNullable<DashboardData["nodeHealth"][number]["logs"]>["entries"][number];
+type LogRecord = RuntimeSelectionRecord<LogEntry>;
 
 function logTone(entry: LogEntry): "default" | "success" | "danger" | "muted" {
   if (entry.priority !== undefined && entry.priority <= 3) {
@@ -26,23 +32,27 @@ function logTone(entry: LogEntry): "default" | "success" | "danger" | "muted" {
 
 function buildLogRows(args: {
   copy: WebCopy;
-  data: DashboardData;
+  records: LogRecord[];
+  selectedRecord: LogRecord | undefined;
   locale: WebLocale;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderFocusLink: (label: string, href: string, active: boolean, activeLabel: string) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): DataTableRow[] {
-  const { copy, data, locale, formatDate, renderFocusLink, renderPill } = args;
+  const { copy, records, selectedRecord, locale, formatDate, renderFocusLink, renderPill } = args;
 
-  return data.nodeHealth.flatMap((node) => {
-    return (node.logs?.entries ?? []).map((entry) => ({
-      selectionKey: `${node.nodeId}:${entry.occurredAt}:${entry.unit ?? ""}:${entry.message}`,
-      selected: false,
+  return records.map((record) => {
+    const { node, item: entry, key } = record;
+    const selected = isRuntimeRecordSelected(record, selectedRecord);
+
+    return {
+      selectionKey: key,
+      selected,
       cells: [
         renderFocusLink(
           node.nodeId,
-          buildDashboardViewUrl("logs", undefined, node.nodeId),
-          false,
+          buildDashboardViewUrl("logs", undefined, key),
+          selected,
           copy.selectedStateLabel
         ),
         `<span class="mono">${escapeHtml(entry.unit ?? copy.none)}</span>`,
@@ -57,42 +67,34 @@ function buildLogRows(args: {
         entry.priorityLabel ?? "",
         entry.message
       ].join(" ")
-    }));
+    };
   });
 }
 
-function renderSelectedNodeLogsPanel(args: {
+function renderSelectedLogPanel(args: {
   copy: WebCopy;
   locale: WebLocale;
-  selectedNode: DashboardData["nodeHealth"][number] | undefined;
+  selectedRecord: LogRecord | undefined;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
 }): string {
-  const { copy, locale, selectedNode, formatDate, renderPill } = args;
+  const { copy, locale, selectedRecord, formatDate, renderPill } = args;
 
-  if (!selectedNode) {
-    return `<article class="panel"><p class="empty">${escapeHtml(copy.noNodes)}</p></article>`;
+  if (!selectedRecord) {
+    return `<article class="panel"><p class="empty">${escapeHtml(copy.noLogs)}</p></article>`;
   }
 
-  const entries = selectedNode.logs?.entries ?? [];
-  const logItems =
-    entries.length === 0
-      ? `<p class="empty">${escapeHtml(copy.noLogs)}</p>`
-      : entries
-          .slice(0, 24)
-          .map(
-            (entry) => `<article class="panel panel-nested detail-shell">
-              <div class="section-head">
-                <div>
-                  <h3>${escapeHtml(entry.unit ?? copy.none)}</h3>
-                  <p class="muted section-description">${escapeHtml(formatDate(entry.occurredAt, locale))}</p>
-                </div>
-                ${renderPill(entry.priorityLabel ?? String(entry.priority ?? copy.none), logTone(entry))}
-              </div>
-              <p>${escapeHtml(entry.message)}</p>
-            </article>`
-          )
-          .join("");
+  const { node: selectedNode, item: entry } = selectedRecord;
+  const logItem = `<article class="panel panel-nested detail-shell">
+    <div class="section-head">
+      <div>
+        <h3>${escapeHtml(entry.unit ?? copy.none)}</h3>
+        <p class="muted section-description">${escapeHtml(formatDate(entry.occurredAt, locale))}</p>
+      </div>
+      ${renderPill(entry.priorityLabel ?? String(entry.priority ?? copy.none), logTone(entry))}
+    </div>
+    <p>${escapeHtml(entry.message)}</p>
+  </article>`;
 
   return `<article class="panel detail-shell">
     <div class="section-head">
@@ -106,7 +108,7 @@ function renderSelectedNodeLogsPanel(args: {
     </div>
     ${renderActionFacts(
       [
-        { label: copy.records, value: escapeHtml(String(entries.length)) },
+        { label: copy.records, value: escapeHtml("1") },
         {
           label: copy.generatedAt,
           value: escapeHtml(formatDate(selectedNode.logs?.checkedAt, locale))
@@ -114,7 +116,7 @@ function renderSelectedNodeLogsPanel(args: {
       ],
       { className: "action-card-facts-wide-labels" }
     )}
-    <div class="stack">${logItems}</div>
+    <div class="stack">${logItem}</div>
   </article>`;
 }
 
@@ -144,14 +146,22 @@ export function renderLogsWorkspace(args: {
     renderPill,
     renderSignalStrip
   } = args;
-  const selectedNode = data.nodeHealth.find((node) => node.nodeId === focus) ?? data.nodeHealth[0];
+  const logRecords = data.nodeHealth.flatMap((node) =>
+    (node.logs?.entries ?? []).map((entry) => ({
+      node,
+      item: entry,
+      key: `${node.nodeId}:${entry.occurredAt}:${entry.unit ?? ""}:${entry.message}`
+    }))
+  );
+  const selectedLog = selectRuntimeRecord(logRecords, focus);
   const entries = data.nodeHealth.flatMap((node) => node.logs?.entries ?? []);
   const errorCount = entries.filter((entry) => entry.priority !== undefined && entry.priority <= 3).length;
   const warningCount = entries.filter((entry) => entry.priority === 4).length;
   const unitCount = new Set(entries.map((entry) => entry.unit).filter(Boolean)).size;
   const rows = buildLogRows({
     copy,
-    data,
+    records: logRecords,
+    selectedRecord: selectedLog,
     locale,
     formatDate,
     renderFocusLink,
@@ -188,10 +198,10 @@ export function renderLogsWorkspace(args: {
       { label: copy.errorLogsLabel, value: String(errorCount), tone: errorCount > 0 ? "danger" : "success" }
     ])}
     ${table}
-    ${renderSelectedNodeLogsPanel({
+    ${renderSelectedLogPanel({
       copy,
       locale,
-      selectedNode,
+      selectedRecord: selectedLog,
       formatDate,
       renderPill
     })}
