@@ -189,7 +189,6 @@ export function renderCertificatesWorkspace(args: {
     heading: copy.certificatesInventoryTitle,
     description: copy.certificatesInventoryDescription,
     headingBadgeClassName: "section-badge-lime",
-    restoreSelectionHref: true,
     columns: [
       { label: copy.filterNodeLabel, className: "mono" },
       { label: copy.certificateNameLabel, className: "mono" },

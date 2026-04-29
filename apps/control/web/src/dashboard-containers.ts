@@ -227,7 +227,6 @@ export function renderContainersWorkspace(args: {
     heading: copy.containersInventoryTitle,
     description: copy.containersInventoryDescription,
     headingBadgeClassName: "section-badge-lime",
-    restoreSelectionHref: true,
     columns: [
       { label: copy.filterNodeLabel, className: "mono" },
       { label: copy.packageColHostname },

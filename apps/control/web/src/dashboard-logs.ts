@@ -163,7 +163,6 @@ export function renderLogsWorkspace(args: {
     heading: copy.logsInventoryTitle,
     description: copy.logsInventoryDescription,
     headingBadgeClassName: "section-badge-lime",
-    restoreSelectionHref: true,
     columns: [
       { label: copy.filterNodeLabel, className: "mono" },
       { label: copy.serviceNameLabel, className: "mono" },

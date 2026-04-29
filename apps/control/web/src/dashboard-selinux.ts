@@ -130,7 +130,6 @@ export function renderSelinuxWorkspace(args: {
     heading: copy.selinuxInventoryTitle,
     description: copy.selinuxInventoryDescription,
     headingBadgeClassName: "section-badge-lime",
-    restoreSelectionHref: true,
     columns: [
       { label: copy.filterNodeLabel, className: "mono" },
       { label: copy.packageColHostname },

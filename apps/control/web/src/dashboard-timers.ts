@@ -142,7 +142,6 @@ export function renderTimersWorkspace(args: {
     heading: copy.timersInventoryTitle,
     description: copy.timersInventoryDescription,
     headingBadgeClassName: "section-badge-lime",
-    restoreSelectionHref: true,
     columns: [
       { label: copy.filterNodeLabel, className: "mono" },
       { label: copy.packageColHostname },

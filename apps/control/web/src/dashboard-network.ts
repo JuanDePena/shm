@@ -259,7 +259,6 @@ export function renderNetworkWorkspace(args: {
     heading: copy.networkListenersTitle,
     description: copy.networkListenersDescription,
     headingBadgeClassName: "section-badge-lime",
-    restoreSelectionHref: true,
     columns: [
       { label: copy.filterNodeLabel, className: "mono" },
       { label: copy.packageColHostname },

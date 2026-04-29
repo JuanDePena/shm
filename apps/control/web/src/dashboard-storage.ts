@@ -191,7 +191,6 @@ export function renderStorageWorkspace(args: {
     heading: copy.storageInventoryTitle,
     description: copy.storageInventoryDescription,
     headingBadgeClassName: "section-badge-lime",
-    restoreSelectionHref: true,
     columns: [
       { label: copy.filterNodeLabel, className: "mono" },
       { label: copy.storageMountLabel, className: "mono" },

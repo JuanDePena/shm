@@ -235,7 +235,6 @@ export function renderProcessesWorkspace(args: {
     heading: copy.processesInventoryTitle,
     description: copy.processesInventoryDescription,
     headingBadgeClassName: "section-badge-lime",
-    restoreSelectionHref: true,
     columns: [
       { label: copy.filterNodeLabel, className: "mono" },
       { label: copy.packageColHostname },

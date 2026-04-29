@@ -141,7 +141,6 @@ export function renderSshWorkspace(args: {
     heading: copy.sshInventoryTitle,
     description: copy.sshInventoryDescription,
     headingBadgeClassName: "section-badge-lime",
-    restoreSelectionHref: true,
     columns: [
       { label: copy.filterNodeLabel, className: "mono" },
       { label: copy.packageColHostname },

@@ -193,7 +193,6 @@ export function renderServicesWorkspace(args: {
     heading: copy.servicesInventoryTitle,
     description: copy.servicesInventoryDescription,
     headingBadgeClassName: "section-badge-lime",
-    restoreSelectionHref: true,
     columns: [
       { label: copy.filterNodeLabel, className: "mono" },
       { label: copy.packageColHostname },
