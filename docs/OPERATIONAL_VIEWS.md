@@ -58,6 +58,24 @@ This view is read-only in the first iteration. Reboot actions should be queued
 as audited maintenance jobs with explicit confirmation and HA awareness before
 they become available from the dashboard.
 
+## Config Validation
+
+The Config Validation view reports syntax checks for critical node-local service
+configuration. The agent runs bounded validation commands such as `sshd -t`,
+`httpd -t`, `postfix check`, `doveconf -n`, `rspamadm configtest`,
+`named-checkconf`, `pdnsutil check-all-zones`, and `php-fpm -t` when those
+commands are present on the node.
+
+The control UI shows:
+
+- cross-node validation inventory with status, command and first summary line
+- counters for failed checks and unavailable validation commands
+- selected-check detail with command, node context and validation summary
+
+Unavailable commands are reported separately from failures so optional services
+do not look broken merely because their validation tool is absent. Repair
+actions should continue through desired state or explicit audited jobs.
+
 ## Services
 
 The Services view reports critical `systemd` units per managed node. The agent

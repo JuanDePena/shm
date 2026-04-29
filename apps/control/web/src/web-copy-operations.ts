@@ -243,6 +243,20 @@ export const operationsCopyByLocale = {
     bootIdLabel: "Boot ID",
     bootedAtLabel: "Booted",
     noReboots: "No reboot records.",
+    configValidationInventoryTitle: "Config validation",
+    configValidationInventoryDescription:
+      "Syntax checks for critical service configuration files on each managed node.",
+    configValidationSelectedCheckTitle: "Selected config check",
+    configValidationSelectedCheckDescription:
+      "Review the command, status and validation summary for the focused check.",
+    configCheckLabel: "Check",
+    configCommandLabel: "Command",
+    configStatusLabel: "Status",
+    configSummaryLabel: "Summary",
+    configPassedLabel: "passed",
+    configFailedLabel: "failed",
+    configUnavailableLabel: "unavailable",
+    noConfigValidation: "No config validation records.",
     packagesInventoryTitle: "Installed packages",
     packagesInventoryDescription:
       "Review the latest collected RPM inventory snapshot across managed nodes.",
@@ -717,6 +731,20 @@ export const operationsCopyByLocale = {
     bootIdLabel: "Boot ID",
     bootedAtLabel: "Boot",
     noReboots: "No hay registros de reboot.",
+    configValidationInventoryTitle: "Validación de config",
+    configValidationInventoryDescription:
+      "Checks de sintaxis para configuraciones críticas en cada nodo gestionado.",
+    configValidationSelectedCheckTitle: "Check de config seleccionado",
+    configValidationSelectedCheckDescription:
+      "Revisa comando, estado y resumen de validación del check enfocado.",
+    configCheckLabel: "Check",
+    configCommandLabel: "Comando",
+    configStatusLabel: "Estado",
+    configSummaryLabel: "Resumen",
+    configPassedLabel: "correcto",
+    configFailedLabel: "fallido",
+    configUnavailableLabel: "no disponible",
+    noConfigValidation: "No hay registros de validación de config.",
     packagesInventoryTitle: "Paquetes instalados",
     packagesInventoryDescription:
       "Revisa el último snapshot recolectado del inventario RPM en los nodos gestionados.",

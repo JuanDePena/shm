@@ -17,6 +17,7 @@ import {
   supportedJobKinds,
   type AppServiceSnapshot,
   type CodeServerServiceSnapshot,
+  type ConfigValidationCheckSnapshot,
   type Fail2BanJailSnapshot,
   type Fail2BanSnapshot,
   type FirewalldZoneSnapshot,
@@ -91,6 +92,16 @@ const trackedSystemServices = [
   "mariadb.service",
   "pdns.service",
   "named.service"
+] as const;
+const configValidationCheckDefinitions = [
+  { checkId: "sshd", label: "OpenSSH daemon", command: "sshd", args: ["-t"] },
+  { checkId: "httpd", label: "Apache HTTP Server", command: "httpd", args: ["-t"] },
+  { checkId: "postfix", label: "Postfix", command: "postfix", args: ["check"] },
+  { checkId: "dovecot", label: "Dovecot", command: "doveconf", args: ["-n"] },
+  { checkId: "rspamd", label: "Rspamd", command: "rspamadm", args: ["configtest"] },
+  { checkId: "named", label: "BIND named", command: "named-checkconf", args: [] },
+  { checkId: "powerdns", label: "PowerDNS zones", command: "pdnsutil", args: ["check-all-zones"] },
+  { checkId: "php-fpm", label: "PHP-FPM", command: "php-fpm", args: ["-t"] }
 ] as const;
 const journalEntriesPerService = 8;
 const journalEntryLimit = 120;
@@ -881,6 +892,74 @@ async function inspectRebootState(): Promise<AgentNodeRuntimeSnapshot["rebootSta
       (kernelMismatch
         ? `Running kernel ${kernelRelease} differs from latest installed kernel ${latestKernelRelease}.`
         : undefined),
+    checkedAt
+  };
+}
+
+function truncateValidationSummary(value: string): string {
+  const normalized = value.trim().replace(/\s+/g, " ");
+  return normalized.length > 500 ? `${normalized.slice(0, 497)}...` : normalized;
+}
+
+function summarizeValidationResult(
+  result: CommandResult | undefined,
+  status: ConfigValidationCheckSnapshot["status"]
+): string {
+  if (!result) {
+    return "Validation command is not available on this node.";
+  }
+
+  const firstLine = [result.stdout, result.stderr]
+    .join("\n")
+    .split(/\r?\n/g)
+    .map((line) => line.trim())
+    .find(Boolean);
+
+  if (firstLine) {
+    return truncateValidationSummary(firstLine);
+  }
+
+  return status === "passed"
+    ? "Configuration check passed."
+    : `Configuration check exited with code ${result.exitCode}.`;
+}
+
+async function inspectConfigValidationCheck(
+  definition: (typeof configValidationCheckDefinitions)[number]
+): Promise<ConfigValidationCheckSnapshot> {
+  const checkedAt = new Date().toISOString();
+  const result = await commandResultWithExitCodes(
+    definition.command,
+    [...definition.args],
+    [0, 1, 2, 3, 4, 5],
+    30000
+  );
+  const status: ConfigValidationCheckSnapshot["status"] = !result
+    ? "unavailable"
+    : result.exitCode === 0
+      ? "passed"
+      : "failed";
+
+  return {
+    checkId: definition.checkId,
+    label: definition.label,
+    command: [definition.command, ...definition.args].join(" "),
+    status,
+    summary: summarizeValidationResult(result, status),
+    checkedAt
+  };
+}
+
+async function inspectConfigValidation(): Promise<AgentNodeRuntimeSnapshot["configValidation"]> {
+  const checkedAt = new Date().toISOString();
+  const checks = await Promise.all(
+    configValidationCheckDefinitions.map((definition) =>
+      inspectConfigValidationCheck(definition)
+    )
+  );
+
+  return {
+    checks,
     checkedAt
   };
 }
@@ -2872,6 +2951,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     services,
     packageUpdates,
     rebootState,
+    configValidation,
     logs,
     tls,
     storage,
@@ -2891,6 +2971,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     inspectSystemServices(),
     inspectPackageUpdates(),
     inspectRebootState(),
+    inspectConfigValidation(),
     inspectSystemLogs(),
     inspectTlsCertificates(),
     inspectStorage(),
@@ -2912,6 +2993,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     services,
     packageUpdates,
     rebootState,
+    configValidation,
     logs,
     tls,
     storage,

@@ -14,6 +14,7 @@ export const navigationCopyByLocale = {
     navRustDesk: "RustDesk",
     navUpdates: "Updates",
     navReboots: "Reboots",
+    navConfig: "Config",
     navServices: "Services",
     navLogs: "Logs",
     navCertificates: "TLS",
@@ -52,6 +53,8 @@ export const navigationCopyByLocale = {
       "Available RPM updates and security advisories reported by managed nodes.",
     rebootsWorkspaceDescription:
       "Kernel, uptime and reboot-required posture reported by managed nodes.",
+    configWorkspaceDescription:
+      "Configuration syntax checks for critical node-local services.",
     servicesWorkspaceDescription:
       "Systemd posture for critical platform services across managed nodes.",
     logsWorkspaceDescription:
@@ -91,6 +94,7 @@ export const navigationCopyByLocale = {
     navRustDesk: "RustDesk",
     navUpdates: "Updates",
     navReboots: "Reboots",
+    navConfig: "Config",
     navServices: "Servicios",
     navLogs: "Logs",
     navCertificates: "TLS",
@@ -134,6 +138,8 @@ export const navigationCopyByLocale = {
       "Actualizaciones RPM disponibles y advisories de seguridad reportados por los nodos gestionados.",
     rebootsWorkspaceDescription:
       "Postura de kernel, uptime y reboot requerido reportada por los nodos gestionados.",
+    configWorkspaceDescription:
+      "Validaciones de sintaxis para configuraciones críticas locales del nodo.",
     servicesWorkspaceDescription:
       "Postura systemd de servicios críticos de plataforma en los nodos gestionados.",
     logsWorkspaceDescription:

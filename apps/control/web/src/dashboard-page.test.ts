@@ -187,6 +187,40 @@ test("runtime workspaces select one row and render only that row detail", () => 
       }
     },
     {
+      name: "config",
+      view: "config",
+      focus: "mail-a:sshd",
+      marker: "Selected config check",
+      selectedText: "sshd -t",
+      otherText: "httpd -t",
+      arrange: (data) => {
+        data.nodeHealth[0] = {
+          ...data.nodeHealth[0]!,
+          configValidation: {
+            checkedAt: "2026-04-29T00:00:00.000Z",
+            checks: [
+              {
+                checkId: "sshd",
+                label: "OpenSSH daemon",
+                command: "sshd -t",
+                status: "passed",
+                summary: "Configuration check passed.",
+                checkedAt: "2026-04-29T00:00:00.000Z"
+              },
+              {
+                checkId: "httpd",
+                label: "Apache HTTP Server",
+                command: "httpd -t",
+                status: "failed",
+                summary: "Syntax error",
+                checkedAt: "2026-04-29T00:00:00.000Z"
+              }
+            ]
+          }
+        };
+      }
+    },
+    {
       name: "services",
       view: "services",
       focus: "mail-a:httpd.service",

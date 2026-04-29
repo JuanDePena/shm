@@ -267,6 +267,22 @@ export interface RebootStateSnapshot {
   checkedAt: string;
 }
 
+export type ConfigValidationStatus = "passed" | "failed" | "unavailable";
+
+export interface ConfigValidationCheckSnapshot {
+  checkId: string;
+  label: string;
+  command: string;
+  status: ConfigValidationStatus;
+  summary?: string;
+  checkedAt: string;
+}
+
+export interface ConfigValidationSnapshot {
+  checks: ConfigValidationCheckSnapshot[];
+  checkedAt: string;
+}
+
 export interface JournalLogEntrySnapshot {
   unit?: string;
   priority?: number;
@@ -465,6 +481,7 @@ export interface NodeRuntimeSnapshot {
   services?: SystemServicesSnapshot;
   packageUpdates?: PackageUpdatesSnapshot;
   rebootState?: RebootStateSnapshot;
+  configValidation?: ConfigValidationSnapshot;
   logs?: SystemLogsSnapshot;
   tls?: TlsCertificatesSnapshot;
   storage?: StorageSnapshot;
@@ -508,6 +525,7 @@ export interface NodeHealthSnapshot {
   services?: SystemServicesSnapshot;
   packageUpdates?: PackageUpdatesSnapshot;
   rebootState?: RebootStateSnapshot;
+  configValidation?: ConfigValidationSnapshot;
   logs?: SystemLogsSnapshot;
   tls?: TlsCertificatesSnapshot;
   storage?: StorageSnapshot;

@@ -11,6 +11,8 @@ import type {
   AuditEventSummary,
   BackupsOverview,
   CodeServerServiceSnapshot,
+  ConfigValidationCheckSnapshot,
+  ConfigValidationSnapshot,
   ContainerPortMappingSnapshot,
   ContainerRuntimeSnapshot,
   ContainerSnapshot,
@@ -636,6 +638,58 @@ function normalizeRebootStateSnapshot(value: unknown): RebootStateSnapshot | und
       typeof record.needsReboot === "boolean" ? record.needsReboot : undefined,
     needsRebootReason:
       typeof record.needsRebootReason === "string" ? record.needsRebootReason : undefined,
+    checkedAt: typeof record.checkedAt === "string" ? record.checkedAt : new Date(0).toISOString()
+  };
+}
+
+function normalizeConfigValidationCheckSnapshot(
+  value: unknown
+): ConfigValidationCheckSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (
+    typeof record.checkId !== "string" ||
+    typeof record.label !== "string" ||
+    typeof record.command !== "string"
+  ) {
+    return undefined;
+  }
+
+  return {
+    checkId: record.checkId,
+    label: record.label,
+    command: record.command,
+    status:
+      record.status === "passed" ||
+      record.status === "failed" ||
+      record.status === "unavailable"
+        ? record.status
+        : "unavailable",
+    summary: typeof record.summary === "string" ? record.summary : undefined,
+    checkedAt: typeof record.checkedAt === "string" ? record.checkedAt : new Date(0).toISOString()
+  };
+}
+
+function normalizeConfigValidationSnapshot(
+  value: unknown
+): ConfigValidationSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  const checks = Array.isArray(record.checks)
+    ? record.checks
+        .map(normalizeConfigValidationCheckSnapshot)
+        .filter((entry): entry is ConfigValidationCheckSnapshot => Boolean(entry))
+    : [];
+
+  return {
+    checks,
     checkedAt: typeof record.checkedAt === "string" ? record.checkedAt : new Date(0).toISOString()
   };
 }
@@ -1742,6 +1796,9 @@ export function toNodeHealthSnapshot(row: NodeHealthRow): NodeHealthSnapshot {
     ),
     rebootState: normalizeRebootStateSnapshot(
       (runtimeSnapshot as Record<string, unknown>).rebootState
+    ),
+    configValidation: normalizeConfigValidationSnapshot(
+      (runtimeSnapshot as Record<string, unknown>).configValidation
     ),
     logs: normalizeSystemLogsSnapshot(
       (runtimeSnapshot as Record<string, unknown>).logs

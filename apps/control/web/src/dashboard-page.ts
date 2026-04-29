@@ -23,6 +23,7 @@ import {
 } from "./dashboard-security.js";
 import { renderUpdatesWorkspace } from "./dashboard-updates.js";
 import { renderRebootsWorkspace } from "./dashboard-reboots.js";
+import { renderConfigValidationWorkspace } from "./dashboard-config-validation.js";
 import { renderServicesWorkspace } from "./dashboard-services.js";
 import { renderLogsWorkspace } from "./dashboard-logs.js";
 import { renderCertificatesWorkspace } from "./dashboard-certificates.js";
@@ -578,6 +579,17 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
         });
       case "reboots":
         return renderRebootsWorkspace({
+          copy,
+          data,
+          locale,
+          focus,
+          formatDate,
+          renderFocusLink: renderFocusLinkWithPill,
+          renderPill,
+          renderSignalStrip
+        });
+      case "config":
+        return renderConfigValidationWorkspace({
           copy,
           data,
           locale,
