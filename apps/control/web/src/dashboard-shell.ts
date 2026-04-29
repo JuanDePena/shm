@@ -54,6 +54,7 @@ type DashboardShellCopy = DashboardCopyLabels & {
   navStorage: string;
   navNetwork: string;
   navProcesses: string;
+  navContainers: string;
   navPackages: string;
   navFirewall: string;
   navFail2Ban: string;
@@ -127,6 +128,7 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
     storageSection: string;
     networkSection: string;
     processesSection: string;
+    containersSection: string;
     packagesSection: string;
     firewallSection: string;
     fail2banSection: string;
@@ -369,6 +371,13 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
           active: view === "processes"
         },
         {
+          id: "containers",
+          label: copy.navContainers,
+          href: buildDashboardViewUrl("containers"),
+          badge: String(data.nodeHealth.reduce((count, node) => count + (node.containers?.containers.length ?? 0), 0)),
+          active: view === "containers"
+        },
+        {
           id: "packages",
           label: copy.navPackages,
           href: buildDashboardViewUrl("packages"),
@@ -465,6 +474,8 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
         return sections.networkSection;
       case "processes":
         return sections.processesSection;
+      case "containers":
+        return sections.containersSection;
       case "packages":
         return sections.packagesSection;
       case "firewall":

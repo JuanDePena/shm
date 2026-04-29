@@ -18,6 +18,7 @@ export const navigationCopyByLocale = {
     navStorage: "Storage",
     navNetwork: "Network",
     navProcesses: "Processes",
+    navContainers: "Containers",
     navResources: "Resources",
     navDesiredState: "Spec",
     navCreate: "Create",
@@ -54,6 +55,8 @@ export const navigationCopyByLocale = {
       "Interfaces, routes and listening sockets reported by managed nodes.",
     processesWorkspaceDescription:
       "Load, memory and top process usage reported by managed nodes.",
+    containersWorkspaceDescription:
+      "Podman container inventory, state, images and published ports by node.",
     firewallWorkspaceDescription:
       "Monitor firewalld posture and apply the SimpleHost baseline without leaving the control plane.",
     fail2banWorkspaceDescription:
@@ -77,6 +80,7 @@ export const navigationCopyByLocale = {
     navStorage: "Storage",
     navNetwork: "Red",
     navProcesses: "Procesos",
+    navContainers: "Containers",
     navResources: "Recursos",
     navDesiredState: "Especificación",
     navCreate: "Crear",
@@ -118,6 +122,8 @@ export const navigationCopyByLocale = {
       "Interfaces, rutas y sockets en escucha reportados por los nodos gestionados.",
     processesWorkspaceDescription:
       "Carga, memoria y top de procesos reportados por los nodos gestionados.",
+    containersWorkspaceDescription:
+      "Inventario Podman, estado, imágenes y puertos publicados por nodo.",
     firewallWorkspaceDescription:
       "Monitorea la postura de firewalld y aplica el baseline SimpleHost sin salir del plano de control.",
     fail2banWorkspaceDescription:

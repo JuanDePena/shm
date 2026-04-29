@@ -601,6 +601,31 @@ export interface SystemProcessesSnapshot {
   checkedAt: string;
 }
 
+export interface ContainerPortMappingSnapshot {
+  hostIp?: string;
+  hostPort?: number;
+  containerPort?: number;
+  protocol?: string;
+  raw?: string;
+}
+
+export interface ContainerSnapshot {
+  id: string;
+  name?: string;
+  image?: string;
+  state?: string;
+  status?: string;
+  createdAt?: string;
+  startedAt?: string;
+  ports: ContainerPortMappingSnapshot[];
+  networks: string[];
+}
+
+export interface ContainerRuntimeSnapshot {
+  containers: ContainerSnapshot[];
+  checkedAt: string;
+}
+
 export interface AgentNodeRuntimeSnapshot {
   appServices?: AppServiceSnapshot[];
   codeServer?: CodeServerServiceSnapshot;
@@ -613,6 +638,7 @@ export interface AgentNodeRuntimeSnapshot {
   storage?: StorageSnapshot;
   network?: NetworkSnapshot;
   processes?: SystemProcessesSnapshot;
+  containers?: ContainerRuntimeSnapshot;
   mail?: MailServiceSnapshot;
 }
 

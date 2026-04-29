@@ -105,3 +105,20 @@ The control UI shows:
 
 The process list is intentionally sampled and read-only. It is meant for
 triage, not for killing processes or replacing deeper observability tooling.
+
+## Containers
+
+The Containers view reports the Podman container inventory per managed node. The
+agent uses `podman ps --all --format json` to collect container identity, image,
+state, status, published ports, networks, and lifecycle timestamps.
+
+The control UI shows:
+
+- cross-node container inventory with image, state, status, ports, and networks
+- running and stopped container counters
+- selected-node container cards with short ID, image, published ports, networks,
+  created timestamp, and started timestamp
+
+This view is read-only in the first pass. Container reconciliation, restart, and
+image rollout should continue to go through desired-state resources and audited
+jobs rather than direct process control from the UI.

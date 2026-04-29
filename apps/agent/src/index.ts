@@ -41,7 +41,9 @@ import {
   type AgentNodeRegistrationRequest,
   type AgentNodeRuntimeSnapshot,
   type AgentNodeSnapshot,
-  type AgentSpoolEntry
+  type AgentSpoolEntry,
+  type ContainerPortMappingSnapshot,
+  type ContainerSnapshot
 } from "@simplehost/agent-contracts";
 import { executeAllowlistedJob } from "@simplehost/agent-drivers";
 import {
@@ -1045,6 +1047,118 @@ async function inspectProcesses(): Promise<AgentNodeRuntimeSnapshot["processes"]
     totalMemoryBytes: totalmem(),
     availableMemoryBytes: parseMemAvailableBytes(memInfo),
     processes: parseProcessRows(processOutput),
+    checkedAt
+  };
+}
+
+function readStringListValue(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === "string");
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function readNumberLikeValue(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Number(value);
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+}
+
+function readPodmanTimestamp(record: Record<string, unknown>, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = readStringField(record, key);
+
+    if (value && !value.startsWith("0001-01-01")) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function parsePodmanPorts(value: unknown): ContainerPortMappingSnapshot[] {
+  if (typeof value === "string") {
+    return value.trim() ? [{ raw: value.trim() }] : [];
+  }
+
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry): ContainerPortMappingSnapshot | undefined => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return undefined;
+      }
+
+      const record = entry as Record<string, unknown>;
+
+      return {
+        hostIp: readStringField(record, "host_ip") ?? readStringField(record, "hostIp"),
+        hostPort:
+          readNumberLikeValue(record.host_port) ?? readNumberLikeValue(record.hostPort),
+        containerPort:
+          readNumberLikeValue(record.container_port) ??
+          readNumberLikeValue(record.containerPort),
+        protocol: readStringField(record, "protocol")
+      };
+    })
+    .filter((entry): entry is ContainerPortMappingSnapshot => Boolean(entry));
+}
+
+function parsePodmanContainers(value: string | undefined): ContainerSnapshot[] {
+  return parseJsonArray(value)
+    .map((entry): ContainerSnapshot | undefined => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return undefined;
+      }
+
+      const record = entry as Record<string, unknown>;
+      const id = readStringField(record, "Id") ?? readStringField(record, "ID");
+
+      if (!id) {
+        return undefined;
+      }
+
+      return {
+        id,
+        name: readStringListValue(record.Names)[0] ?? readStringField(record, "Name"),
+        image: readStringField(record, "Image"),
+        state: readStringField(record, "State"),
+        status: readStringField(record, "Status"),
+        createdAt: readPodmanTimestamp(record, "CreatedAt", "Created"),
+        startedAt: readPodmanTimestamp(record, "StartedAt"),
+        ports: parsePodmanPorts(record.Ports),
+        networks: readStringListValue(record.Networks).sort((left, right) =>
+          left.localeCompare(right)
+        )
+      };
+    })
+    .filter((entry): entry is ContainerSnapshot => Boolean(entry))
+    .sort((left, right) => (left.name ?? left.id).localeCompare(right.name ?? right.id));
+}
+
+async function inspectContainers(): Promise<AgentNodeRuntimeSnapshot["containers"]> {
+  const checkedAt = new Date().toISOString();
+  const output = await commandOutput("podman", ["ps", "--all", "--format", "json"]);
+
+  return {
+    containers: parsePodmanContainers(output),
     checkedAt
   };
 }
@@ -2183,6 +2297,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     storage,
     network,
     processes,
+    containers,
     mail
   ] = await Promise.all([
     inspectAppServices(),
@@ -2196,6 +2311,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     inspectStorage(),
     inspectNetwork(),
     inspectProcesses(),
+    inspectContainers(),
     inspectMail()
   ]);
 
@@ -2211,6 +2327,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     storage,
     network,
     processes,
+    containers,
     mail
   };
 }

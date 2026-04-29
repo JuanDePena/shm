@@ -11,6 +11,9 @@ import type {
   AuditEventSummary,
   BackupsOverview,
   CodeServerServiceSnapshot,
+  ContainerPortMappingSnapshot,
+  ContainerRuntimeSnapshot,
+  ContainerSnapshot,
   DispatchedJobEnvelope,
   Fail2BanJailSnapshot,
   Fail2BanSnapshot,
@@ -893,6 +896,74 @@ function normalizeSystemProcessesSnapshot(
   };
 }
 
+function normalizeContainerPortMappingSnapshot(
+  value: unknown
+): ContainerPortMappingSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return {
+    hostIp: typeof record.hostIp === "string" ? record.hostIp : undefined,
+    hostPort: typeof record.hostPort === "number" ? Number(record.hostPort) : undefined,
+    containerPort:
+      typeof record.containerPort === "number" ? Number(record.containerPort) : undefined,
+    protocol: typeof record.protocol === "string" ? record.protocol : undefined,
+    raw: typeof record.raw === "string" ? record.raw : undefined
+  };
+}
+
+function normalizeContainerSnapshot(value: unknown): ContainerSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (typeof record.id !== "string") {
+    return undefined;
+  }
+
+  return {
+    id: record.id,
+    name: typeof record.name === "string" ? record.name : undefined,
+    image: typeof record.image === "string" ? record.image : undefined,
+    state: typeof record.state === "string" ? record.state : undefined,
+    status: typeof record.status === "string" ? record.status : undefined,
+    createdAt: typeof record.createdAt === "string" ? record.createdAt : undefined,
+    startedAt: typeof record.startedAt === "string" ? record.startedAt : undefined,
+    ports: Array.isArray(record.ports)
+      ? record.ports
+          .map(normalizeContainerPortMappingSnapshot)
+          .filter((entry): entry is ContainerPortMappingSnapshot => Boolean(entry))
+      : [],
+    networks: Array.isArray(record.networks)
+      ? record.networks.filter((entry): entry is string => typeof entry === "string")
+      : []
+  };
+}
+
+function normalizeContainerRuntimeSnapshot(
+  value: unknown
+): ContainerRuntimeSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return {
+    containers: Array.isArray(record.containers)
+      ? record.containers
+          .map(normalizeContainerSnapshot)
+          .filter((entry): entry is ContainerSnapshot => Boolean(entry))
+      : [],
+    checkedAt: typeof record.checkedAt === "string" ? record.checkedAt : new Date(0).toISOString()
+  };
+}
+
 function normalizeRustDeskListenerSnapshot(
   value: unknown
 ): RustDeskListenerSnapshot | undefined {
@@ -1485,6 +1556,9 @@ export function toNodeHealthSnapshot(row: NodeHealthRow): NodeHealthSnapshot {
     ),
     processes: normalizeSystemProcessesSnapshot(
       (runtimeSnapshot as Record<string, unknown>).processes
+    ),
+    containers: normalizeContainerRuntimeSnapshot(
+      (runtimeSnapshot as Record<string, unknown>).containers
     ),
     mail: normalizeMailSnapshot((runtimeSnapshot as Record<string, unknown>).mail)
   };

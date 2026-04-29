@@ -141,6 +141,18 @@ test("combined runtime serves authenticated flow over a real HTTP server", async
       "processes workspace should render process inventory"
     );
 
+    const containersResponse = await fetch(new URL("/?view=containers", runtime.origin), {
+      headers: {
+        cookie
+      }
+    });
+    assert.equal(containersResponse.status, 200);
+    assert.match(
+      await containersResponse.text(),
+      /Containers/,
+      "containers workspace should render container inventory"
+    );
+
     const packagesResponse = await fetch(new URL("/?view=packages", runtime.origin), {
       headers: {
         cookie
