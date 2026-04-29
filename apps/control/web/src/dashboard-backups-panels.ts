@@ -129,7 +129,6 @@ export function renderSelectedBackupPolicyPanel<Copy extends BackupCopy>(
     | "renderActionFacts"
     | "renderDetailGrid"
     | "renderPill"
-    | "renderRelatedPanel"
     | "selectedBackupPolicySummary"
   > & {
     selectedBackupPolicyLatestFailedRun:
@@ -138,19 +137,9 @@ export function renderSelectedBackupPolicyPanel<Copy extends BackupCopy>(
     selectedBackupPolicyLatestSuccessRun:
       | BackupsWorkspaceArgs<Copy>["filteredBackupRuns"][number]
       | undefined;
-    selectedBackupPolicyRuns: BackupsWorkspaceArgs<Copy>["filteredBackupRuns"];
     selectedBackupPolicyTargetHealth:
       | BackupsWorkspaceArgs<Copy>["data"]["nodeHealth"][number]
       | undefined;
-    selectedBackupPolicyTenantApps: BackupsWorkspaceArgs<Copy>["data"]["desiredState"]["spec"]["apps"];
-    selectedBackupPolicyTenantDatabases: BackupsWorkspaceArgs<Copy>["data"]["desiredState"]["spec"]["databases"];
-    selectedBackupPolicyTenantZones: BackupsWorkspaceArgs<Copy>["data"]["desiredState"]["spec"]["zones"];
-    selectedBackupSummaryActionPreviewItems: Array<{
-      title: string;
-      meta?: string;
-      summary?: string;
-      tone?: "default" | "danger" | "success";
-    }>;
   }
 ): string {
   const {
@@ -159,16 +148,10 @@ export function renderSelectedBackupPolicyPanel<Copy extends BackupCopy>(
     renderActionFacts,
     renderDetailGrid,
     renderPill,
-    renderRelatedPanel,
     selectedBackupPolicyLatestFailedRun,
     selectedBackupPolicyLatestSuccessRun,
-    selectedBackupPolicyRuns,
     selectedBackupPolicySummary,
-    selectedBackupPolicyTargetHealth,
-    selectedBackupPolicyTenantApps,
-    selectedBackupPolicyTenantDatabases,
-    selectedBackupPolicyTenantZones,
-    selectedBackupSummaryActionPreviewItems
+    selectedBackupPolicyTargetHealth
   } = args;
 
   if (!selectedBackupPolicySummary) {
@@ -277,78 +260,5 @@ export function renderSelectedBackupPolicyPanel<Copy extends BackupCopy>(
         )}">${escapeHtml(selectedBackupPolicySummary.targetNodeId)}</a>`
       }
     ])}
-    ${renderRelatedPanel(
-      copy.effectiveStateTitle,
-      copy.effectiveStateDescription,
-      [
-        {
-          title: escapeHtml(copy.nodeHealthTitle),
-          meta: escapeHtml(selectedBackupPolicyTargetHealth?.currentVersion ?? copy.none),
-          summary: escapeHtml(
-            selectedBackupPolicyTargetHealth?.latestJobSummary ??
-              selectedBackupPolicyLatestSuccessRun?.summary ??
-              copy.none
-          ),
-          tone:
-            selectedBackupPolicyTargetHealth?.latestJobStatus === "failed"
-              ? ("danger" as const)
-              : selectedBackupPolicyTargetHealth?.latestJobStatus === "applied"
-                ? ("success" as const)
-                : ("default" as const)
-        },
-        {
-          title: escapeHtml(copy.relatedJobsTitle),
-          meta: escapeHtml(`${selectedBackupPolicyRuns.length} run(s)`),
-          summary: escapeHtml(
-            selectedBackupPolicyLatestFailedRun?.summary ??
-              selectedBackupPolicyLatestSuccessRun?.summary ??
-              copy.none
-          ),
-          tone: selectedBackupPolicyRuns.some((run) => run.status === "failed")
-            ? ("danger" as const)
-            : selectedBackupPolicyRuns.some((run) => run.status === "succeeded")
-              ? ("success" as const)
-              : ("default" as const)
-        }
-      ],
-      copy.noRelatedRecords
-    )}
-    ${renderRelatedPanel(
-      copy.plannedChangesTitle,
-      copy.plannedChangesDescription,
-      selectedBackupSummaryActionPreviewItems,
-      copy.noRelatedRecords
-    )}
-    ${renderRelatedPanel(
-      copy.relatedResourcesTitle,
-      copy.relatedResourcesDescription,
-      [
-        ...selectedBackupPolicyTenantApps.slice(0, 4).map((app) => ({
-          title: `<a class="detail-link" href="${escapeHtml(
-            buildDashboardViewUrl("desired-state", "desired-state-apps", app.slug)
-          )}">${escapeHtml(app.slug)}</a>`,
-          meta: escapeHtml(app.canonicalDomain),
-          summary: escapeHtml(app.primaryNodeId),
-          tone: "default" as const
-        })),
-        ...selectedBackupPolicyTenantZones.slice(0, 3).map((zone) => ({
-          title: `<a class="detail-link" href="${escapeHtml(
-            buildDashboardViewUrl("desired-state", "desired-state-zones", zone.zoneName)
-          )}">${escapeHtml(zone.zoneName)}</a>`,
-          meta: escapeHtml(zone.primaryNodeId),
-          summary: escapeHtml(zone.tenantSlug),
-          tone: "default" as const
-        })),
-        ...selectedBackupPolicyTenantDatabases.slice(0, 3).map((database) => ({
-          title: `<a class="detail-link" href="${escapeHtml(
-            buildDashboardViewUrl("desired-state", "desired-state-databases", database.appSlug)
-          )}">${escapeHtml(database.databaseName)}</a>`,
-          meta: escapeHtml(database.engine),
-          summary: escapeHtml(database.appSlug),
-          tone: "default" as const
-        }))
-      ],
-      copy.noRelatedRecords
-    )}
   </article>`;
 }

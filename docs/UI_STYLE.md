@@ -319,6 +319,12 @@ This applies to:
 - `Backups`
 - `Mail`
 
+Backups should stay intentionally light in the operations workspace: keep the
+run table, selected run detail, and selected policy context visible, but avoid
+secondary summary cards for effective state, planned changes, related resources,
+or duplicate backup-run lists when those links already exist in the primary
+table and detail panels.
+
 ## Modals and overlays
 
 Current overlay direction:
