@@ -1210,6 +1210,18 @@ export function renderBaseStyleBlock(): string {
         max-width: 30rem;
       }
 
+      @media (min-width: 901px) {
+        .table-col-runtime-text-compact {
+          width: 21rem;
+          max-width: 21rem;
+        }
+
+        td.table-col-runtime-text-compact {
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
+      }
+
       .node-health-code-server-cell {
         display: flex;
         flex-wrap: wrap;

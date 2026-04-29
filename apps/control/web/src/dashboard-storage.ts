@@ -16,7 +16,9 @@ import { renderActionFacts } from "./panel-renderers.js";
 import { type WebCopy } from "./web-copy.js";
 
 type Filesystem = NonNullable<DashboardData["nodeHealth"][number]["storage"]>["filesystems"][number];
+type StoragePath = NonNullable<DashboardData["nodeHealth"][number]["storage"]>["paths"][number];
 type FilesystemRecord = RuntimeSelectionRecord<Filesystem>;
+const storagePathPriority = ["/root", "/home", "/etc", "/opt", "/srv", "/var"];
 
 function usageTone(percent: number | undefined): "default" | "success" | "danger" | "muted" {
   if (percent === undefined) {
@@ -100,7 +102,67 @@ function renderFilesystemCard(copy: WebCopy, renderPill: (value: string, tone?: 
   </article>`;
 }
 
-function renderSelectedNodeStoragePanel(args: {
+function sortStoragePaths(paths: StoragePath[]): StoragePath[] {
+  return [...paths].sort((left, right) => {
+    const leftPriority = storagePathPriority.indexOf(left.path);
+    const rightPriority = storagePathPriority.indexOf(right.path);
+    const normalizedLeftPriority =
+      leftPriority === -1 ? Number.POSITIVE_INFINITY : leftPriority;
+    const normalizedRightPriority =
+      rightPriority === -1 ? Number.POSITIVE_INFINITY : rightPriority;
+
+    if (normalizedLeftPriority !== normalizedRightPriority) {
+      return normalizedLeftPriority - normalizedRightPriority;
+    }
+
+    return left.path.localeCompare(right.path);
+  });
+}
+
+function renderSelectedStoragePathPanel(args: {
+  copy: WebCopy;
+  selectedNode: DashboardData["nodeHealth"][number];
+}): string {
+  const { copy, selectedNode } = args;
+  const paths = sortStoragePaths(selectedNode.storage?.paths ?? []);
+
+  if (paths.length === 0) {
+    return `<article class="panel detail-shell">
+      <div class="section-head">
+        <div>
+          <h3>${escapeHtml(copy.storagePathsTitle)}</h3>
+          <p class="muted section-description">${escapeHtml(selectedNode.hostname)}</p>
+        </div>
+      </div>
+      <p class="empty">${escapeHtml(copy.noStorage)}</p>
+    </article>`;
+  }
+
+  return `<article class="panel detail-shell">
+    <div class="section-head">
+      <div>
+        <h3>${escapeHtml(copy.storagePathsTitle)}</h3>
+        <p class="muted section-description">${escapeHtml(copy.storagePathsDescription)}</p>
+      </div>
+    </div>
+    ${renderActionFacts(
+      paths.map((entry) => ({
+        label: entry.path,
+        value: [
+          escapeHtml(entry.usedBytes === undefined ? copy.none : formatBytes(entry.usedBytes)),
+          entry.mountpoint
+            ? `<span class="mono">${escapeHtml(entry.mountpoint)}</span>`
+            : ""
+        ]
+          .filter(Boolean)
+          .join(" ")
+      })),
+      { className: "action-card-facts-wide-labels" }
+    )}
+  </article>`;
+}
+
+function renderSelectedNodeStoragePanels(args: {
   copy: WebCopy;
   selectedRecord: FilesystemRecord | undefined;
   renderPill: (value: string, tone?: "default" | "success" | "danger" | "muted") => string;
@@ -114,18 +176,21 @@ function renderSelectedNodeStoragePanel(args: {
   const { node: selectedNode, item: filesystem } = selectedRecord;
   const filesystemCard = renderFilesystemCard(copy, renderPill, filesystem);
 
-  return `<article class="panel detail-shell">
-    <div class="section-head">
-      <div>
-        <h3>${escapeHtml(copy.storageSelectedNodeTitle)}</h3>
-        <p class="muted section-description">${escapeHtml(selectedNode.hostname)}</p>
+  return `<div class="grid-two-desktop">
+    <article class="panel detail-shell">
+      <div class="section-head">
+        <div>
+          <h3>${escapeHtml(copy.storageSelectedNodeTitle)}</h3>
+          <p class="muted section-description">${escapeHtml(selectedNode.hostname)}</p>
+        </div>
+        <a class="button-link secondary" href="${escapeHtml(
+          buildDashboardViewUrl("node-health", undefined, selectedNode.nodeId)
+        )}">${escapeHtml(copy.openNodeHealth)}</a>
       </div>
-      <a class="button-link secondary" href="${escapeHtml(
-        buildDashboardViewUrl("node-health", undefined, selectedNode.nodeId)
-      )}">${escapeHtml(copy.openNodeHealth)}</a>
-    </div>
-    <div class="stack">${filesystemCard}</div>
-  </article>`;
+      <div class="stack">${filesystemCard}</div>
+    </article>
+    ${renderSelectedStoragePathPanel({ copy, selectedNode })}
+  </div>`;
 }
 
 export function renderStorageWorkspace(args: {
@@ -197,7 +262,7 @@ export function renderStorageWorkspace(args: {
       { label: copy.storagePressureLabel, value: String(warningFilesystems.length), tone: warningFilesystems.length > 0 ? "danger" : "success" }
     ])}
     ${table}
-    ${renderSelectedNodeStoragePanel({
+    ${renderSelectedNodeStoragePanels({
       copy,
       selectedRecord: selectedFilesystem,
       renderPill

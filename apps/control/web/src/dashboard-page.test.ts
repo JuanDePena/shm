@@ -398,3 +398,82 @@ test("runtime workspaces select one row and render only that row detail", () => 
     );
   }
 });
+
+test("runtime text-heavy tables use compact desktop columns", () => {
+  assert.match(renderView(createDashboardData(), "logs"), /table-col-runtime-text-compact/);
+  assert.match(renderView(createDashboardData(), "network"), /table-col-runtime-text-compact/);
+  assert.match(renderView(createDashboardData(), "processes"), /table-col-runtime-text-compact/);
+});
+
+test("storage workspace shows selected node tracked path usage beside storage detail", () => {
+  const data = createDashboardData();
+  data.nodeHealth[0] = {
+    ...data.nodeHealth[0]!,
+    storage: {
+      checkedAt: "2026-04-29T00:00:00.000Z",
+      filesystems: [
+        {
+          filesystem: "/dev/vda1",
+          mountpoint: "/srv",
+          type: "xfs",
+          totalBytes: 100,
+          usedBytes: 40,
+          availableBytes: 60,
+          usedPercent: 40
+        }
+      ],
+      paths: [
+        {
+          path: "/root",
+          usedBytes: 10,
+          mountpoint: "/",
+          checkedAt: "2026-04-29T00:00:00.000Z"
+        },
+        {
+          path: "/home",
+          usedBytes: 20,
+          mountpoint: "/",
+          checkedAt: "2026-04-29T00:00:00.000Z"
+        },
+        {
+          path: "/etc",
+          usedBytes: 30,
+          mountpoint: "/",
+          checkedAt: "2026-04-29T00:00:00.000Z"
+        },
+        {
+          path: "/opt",
+          usedBytes: 40,
+          mountpoint: "/",
+          checkedAt: "2026-04-29T00:00:00.000Z"
+        },
+        {
+          path: "/srv",
+          usedBytes: 50,
+          mountpoint: "/srv",
+          checkedAt: "2026-04-29T00:00:00.000Z"
+        },
+        {
+          path: "/var",
+          usedBytes: 60,
+          mountpoint: "/",
+          checkedAt: "2026-04-29T00:00:00.000Z"
+        },
+        {
+          path: "/custom",
+          usedBytes: 70,
+          mountpoint: "/",
+          checkedAt: "2026-04-29T00:00:00.000Z"
+        }
+      ]
+    }
+  };
+
+  const html = renderView(data, "storage", "mail-a:/srv");
+  const detail = detailRegion(html, "Selected node storage");
+
+  assert.match(detail, /Tracked paths/);
+  for (const path of ["/root", "/home", "/etc", "/opt", "/srv", "/var", "/custom"]) {
+    assert.match(detail, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+});

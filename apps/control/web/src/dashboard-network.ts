@@ -191,7 +191,7 @@ export function renderNetworkWorkspace(args: {
       { label: copy.networkAddressLabel, className: "mono" },
       { label: copy.networkPortLabel, className: "mono" },
       { label: copy.networkStateLabel },
-      { label: copy.networkProcessLabel },
+      { label: copy.networkProcessLabel, className: "table-col-runtime-text-compact" },
       { label: copy.generatedAt }
     ],
     rows,

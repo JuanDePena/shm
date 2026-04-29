@@ -178,7 +178,7 @@ export function renderLogsWorkspace(args: {
       { label: copy.serviceNameLabel, className: "mono" },
       { label: copy.logPriorityLabel },
       { label: copy.generatedAt },
-      { label: copy.logMessageLabel }
+      { label: copy.logMessageLabel, className: "table-col-runtime-text-compact" }
     ],
     rows,
     emptyMessage: copy.noLogs,

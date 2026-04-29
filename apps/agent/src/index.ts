@@ -96,6 +96,10 @@ const journalEntryLimit = 120;
 const letsEncryptLiveDir = "/etc/letsencrypt/live";
 const trackedStoragePaths = [
   "/",
+  "/root",
+  "/home",
+  "/etc",
+  "/opt",
   "/var",
   "/var/log",
   "/srv",

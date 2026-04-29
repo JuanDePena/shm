@@ -256,7 +256,7 @@ export function renderProcessesWorkspace(args: {
       { label: copy.processCpuLabel },
       { label: copy.processMemoryLabel },
       { label: copy.processRssLabel },
-      { label: copy.processCommandLabel }
+      { label: copy.processCommandLabel, className: "table-col-runtime-text-compact" }
     ],
     rows,
     emptyMessage: copy.noProcesses,
