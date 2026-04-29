@@ -396,6 +396,15 @@ export interface SystemTimersSnapshot {
   checkedAt: string;
 }
 
+export interface SelinuxSnapshot {
+  status?: string;
+  currentMode?: string;
+  configuredMode?: string;
+  policyName?: string;
+  policyVersion?: string;
+  checkedAt: string;
+}
+
 export interface NodeRuntimeSnapshot {
   appServices?: AppServiceSnapshot[];
   codeServer?: CodeServerServiceSnapshot;
@@ -410,6 +419,7 @@ export interface NodeRuntimeSnapshot {
   processes?: SystemProcessesSnapshot;
   containers?: ContainerRuntimeSnapshot;
   timers?: SystemTimersSnapshot;
+  selinux?: SelinuxSnapshot;
   mail?: MailServiceSnapshot;
 }
 
@@ -449,6 +459,7 @@ export interface NodeHealthSnapshot {
   processes?: SystemProcessesSnapshot;
   containers?: ContainerRuntimeSnapshot;
   timers?: SystemTimersSnapshot;
+  selinux?: SelinuxSnapshot;
   mail?: MailServiceSnapshot;
 }
 

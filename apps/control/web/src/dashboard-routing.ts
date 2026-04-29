@@ -16,6 +16,7 @@ export type DashboardView =
   | "processes"
   | "containers"
   | "timers"
+  | "selinux"
   | "packages"
   | "firewall"
   | "fail2ban"
@@ -86,6 +87,7 @@ export interface DashboardCopyLabels {
   navProcesses: string;
   navContainers: string;
   navTimers: string;
+  navSelinux: string;
   navPackages: string;
   navFirewall: string;
   navFail2Ban: string;
@@ -108,6 +110,7 @@ export interface DashboardCopyLabels {
   processesWorkspaceDescription: string;
   containersWorkspaceDescription: string;
   timersWorkspaceDescription: string;
+  selinuxWorkspaceDescription: string;
   firewallWorkspaceDescription: string;
   fail2banWorkspaceDescription: string;
   rustdeskWorkspaceDescription: string;
@@ -146,6 +149,7 @@ export function normalizeDashboardView(value: string | null | undefined): Dashbo
     case "processes":
     case "containers":
     case "timers":
+    case "selinux":
     case "packages":
     case "firewall":
     case "fail2ban":
@@ -240,6 +244,8 @@ function getObjectViewLabel(
       return copy.navContainers;
     case "timers":
       return copy.navTimers;
+    case "selinux":
+      return copy.navSelinux;
     case "packages":
       return copy.navPackages;
     case "firewall":
@@ -400,6 +406,8 @@ export function getDashboardSubheading(copy: DashboardCopyLabels, view: Dashboar
       return copy.containersWorkspaceDescription;
     case "timers":
       return copy.timersWorkspaceDescription;
+    case "selinux":
+      return copy.selinuxWorkspaceDescription;
     case "packages":
       return copy.packagesDescription;
     case "firewall":

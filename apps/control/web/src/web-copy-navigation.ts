@@ -20,6 +20,7 @@ export const navigationCopyByLocale = {
     navProcesses: "Processes",
     navContainers: "Containers",
     navTimers: "Timers",
+    navSelinux: "SELinux",
     navResources: "Resources",
     navDesiredState: "Spec",
     navCreate: "Create",
@@ -60,6 +61,8 @@ export const navigationCopyByLocale = {
       "Podman container inventory, state, images and published ports by node.",
     timersWorkspaceDescription:
       "Systemd timer schedule inventory and activation targets by node.",
+    selinuxWorkspaceDescription:
+      "SELinux effective mode, configured mode and loaded policy by node.",
     firewallWorkspaceDescription:
       "Monitor firewalld posture and apply the SimpleHost baseline without leaving the control plane.",
     fail2banWorkspaceDescription:
@@ -85,6 +88,7 @@ export const navigationCopyByLocale = {
     navProcesses: "Procesos",
     navContainers: "Containers",
     navTimers: "Timers",
+    navSelinux: "SELinux",
     navResources: "Recursos",
     navDesiredState: "Especificación",
     navCreate: "Crear",
@@ -130,6 +134,8 @@ export const navigationCopyByLocale = {
       "Inventario Podman, estado, imágenes y puertos publicados por nodo.",
     timersWorkspaceDescription:
       "Inventario de timers systemd, horarios y unidades activadas por nodo.",
+    selinuxWorkspaceDescription:
+      "Modo efectivo, modo configurado y política SELinux cargada por nodo.",
     firewallWorkspaceDescription:
       "Monitorea la postura de firewalld y aplica el baseline SimpleHost sin salir del plano de control.",
     fail2banWorkspaceDescription:

@@ -46,6 +46,7 @@ import type {
   ResourceDriftSummary,
   RustDeskListenerSnapshot,
   RustDeskServiceSnapshot,
+  SelinuxSnapshot,
   FilesystemUsageSnapshot,
   ServiceUnitSnapshot,
   StoragePathUsageSnapshot,
@@ -1004,6 +1005,24 @@ function normalizeSystemTimersSnapshot(value: unknown): SystemTimersSnapshot | u
   };
 }
 
+function normalizeSelinuxSnapshot(value: unknown): SelinuxSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return {
+    status: typeof record.status === "string" ? record.status : undefined,
+    currentMode: typeof record.currentMode === "string" ? record.currentMode : undefined,
+    configuredMode:
+      typeof record.configuredMode === "string" ? record.configuredMode : undefined,
+    policyName: typeof record.policyName === "string" ? record.policyName : undefined,
+    policyVersion: typeof record.policyVersion === "string" ? record.policyVersion : undefined,
+    checkedAt: typeof record.checkedAt === "string" ? record.checkedAt : new Date(0).toISOString()
+  };
+}
+
 function normalizeRustDeskListenerSnapshot(
   value: unknown
 ): RustDeskListenerSnapshot | undefined {
@@ -1602,6 +1621,9 @@ export function toNodeHealthSnapshot(row: NodeHealthRow): NodeHealthSnapshot {
     ),
     timers: normalizeSystemTimersSnapshot(
       (runtimeSnapshot as Record<string, unknown>).timers
+    ),
+    selinux: normalizeSelinuxSnapshot(
+      (runtimeSnapshot as Record<string, unknown>).selinux
     ),
     mail: normalizeMailSnapshot((runtimeSnapshot as Record<string, unknown>).mail)
   };

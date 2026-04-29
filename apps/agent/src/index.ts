@@ -30,6 +30,7 @@ import {
   type ProcessEntrySnapshot,
   type RustDeskListenerSnapshot,
   type RustDeskServiceSnapshot,
+  type SelinuxSnapshot,
   type FilesystemUsageSnapshot,
   type JournalLogEntrySnapshot,
   type StoragePathUsageSnapshot,
@@ -1220,6 +1221,53 @@ async function inspectSystemTimers(): Promise<AgentNodeRuntimeSnapshot["timers"]
   };
 }
 
+function parseSestatus(value: string | undefined): Partial<SelinuxSnapshot> {
+  const result: Partial<SelinuxSnapshot> = {};
+
+  for (const rawLine of (value ?? "").split(/\r?\n/g)) {
+    const separatorIndex = rawLine.indexOf(":");
+
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const key = rawLine.slice(0, separatorIndex).trim().toLowerCase();
+    const fieldValue = rawLine.slice(separatorIndex + 1).trim();
+
+    if (key === "selinux status") {
+      result.status = fieldValue;
+    } else if (key === "current mode") {
+      result.currentMode = fieldValue;
+    } else if (key === "mode from config file") {
+      result.configuredMode = fieldValue;
+    } else if (key === "loaded policy name") {
+      result.policyName = fieldValue;
+    } else if (key === "policy version") {
+      result.policyVersion = fieldValue;
+    }
+  }
+
+  return result;
+}
+
+async function inspectSelinux(): Promise<AgentNodeRuntimeSnapshot["selinux"]> {
+  const checkedAt = new Date().toISOString();
+  const [getenforceOutput, sestatusOutput] = await Promise.all([
+    commandOutput("getenforce", []),
+    commandOutput("sestatus", [])
+  ]);
+  const parsed = parseSestatus(sestatusOutput);
+
+  return {
+    status: parsed.status,
+    currentMode: getenforceOutput ?? parsed.currentMode,
+    configuredMode: parsed.configuredMode,
+    policyName: parsed.policyName,
+    policyVersion: parsed.policyVersion,
+    checkedAt
+  };
+}
+
 async function inspectFail2BanJail(jail: string): Promise<Fail2BanJailSnapshot> {
   const [status, actions, bantime, findtime, maxRetry] = await Promise.all([
     commandOutput("fail2ban-client", ["status", jail]),
@@ -2356,6 +2404,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     processes,
     containers,
     timers,
+    selinux,
     mail
   ] = await Promise.all([
     inspectAppServices(),
@@ -2371,6 +2420,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     inspectProcesses(),
     inspectContainers(),
     inspectSystemTimers(),
+    inspectSelinux(),
     inspectMail()
   ]);
 
@@ -2388,6 +2438,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     processes,
     containers,
     timers,
+    selinux,
     mail
   };
 }

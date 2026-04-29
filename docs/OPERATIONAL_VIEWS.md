@@ -139,3 +139,20 @@ The control UI shows:
 
 The view is read-only. Starting, stopping, or enabling timers should be modeled
 as explicit audited jobs before becoming UI actions.
+
+## SELinux
+
+The SELinux view reports node-local SELinux posture. The agent uses `getenforce`
+and `sestatus` to collect current mode, configured mode, loaded policy, policy
+version, and SELinux status.
+
+The control UI shows:
+
+- per-node SELinux inventory with current mode, configured mode, policy name,
+  policy version, and collection timestamp
+- counters for reported nodes, enforcing nodes, and weak modes such as
+  `permissive` or `disabled`
+- selected-node posture details
+
+The view is read-only. Mode changes and policy edits should stay outside the UI
+until they are represented as explicit audited maintenance jobs.

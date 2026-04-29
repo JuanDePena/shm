@@ -56,6 +56,7 @@ type DashboardShellCopy = DashboardCopyLabels & {
   navProcesses: string;
   navContainers: string;
   navTimers: string;
+  navSelinux: string;
   navPackages: string;
   navFirewall: string;
   navFail2Ban: string;
@@ -131,6 +132,7 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
     processesSection: string;
     containersSection: string;
     timersSection: string;
+    selinuxSection: string;
     packagesSection: string;
     firewallSection: string;
     fail2banSection: string;
@@ -387,6 +389,13 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
           active: view === "timers"
         },
         {
+          id: "selinux",
+          label: copy.navSelinux,
+          href: buildDashboardViewUrl("selinux"),
+          badge: String(data.nodeHealth.filter((node) => node.selinux?.currentMode).length),
+          active: view === "selinux"
+        },
+        {
           id: "packages",
           label: copy.navPackages,
           href: buildDashboardViewUrl("packages"),
@@ -487,6 +496,8 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
         return sections.containersSection;
       case "timers":
         return sections.timersSection;
+      case "selinux":
+        return sections.selinuxSection;
       case "packages":
         return sections.packagesSection;
       case "firewall":

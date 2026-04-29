@@ -165,6 +165,18 @@ test("combined runtime serves authenticated flow over a real HTTP server", async
       "timers workspace should render systemd timer inventory"
     );
 
+    const selinuxResponse = await fetch(new URL("/?view=selinux", runtime.origin), {
+      headers: {
+        cookie
+      }
+    });
+    assert.equal(selinuxResponse.status, 200);
+    assert.match(
+      await selinuxResponse.text(),
+      /SELinux/,
+      "selinux workspace should render SELinux posture"
+    );
+
     const packagesResponse = await fetch(new URL("/?view=packages", runtime.origin), {
       headers: {
         cookie
