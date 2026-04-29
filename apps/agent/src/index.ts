@@ -24,6 +24,7 @@ import {
   type MailSyncPayload,
   type RustDeskListenerSnapshot,
   type RustDeskServiceSnapshot,
+  type JournalLogEntrySnapshot,
   type ServiceUnitSnapshot,
   type AgentBufferedReport,
   type AgentJobEnvelope,
@@ -76,6 +77,8 @@ const trackedSystemServices = [
   "pdns.service",
   "named.service"
 ] as const;
+const journalEntriesPerService = 8;
+const journalEntryLimit = 120;
 
 type MailboxUsageEntry = NonNullable<MailServiceSnapshot["mailboxUsage"]>[number];
 
@@ -440,6 +443,107 @@ async function inspectSystemServices(): Promise<AgentNodeRuntimeSnapshot["servic
 
   return {
     units,
+    checkedAt
+  };
+}
+
+function formatJournalTimestamp(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const micros = Number.parseInt(value, 10);
+  return Number.isFinite(micros) ? new Date(Math.floor(micros / 1000)).toISOString() : undefined;
+}
+
+function priorityLabel(priority: number | undefined): string | undefined {
+  switch (priority) {
+    case 0:
+      return "emerg";
+    case 1:
+      return "alert";
+    case 2:
+      return "crit";
+    case 3:
+      return "err";
+    case 4:
+      return "warning";
+    case 5:
+      return "notice";
+    case 6:
+      return "info";
+    case 7:
+      return "debug";
+    default:
+      return undefined;
+  }
+}
+
+function parseJournalJsonLines(
+  output: string | undefined,
+  fallbackUnit: string
+): JournalLogEntrySnapshot[] {
+  const entries: JournalLogEntrySnapshot[] = [];
+
+  for (const line of (output ?? "").split(/\r?\n/g)) {
+    if (!line.trim()) {
+      continue;
+    }
+
+    try {
+      const record = JSON.parse(line) as Record<string, unknown>;
+      const message = typeof record.MESSAGE === "string" ? record.MESSAGE : undefined;
+      const occurredAt = formatJournalTimestamp(record.__REALTIME_TIMESTAMP);
+      const priority =
+        typeof record.PRIORITY === "string"
+          ? Number.parseInt(record.PRIORITY, 10)
+          : typeof record.PRIORITY === "number"
+            ? record.PRIORITY
+            : undefined;
+
+      if (!message || !occurredAt) {
+        continue;
+      }
+
+      entries.push({
+        unit:
+          typeof record._SYSTEMD_UNIT === "string" ? record._SYSTEMD_UNIT : fallbackUnit,
+        priority: Number.isFinite(priority) ? priority : undefined,
+        priorityLabel: priorityLabel(Number.isFinite(priority) ? priority : undefined),
+        occurredAt,
+        message
+      });
+    } catch {
+      continue;
+    }
+  }
+
+  return entries;
+}
+
+async function inspectJournalForService(serviceName: string): Promise<JournalLogEntrySnapshot[]> {
+  const output = await commandOutput("journalctl", [
+    "--unit",
+    serviceName,
+    "--no-pager",
+    "--output=json",
+    "--since=-24h",
+    "-n",
+    String(journalEntriesPerService)
+  ]);
+
+  return parseJournalJsonLines(output, serviceName);
+}
+
+async function inspectSystemLogs(): Promise<AgentNodeRuntimeSnapshot["logs"]> {
+  const checkedAt = new Date().toISOString();
+  const entries = (await Promise.all(trackedSystemServices.map(inspectJournalForService)))
+    .flat()
+    .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt))
+    .slice(0, journalEntryLimit);
+
+  return {
+    entries,
     checkedAt
   };
 }
@@ -1566,13 +1670,14 @@ async function inspectAppServices(): Promise<AppServiceSnapshot[]> {
 }
 
 async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
-  const [appServices, codeServer, rustdesk, firewall, fail2ban, services, mail] = await Promise.all([
+  const [appServices, codeServer, rustdesk, firewall, fail2ban, services, logs, mail] = await Promise.all([
     inspectAppServices(),
     inspectCodeServer(),
     inspectRustDesk(),
     inspectFirewall(),
     inspectFail2Ban(),
     inspectSystemServices(),
+    inspectSystemLogs(),
     inspectMail()
   ]);
 
@@ -1583,6 +1688,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     firewall,
     fail2ban,
     services,
+    logs,
     mail
   };
 }

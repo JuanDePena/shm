@@ -81,6 +81,18 @@ test("combined runtime serves authenticated flow over a real HTTP server", async
       "services workspace should render systemd service inventory"
     );
 
+    const logsResponse = await fetch(new URL("/?view=logs", runtime.origin), {
+      headers: {
+        cookie
+      }
+    });
+    assert.equal(logsResponse.status, 200);
+    assert.match(
+      await logsResponse.text(),
+      /Recent logs|Logs recientes/,
+      "logs workspace should render recent journal entries"
+    );
+
     const packagesResponse = await fetch(new URL("/?view=packages", runtime.origin), {
       headers: {
         cookie

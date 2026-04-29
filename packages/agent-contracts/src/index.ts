@@ -480,6 +480,19 @@ export interface SystemServicesSnapshot {
   checkedAt: string;
 }
 
+export interface JournalLogEntrySnapshot {
+  unit?: string;
+  priority?: number;
+  priorityLabel?: string;
+  occurredAt: string;
+  message: string;
+}
+
+export interface SystemLogsSnapshot {
+  entries: JournalLogEntrySnapshot[];
+  checkedAt: string;
+}
+
 export interface AgentNodeRuntimeSnapshot {
   appServices?: AppServiceSnapshot[];
   codeServer?: CodeServerServiceSnapshot;
@@ -487,6 +500,7 @@ export interface AgentNodeRuntimeSnapshot {
   firewall?: HostFirewallSnapshot;
   fail2ban?: Fail2BanSnapshot;
   services?: SystemServicesSnapshot;
+  logs?: SystemLogsSnapshot;
   mail?: MailServiceSnapshot;
 }
 

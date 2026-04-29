@@ -22,6 +22,7 @@ import {
   renderFirewallWorkspace
 } from "./dashboard-security.js";
 import { renderServicesWorkspace } from "./dashboard-services.js";
+import { renderLogsWorkspace } from "./dashboard-logs.js";
 import { renderDashboardShell } from "./dashboard-shell.js";
 import { buildDashboardViewModel } from "./dashboard-view-model.js";
 import {
@@ -588,6 +589,16 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
     renderPill,
     renderSignalStrip
   });
+  const logsSection = renderLogsWorkspace({
+    copy,
+    data,
+    locale,
+    focus,
+    formatDate,
+    renderFocusLink: renderFocusLinkWithPill,
+    renderPill,
+    renderSignalStrip
+  });
   const rustdeskSection = renderRustDeskSection(data, copy, locale, focus, {
     formatDate,
     renderActionFacts,
@@ -713,6 +724,7 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
       mailSection,
       backupPoliciesSection,
       servicesSection,
+      logsSection,
       packagesSection,
       firewallSection,
       fail2banSection,

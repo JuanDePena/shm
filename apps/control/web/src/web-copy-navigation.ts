@@ -13,6 +13,7 @@ export const navigationCopyByLocale = {
     navBackups: "Backups",
     navRustDesk: "RustDesk",
     navServices: "Services",
+    navLogs: "Logs",
     navResources: "Resources",
     navDesiredState: "Spec",
     navCreate: "Create",
@@ -39,6 +40,8 @@ export const navigationCopyByLocale = {
     backupWorkspaceDescription: "Policy definition, retention and coverage before backup runs.",
     servicesWorkspaceDescription:
       "Systemd posture for critical platform services across managed nodes.",
+    logsWorkspaceDescription:
+      "Recent journal entries for critical platform services across managed nodes.",
     firewallWorkspaceDescription:
       "Monitor firewalld posture and apply the SimpleHost baseline without leaving the control plane.",
     fail2banWorkspaceDescription:
@@ -57,6 +60,7 @@ export const navigationCopyByLocale = {
     navBackups: "Backups",
     navRustDesk: "RustDesk",
     navServices: "Servicios",
+    navLogs: "Logs",
     navResources: "Recursos",
     navDesiredState: "Especificación",
     navCreate: "Crear",
@@ -88,6 +92,8 @@ export const navigationCopyByLocale = {
       "Definición de políticas, retención y cobertura antes de las ejecuciones.",
     servicesWorkspaceDescription:
       "Postura systemd de servicios críticos de plataforma en los nodos gestionados.",
+    logsWorkspaceDescription:
+      "Entradas recientes de journal para servicios críticos de plataforma en los nodos gestionados.",
     firewallWorkspaceDescription:
       "Monitorea la postura de firewalld y aplica el baseline SimpleHost sin salir del plano de control.",
     fail2banWorkspaceDescription:

@@ -22,3 +22,19 @@ The control UI shows:
 This view is read-only by design in its first iteration. Restart/reload actions
 should be added only when they can be queued as audited jobs with an explicit
 target node and confirmation.
+
+## Logs
+
+The Logs view surfaces recent `journalctl` entries for the same critical
+platform units tracked by Services. The agent collects a bounded sample per unit
+from the last 24 hours and reports normalized timestamp, unit, priority and
+message fields.
+
+The control UI shows:
+
+- a cross-node log table with client-side filtering
+- priority counters for warnings and errors
+- selected-node log cards for the most recent entries
+
+The snapshot is intentionally bounded. It is meant for incident triage and
+context switching reduction, not as a full log archive or SIEM replacement.

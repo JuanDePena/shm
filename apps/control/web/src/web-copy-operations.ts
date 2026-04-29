@@ -276,6 +276,15 @@ export const operationsCopyByLocale = {
     servicesInventoryDescription:
       "Critical systemd units reported by each managed node.",
     servicesSelectedNodeTitle: "Selected node services",
+    logsInventoryTitle: "Recent logs",
+    logsInventoryDescription:
+      "Bounded journalctl entries collected from critical services in the last 24 hours.",
+    logsSelectedNodeTitle: "Selected node logs",
+    logPriorityLabel: "Priority",
+    logMessageLabel: "Message",
+    warningLogsLabel: "Warnings",
+    errorLogsLabel: "Errors",
+    noLogs: "No log records.",
     serviceNameLabel: "Unit",
     serviceDescriptionLabel: "Description",
     enabledStateLabel: "Enabled",
@@ -595,6 +604,15 @@ export const operationsCopyByLocale = {
     servicesInventoryDescription:
       "Unidades systemd críticas reportadas por cada nodo gestionado.",
     servicesSelectedNodeTitle: "Servicios del nodo seleccionado",
+    logsInventoryTitle: "Logs recientes",
+    logsInventoryDescription:
+      "Entradas acotadas de journalctl recolectadas desde servicios críticos en las últimas 24 horas.",
+    logsSelectedNodeTitle: "Logs del nodo seleccionado",
+    logPriorityLabel: "Prioridad",
+    logMessageLabel: "Mensaje",
+    warningLogsLabel: "Warnings",
+    errorLogsLabel: "Errores",
+    noLogs: "No hay registros de logs.",
     serviceNameLabel: "Unidad",
     serviceDescriptionLabel: "Descripción",
     enabledStateLabel: "Habilitado",

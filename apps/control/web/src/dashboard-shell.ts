@@ -49,6 +49,7 @@ type DashboardShellCopy = DashboardCopyLabels & {
   navBackups: string;
   navBackupPolicies: string;
   navServices: string;
+  navLogs: string;
   navPackages: string;
   navFirewall: string;
   navFail2Ban: string;
@@ -117,6 +118,7 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
     mailSection: string;
     backupPoliciesSection: string;
     servicesSection: string;
+    logsSection: string;
     packagesSection: string;
     firewallSection: string;
     fail2banSection: string;
@@ -324,6 +326,13 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
           active: view === "services"
         },
         {
+          id: "logs",
+          label: copy.navLogs,
+          href: buildDashboardViewUrl("logs"),
+          badge: String(data.nodeHealth.reduce((count, node) => count + (node.logs?.entries.length ?? 0), 0)),
+          active: view === "logs"
+        },
+        {
           id: "packages",
           label: copy.navPackages,
           href: buildDashboardViewUrl("packages"),
@@ -410,6 +419,8 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
         return sections.backupPoliciesSection;
       case "services":
         return sections.servicesSection;
+      case "logs":
+        return sections.logsSection;
       case "packages":
         return sections.packagesSection;
       case "firewall":

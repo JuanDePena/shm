@@ -25,6 +25,7 @@ import type {
   InventoryNodeSummary,
   InventoryZoneSummary,
   JobHistoryEntry,
+  JournalLogEntrySnapshot,
   MailDeliveryFailureSnapshot,
   MailManagedDomainSnapshot,
   MailQueueSnapshot,
@@ -37,6 +38,7 @@ import type {
   RustDeskListenerSnapshot,
   RustDeskServiceSnapshot,
   ServiceUnitSnapshot,
+  SystemLogsSnapshot,
   SystemServicesSnapshot
 } from "@simplehost/control-contracts";
 
@@ -536,6 +538,45 @@ function normalizeSystemServicesSnapshot(value: unknown): SystemServicesSnapshot
 
   return {
     units,
+    checkedAt: typeof record.checkedAt === "string" ? record.checkedAt : new Date(0).toISOString()
+  };
+}
+
+function normalizeJournalLogEntrySnapshot(value: unknown): JournalLogEntrySnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (typeof record.occurredAt !== "string" || typeof record.message !== "string") {
+    return undefined;
+  }
+
+  return {
+    unit: typeof record.unit === "string" ? record.unit : undefined,
+    priority: typeof record.priority === "number" ? Number(record.priority) : undefined,
+    priorityLabel:
+      typeof record.priorityLabel === "string" ? record.priorityLabel : undefined,
+    occurredAt: record.occurredAt,
+    message: record.message
+  };
+}
+
+function normalizeSystemLogsSnapshot(value: unknown): SystemLogsSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  const entries = Array.isArray(record.entries)
+    ? record.entries
+        .map(normalizeJournalLogEntrySnapshot)
+        .filter((entry): entry is JournalLogEntrySnapshot => Boolean(entry))
+    : [];
+
+  return {
+    entries,
     checkedAt: typeof record.checkedAt === "string" ? record.checkedAt : new Date(0).toISOString()
   };
 }
@@ -1117,6 +1158,9 @@ export function toNodeHealthSnapshot(row: NodeHealthRow): NodeHealthSnapshot {
     ),
     services: normalizeSystemServicesSnapshot(
       (runtimeSnapshot as Record<string, unknown>).services
+    ),
+    logs: normalizeSystemLogsSnapshot(
+      (runtimeSnapshot as Record<string, unknown>).logs
     ),
     mail: normalizeMailSnapshot((runtimeSnapshot as Record<string, unknown>).mail)
   };
