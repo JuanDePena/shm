@@ -28,6 +28,7 @@ import { renderStorageWorkspace } from "./dashboard-storage.js";
 import { renderNetworkWorkspace } from "./dashboard-network.js";
 import { renderProcessesWorkspace } from "./dashboard-processes.js";
 import { renderContainersWorkspace } from "./dashboard-containers.js";
+import { renderTimersWorkspace } from "./dashboard-timers.js";
 import { renderDashboardShell } from "./dashboard-shell.js";
 import { buildDashboardViewModel } from "./dashboard-view-model.js";
 import {
@@ -652,6 +653,15 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
     renderPill,
     renderSignalStrip
   });
+  const timersSection = renderTimersWorkspace({
+    copy,
+    data,
+    locale,
+    focus,
+    formatDate,
+    renderPill,
+    renderSignalStrip
+  });
   const rustdeskSection = renderRustDeskSection(data, copy, locale, focus, {
     formatDate,
     renderActionFacts,
@@ -783,6 +793,7 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
       networkSection,
       processesSection,
       containersSection,
+      timersSection,
       packagesSection,
       firewallSection,
       fail2banSection,

@@ -19,6 +19,7 @@ export const navigationCopyByLocale = {
     navNetwork: "Network",
     navProcesses: "Processes",
     navContainers: "Containers",
+    navTimers: "Timers",
     navResources: "Resources",
     navDesiredState: "Spec",
     navCreate: "Create",
@@ -57,6 +58,8 @@ export const navigationCopyByLocale = {
       "Load, memory and top process usage reported by managed nodes.",
     containersWorkspaceDescription:
       "Podman container inventory, state, images and published ports by node.",
+    timersWorkspaceDescription:
+      "Systemd timer schedule inventory and activation targets by node.",
     firewallWorkspaceDescription:
       "Monitor firewalld posture and apply the SimpleHost baseline without leaving the control plane.",
     fail2banWorkspaceDescription:
@@ -81,6 +84,7 @@ export const navigationCopyByLocale = {
     navNetwork: "Red",
     navProcesses: "Procesos",
     navContainers: "Containers",
+    navTimers: "Timers",
     navResources: "Recursos",
     navDesiredState: "Especificación",
     navCreate: "Crear",
@@ -124,6 +128,8 @@ export const navigationCopyByLocale = {
       "Carga, memoria y top de procesos reportados por los nodos gestionados.",
     containersWorkspaceDescription:
       "Inventario Podman, estado, imágenes y puertos publicados por nodo.",
+    timersWorkspaceDescription:
+      "Inventario de timers systemd, horarios y unidades activadas por nodo.",
     firewallWorkspaceDescription:
       "Monitorea la postura de firewalld y aplica el baseline SimpleHost sin salir del plano de control.",
     fail2banWorkspaceDescription:

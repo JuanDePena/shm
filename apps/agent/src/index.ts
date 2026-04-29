@@ -34,6 +34,7 @@ import {
   type JournalLogEntrySnapshot,
   type StoragePathUsageSnapshot,
   type ServiceUnitSnapshot,
+  type SystemTimerSnapshot,
   type TlsCertificateSnapshot,
   type AgentBufferedReport,
   type AgentJobEnvelope,
@@ -1159,6 +1160,62 @@ async function inspectContainers(): Promise<AgentNodeRuntimeSnapshot["containers
 
   return {
     containers: parsePodmanContainers(output),
+    checkedAt
+  };
+}
+
+function parseSystemTimerTimestamp(value: unknown): string | undefined {
+  if (typeof value !== "string" || !value || value === "n/a") {
+    return undefined;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : value;
+}
+
+function parseSystemTimers(value: string | undefined): SystemTimerSnapshot[] {
+  return parseJsonArray(value)
+    .map((entry): SystemTimerSnapshot | undefined => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return undefined;
+      }
+
+      const record = entry as Record<string, unknown>;
+      const timerName =
+        readStringField(record, "unit") ??
+        readStringField(record, "UNIT") ??
+        readStringField(record, "timer");
+
+      if (!timerName) {
+        return undefined;
+      }
+
+      return {
+        timerName,
+        activates:
+          readStringField(record, "activates") ??
+          readStringField(record, "ACTIVATES"),
+        nextElapse: parseSystemTimerTimestamp(record.next ?? record.NEXT),
+        lastTrigger: parseSystemTimerTimestamp(record.last ?? record.LAST),
+        left: readStringField(record, "left") ?? readStringField(record, "LEFT"),
+        passed: readStringField(record, "passed") ?? readStringField(record, "PASSED")
+      };
+    })
+    .filter((entry): entry is SystemTimerSnapshot => Boolean(entry))
+    .sort((left, right) => left.timerName.localeCompare(right.timerName));
+}
+
+async function inspectSystemTimers(): Promise<AgentNodeRuntimeSnapshot["timers"]> {
+  const checkedAt = new Date().toISOString();
+  const output = await commandOutput("systemctl", [
+    "list-timers",
+    "--all",
+    "--no-pager",
+    "--output=json"
+  ]);
+
+  return {
+    timers: parseSystemTimers(output),
     checkedAt
   };
 }
@@ -2298,6 +2355,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     network,
     processes,
     containers,
+    timers,
     mail
   ] = await Promise.all([
     inspectAppServices(),
@@ -2312,6 +2370,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     inspectNetwork(),
     inspectProcesses(),
     inspectContainers(),
+    inspectSystemTimers(),
     inspectMail()
   ]);
 
@@ -2328,6 +2387,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     network,
     processes,
     containers,
+    timers,
     mail
   };
 }

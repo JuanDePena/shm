@@ -122,3 +122,20 @@ The control UI shows:
 This view is read-only in the first pass. Container reconciliation, restart, and
 image rollout should continue to go through desired-state resources and audited
 jobs rather than direct process control from the UI.
+
+## Timers
+
+The Timers view reports `systemd` timer inventory per managed node. The agent
+uses `systemctl list-timers --all --output=json` to collect timer names,
+activated units, next trigger timing, last trigger timing, and relative timing
+strings.
+
+The control UI shows:
+
+- cross-node timer inventory with activation target, next trigger, last trigger,
+  and remaining time
+- scheduled and activation-target counters
+- selected-node timer cards for the reported timers
+
+The view is read-only. Starting, stopping, or enabling timers should be modeled
+as explicit audited jobs before becoming UI actions.

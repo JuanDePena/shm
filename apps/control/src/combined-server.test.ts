@@ -153,6 +153,18 @@ test("combined runtime serves authenticated flow over a real HTTP server", async
       "containers workspace should render container inventory"
     );
 
+    const timersResponse = await fetch(new URL("/?view=timers", runtime.origin), {
+      headers: {
+        cookie
+      }
+    });
+    assert.equal(timersResponse.status, 200);
+    assert.match(
+      await timersResponse.text(),
+      /Timers/,
+      "timers workspace should render systemd timer inventory"
+    );
+
     const packagesResponse = await fetch(new URL("/?view=packages", runtime.origin), {
       headers: {
         cookie

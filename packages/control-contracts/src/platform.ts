@@ -382,6 +382,20 @@ export interface ContainerRuntimeSnapshot {
   checkedAt: string;
 }
 
+export interface SystemTimerSnapshot {
+  timerName: string;
+  activates?: string;
+  nextElapse?: string;
+  lastTrigger?: string;
+  left?: string;
+  passed?: string;
+}
+
+export interface SystemTimersSnapshot {
+  timers: SystemTimerSnapshot[];
+  checkedAt: string;
+}
+
 export interface NodeRuntimeSnapshot {
   appServices?: AppServiceSnapshot[];
   codeServer?: CodeServerServiceSnapshot;
@@ -395,6 +409,7 @@ export interface NodeRuntimeSnapshot {
   network?: NetworkSnapshot;
   processes?: SystemProcessesSnapshot;
   containers?: ContainerRuntimeSnapshot;
+  timers?: SystemTimersSnapshot;
   mail?: MailServiceSnapshot;
 }
 
@@ -433,6 +448,7 @@ export interface NodeHealthSnapshot {
   network?: NetworkSnapshot;
   processes?: SystemProcessesSnapshot;
   containers?: ContainerRuntimeSnapshot;
+  timers?: SystemTimersSnapshot;
   mail?: MailServiceSnapshot;
 }
 

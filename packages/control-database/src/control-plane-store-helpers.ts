@@ -53,6 +53,8 @@ import type {
   SystemProcessesSnapshot,
   SystemLogsSnapshot,
   SystemServicesSnapshot,
+  SystemTimerSnapshot,
+  SystemTimersSnapshot,
   TlsCertificateSnapshot,
   TlsCertificatesSnapshot
 } from "@simplehost/control-contracts";
@@ -964,6 +966,44 @@ function normalizeContainerRuntimeSnapshot(
   };
 }
 
+function normalizeSystemTimerSnapshot(value: unknown): SystemTimerSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (typeof record.timerName !== "string") {
+    return undefined;
+  }
+
+  return {
+    timerName: record.timerName,
+    activates: typeof record.activates === "string" ? record.activates : undefined,
+    nextElapse: typeof record.nextElapse === "string" ? record.nextElapse : undefined,
+    lastTrigger: typeof record.lastTrigger === "string" ? record.lastTrigger : undefined,
+    left: typeof record.left === "string" ? record.left : undefined,
+    passed: typeof record.passed === "string" ? record.passed : undefined
+  };
+}
+
+function normalizeSystemTimersSnapshot(value: unknown): SystemTimersSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return {
+    timers: Array.isArray(record.timers)
+      ? record.timers
+          .map(normalizeSystemTimerSnapshot)
+          .filter((entry): entry is SystemTimerSnapshot => Boolean(entry))
+      : [],
+    checkedAt: typeof record.checkedAt === "string" ? record.checkedAt : new Date(0).toISOString()
+  };
+}
+
 function normalizeRustDeskListenerSnapshot(
   value: unknown
 ): RustDeskListenerSnapshot | undefined {
@@ -1559,6 +1599,9 @@ export function toNodeHealthSnapshot(row: NodeHealthRow): NodeHealthSnapshot {
     ),
     containers: normalizeContainerRuntimeSnapshot(
       (runtimeSnapshot as Record<string, unknown>).containers
+    ),
+    timers: normalizeSystemTimersSnapshot(
+      (runtimeSnapshot as Record<string, unknown>).timers
     ),
     mail: normalizeMailSnapshot((runtimeSnapshot as Record<string, unknown>).mail)
   };
