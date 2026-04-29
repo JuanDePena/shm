@@ -76,6 +76,24 @@ Unavailable commands are reported separately from failures so optional services
 do not look broken merely because their validation tool is absent. Repair
 actions should continue through desired state or explicit audited jobs.
 
+## Time
+
+The Time view reports clock and NTP posture per managed node. The agent collects
+`timedatectl show` fields for timezone, NTP enablement, synchronization and
+local RTC state, then enriches the snapshot with `chronyc tracking` and
+`chronyc sources -n` when chrony is available.
+
+The control UI shows:
+
+- per-node synchronization inventory with timezone, time service and source
+  counts
+- counters for unsynchronized nodes, active time services and local RTC usage
+- selected-node details with chrony tracking summary and reported NTP sources
+
+This view is read-only. Time service changes should be modeled as audited
+configuration jobs before becoming dashboard actions, because clock drift can
+affect TLS, mail, backups and job ordering.
+
 ## Services
 
 The Services view reports critical `systemd` units per managed node. The agent

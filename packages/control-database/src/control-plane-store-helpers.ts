@@ -63,6 +63,8 @@ import type {
   SystemServicesSnapshot,
   SystemTimerSnapshot,
   SystemTimersSnapshot,
+  TimeSyncSnapshot,
+  TimeSyncSourceSnapshot,
   TlsCertificateSnapshot,
   TlsCertificatesSnapshot
 } from "@simplehost/control-contracts";
@@ -690,6 +692,56 @@ function normalizeConfigValidationSnapshot(
 
   return {
     checks,
+    checkedAt: typeof record.checkedAt === "string" ? record.checkedAt : new Date(0).toISOString()
+  };
+}
+
+function normalizeTimeSyncSourceSnapshot(value: unknown): TimeSyncSourceSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (typeof record.name !== "string") {
+    return undefined;
+  }
+
+  return {
+    marker: typeof record.marker === "string" ? record.marker : undefined,
+    name: record.name,
+    stratum: typeof record.stratum === "number" ? Number(record.stratum) : undefined,
+    poll: typeof record.poll === "number" ? Number(record.poll) : undefined,
+    reach: typeof record.reach === "number" ? Number(record.reach) : undefined,
+    lastRx: typeof record.lastRx === "string" ? record.lastRx : undefined,
+    lastSample: typeof record.lastSample === "string" ? record.lastSample : undefined
+  };
+}
+
+function normalizeTimeSyncSnapshot(value: unknown): TimeSyncSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  const sources = Array.isArray(record.sources)
+    ? record.sources
+        .map(normalizeTimeSyncSourceSnapshot)
+        .filter((entry): entry is TimeSyncSourceSnapshot => Boolean(entry))
+    : [];
+
+  return {
+    timezone: typeof record.timezone === "string" ? record.timezone : undefined,
+    ntpEnabled: typeof record.ntpEnabled === "boolean" ? record.ntpEnabled : undefined,
+    synchronized:
+      typeof record.synchronized === "boolean" ? record.synchronized : undefined,
+    localRtc: typeof record.localRtc === "boolean" ? record.localRtc : undefined,
+    serviceName: typeof record.serviceName === "string" ? record.serviceName : undefined,
+    serviceActive:
+      typeof record.serviceActive === "boolean" ? record.serviceActive : undefined,
+    trackingSummary:
+      typeof record.trackingSummary === "string" ? record.trackingSummary : undefined,
+    sources,
     checkedAt: typeof record.checkedAt === "string" ? record.checkedAt : new Date(0).toISOString()
   };
 }
@@ -1799,6 +1851,9 @@ export function toNodeHealthSnapshot(row: NodeHealthRow): NodeHealthSnapshot {
     ),
     configValidation: normalizeConfigValidationSnapshot(
       (runtimeSnapshot as Record<string, unknown>).configValidation
+    ),
+    timeSync: normalizeTimeSyncSnapshot(
+      (runtimeSnapshot as Record<string, unknown>).timeSync
     ),
     logs: normalizeSystemLogsSnapshot(
       (runtimeSnapshot as Record<string, unknown>).logs

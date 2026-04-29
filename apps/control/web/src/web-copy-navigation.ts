@@ -15,6 +15,7 @@ export const navigationCopyByLocale = {
     navUpdates: "Updates",
     navReboots: "Reboots",
     navConfig: "Config",
+    navTime: "Time",
     navServices: "Services",
     navLogs: "Logs",
     navCertificates: "TLS",
@@ -55,6 +56,8 @@ export const navigationCopyByLocale = {
       "Kernel, uptime and reboot-required posture reported by managed nodes.",
     configWorkspaceDescription:
       "Configuration syntax checks for critical node-local services.",
+    timeWorkspaceDescription:
+      "Clock, timezone and NTP synchronization posture reported by managed nodes.",
     servicesWorkspaceDescription:
       "Systemd posture for critical platform services across managed nodes.",
     logsWorkspaceDescription:
@@ -95,6 +98,7 @@ export const navigationCopyByLocale = {
     navUpdates: "Updates",
     navReboots: "Reboots",
     navConfig: "Config",
+    navTime: "Hora",
     navServices: "Servicios",
     navLogs: "Logs",
     navCertificates: "TLS",
@@ -140,6 +144,8 @@ export const navigationCopyByLocale = {
       "Postura de kernel, uptime y reboot requerido reportada por los nodos gestionados.",
     configWorkspaceDescription:
       "Validaciones de sintaxis para configuraciones críticas locales del nodo.",
+    timeWorkspaceDescription:
+      "Postura de reloj, zona horaria y sincronización NTP reportada por los nodos gestionados.",
     servicesWorkspaceDescription:
       "Postura systemd de servicios críticos de plataforma en los nodos gestionados.",
     logsWorkspaceDescription:

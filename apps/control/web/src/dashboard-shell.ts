@@ -51,6 +51,7 @@ type DashboardShellCopy = DashboardCopyLabels & {
   navUpdates: string;
   navReboots: string;
   navConfig: string;
+  navTime: string;
   navServices: string;
   navLogs: string;
   navCertificates: string;
@@ -327,6 +328,13 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
           href: buildDashboardViewUrl("config"),
           badge: String(data.nodeHealth.reduce((count, node) => count + (node.configValidation?.checks.filter((check) => check.status === "failed").length ?? 0), 0)),
           active: view === "config"
+        },
+        {
+          id: "time",
+          label: copy.navTime,
+          href: buildDashboardViewUrl("time"),
+          badge: String(data.nodeHealth.filter((node) => node.timeSync?.synchronized === false).length),
+          active: view === "time"
         },
         {
           id: "services",

@@ -24,6 +24,7 @@ import {
 import { renderUpdatesWorkspace } from "./dashboard-updates.js";
 import { renderRebootsWorkspace } from "./dashboard-reboots.js";
 import { renderConfigValidationWorkspace } from "./dashboard-config-validation.js";
+import { renderTimeWorkspace } from "./dashboard-time.js";
 import { renderServicesWorkspace } from "./dashboard-services.js";
 import { renderLogsWorkspace } from "./dashboard-logs.js";
 import { renderCertificatesWorkspace } from "./dashboard-certificates.js";
@@ -590,6 +591,17 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
         });
       case "config":
         return renderConfigValidationWorkspace({
+          copy,
+          data,
+          locale,
+          focus,
+          formatDate,
+          renderFocusLink: renderFocusLinkWithPill,
+          renderPill,
+          renderSignalStrip
+        });
+      case "time":
+        return renderTimeWorkspace({
           copy,
           data,
           locale,

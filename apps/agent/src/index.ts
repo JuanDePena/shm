@@ -39,6 +39,7 @@ import {
   type StoragePathUsageSnapshot,
   type ServiceUnitSnapshot,
   type SystemTimerSnapshot,
+  type TimeSyncSourceSnapshot,
   type TlsCertificateSnapshot,
   type AgentBufferedReport,
   type AgentJobEnvelope,
@@ -960,6 +961,113 @@ async function inspectConfigValidation(): Promise<AgentNodeRuntimeSnapshot["conf
 
   return {
     checks,
+    checkedAt
+  };
+}
+
+function parseBooleanText(value: string | undefined): boolean | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (["yes", "true", "1"].includes(normalized)) {
+    return true;
+  }
+
+  if (["no", "false", "0"].includes(normalized)) {
+    return false;
+  }
+
+  return undefined;
+}
+
+function parseChronyTrackingSummary(output: string | undefined): string | undefined {
+  const selectedLines = (output ?? "")
+    .split(/\r?\n/g)
+    .map((line) => line.trim())
+    .filter((line) =>
+      /^(Reference ID|System time|Last offset|Root dispersion|Leap status)\s*:/i.test(line)
+    );
+
+  return selectedLines.length > 0 ? selectedLines.join("; ") : undefined;
+}
+
+function parseChronySources(output: string | undefined): TimeSyncSourceSnapshot[] {
+  const sources: TimeSyncSourceSnapshot[] = [];
+
+  for (const rawLine of (output ?? "").split(/\r?\n/g)) {
+    const line = rawLine.trim();
+
+    if (!line || line.startsWith("MS ") || line.startsWith("===")) {
+      continue;
+    }
+
+    const parts = line.split(/\s+/g);
+    const marker = parts[0];
+    const name = parts[1];
+
+    if (!marker || !name || !/^[\^=#?~x+*-]{2}$/.test(marker)) {
+      continue;
+    }
+
+    sources.push({
+      marker,
+      name,
+      stratum: parseOptionalNumber(parts[2]),
+      poll: parseOptionalNumber(parts[3]),
+      reach: parseOptionalNumber(parts[4]),
+      lastRx: parts[5],
+      lastSample: parts.slice(6).join(" ") || undefined
+    });
+  }
+
+  return sources;
+}
+
+async function inspectTimeSync(): Promise<AgentNodeRuntimeSnapshot["timeSync"]> {
+  const checkedAt = new Date().toISOString();
+  const [
+    timedatectlOutput,
+    chronydActive,
+    systemdTimesyncdActive,
+    trackingOutput,
+    sourcesOutput
+  ] = await Promise.all([
+    commandOutput("timedatectl", [
+      "show",
+      "--property=Timezone,NTP,Synchronized,NTPSynchronized,LocalRTC",
+      "--no-pager"
+    ]),
+    commandOutput("systemctl", ["is-active", "chronyd.service"]),
+    commandOutput("systemctl", ["is-active", "systemd-timesyncd.service"]),
+    commandOutput("chronyc", ["tracking"]),
+    commandOutput("chronyc", ["sources", "-n"])
+  ]);
+  const fields = parseSystemctlShowOutput(timedatectlOutput);
+  const serviceName =
+    chronydActive !== undefined
+      ? "chronyd.service"
+      : systemdTimesyncdActive !== undefined
+        ? "systemd-timesyncd.service"
+        : undefined;
+  const serviceActive =
+    serviceName === "chronyd.service"
+      ? chronydActive === "active"
+      : serviceName === "systemd-timesyncd.service"
+        ? systemdTimesyncdActive === "active"
+        : undefined;
+
+  return {
+    timezone: fields.Timezone || undefined,
+    ntpEnabled: parseBooleanText(fields.NTP),
+    synchronized: parseBooleanText(fields.NTPSynchronized ?? fields.Synchronized),
+    localRtc: parseBooleanText(fields.LocalRTC),
+    serviceName,
+    serviceActive,
+    trackingSummary: parseChronyTrackingSummary(trackingOutput),
+    sources: parseChronySources(sourcesOutput),
     checkedAt
   };
 }
@@ -2952,6 +3060,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     packageUpdates,
     rebootState,
     configValidation,
+    timeSync,
     logs,
     tls,
     storage,
@@ -2972,6 +3081,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     inspectPackageUpdates(),
     inspectRebootState(),
     inspectConfigValidation(),
+    inspectTimeSync(),
     inspectSystemLogs(),
     inspectTlsCertificates(),
     inspectStorage(),
@@ -2994,6 +3104,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     packageUpdates,
     rebootState,
     configValidation,
+    timeSync,
     logs,
     tls,
     storage,

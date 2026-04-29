@@ -527,6 +527,28 @@ export interface ConfigValidationSnapshot {
   checkedAt: string;
 }
 
+export interface TimeSyncSourceSnapshot {
+  marker?: string;
+  name: string;
+  stratum?: number;
+  poll?: number;
+  reach?: number;
+  lastRx?: string;
+  lastSample?: string;
+}
+
+export interface TimeSyncSnapshot {
+  timezone?: string;
+  ntpEnabled?: boolean;
+  synchronized?: boolean;
+  localRtc?: boolean;
+  serviceName?: string;
+  serviceActive?: boolean;
+  trackingSummary?: string;
+  sources: TimeSyncSourceSnapshot[];
+  checkedAt: string;
+}
+
 export interface JournalLogEntrySnapshot {
   unit?: string;
   priority?: number;
@@ -726,6 +748,7 @@ export interface AgentNodeRuntimeSnapshot {
   packageUpdates?: PackageUpdatesSnapshot;
   rebootState?: RebootStateSnapshot;
   configValidation?: ConfigValidationSnapshot;
+  timeSync?: TimeSyncSnapshot;
   logs?: SystemLogsSnapshot;
   tls?: TlsCertificatesSnapshot;
   storage?: StorageSnapshot;

@@ -221,6 +221,54 @@ test("runtime workspaces select one row and render only that row detail", () => 
       }
     },
     {
+      name: "time",
+      view: "time",
+      focus: "mail-a",
+      marker: "Selected node time",
+      selectedText: "America/Santo_Domingo",
+      otherText: "UTC",
+      arrange: (data) => {
+        data.nodeHealth[0] = {
+          ...data.nodeHealth[0]!,
+          timeSync: {
+            timezone: "America/Santo_Domingo",
+            ntpEnabled: true,
+            synchronized: true,
+            localRtc: false,
+            serviceName: "chronyd.service",
+            serviceActive: true,
+            trackingSummary: "Reference ID: selected",
+            sources: [
+              {
+                marker: "^*",
+                name: "192.0.2.10",
+                stratum: 2,
+                reach: 377,
+                lastRx: "12",
+                lastSample: "+1ms"
+              }
+            ],
+            checkedAt: "2026-04-29T00:00:00.000Z"
+          }
+        };
+        data.nodeHealth[1] = {
+          ...data.nodeHealth[0]!,
+          nodeId: "mail-b",
+          hostname: "mail-b.example.com",
+          timeSync: {
+            timezone: "UTC",
+            ntpEnabled: true,
+            synchronized: false,
+            localRtc: false,
+            serviceName: "chronyd.service",
+            serviceActive: false,
+            sources: [],
+            checkedAt: "2026-04-29T00:00:00.000Z"
+          }
+        };
+      }
+    },
+    {
       name: "services",
       view: "services",
       focus: "mail-a:httpd.service",

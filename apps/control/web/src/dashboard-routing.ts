@@ -11,6 +11,7 @@ export type DashboardView =
   | "updates"
   | "reboots"
   | "config"
+  | "time"
   | "services"
   | "logs"
   | "certificates"
@@ -86,6 +87,7 @@ export interface DashboardCopyLabels {
   navUpdates: string;
   navReboots: string;
   navConfig: string;
+  navTime: string;
   navServices: string;
   navLogs: string;
   navCertificates: string;
@@ -113,6 +115,7 @@ export interface DashboardCopyLabels {
   updatesWorkspaceDescription: string;
   rebootsWorkspaceDescription: string;
   configWorkspaceDescription: string;
+  timeWorkspaceDescription: string;
   servicesWorkspaceDescription: string;
   logsWorkspaceDescription: string;
   certificatesWorkspaceDescription: string;
@@ -156,6 +159,7 @@ export function normalizeDashboardView(value: string | null | undefined): Dashbo
     case "updates":
     case "reboots":
     case "config":
+    case "time":
     case "services":
     case "logs":
     case "certificates":
@@ -250,6 +254,8 @@ function getObjectViewLabel(
       return copy.navReboots;
     case "config":
       return copy.navConfig;
+    case "time":
+      return copy.navTime;
     case "services":
       return copy.navServices;
     case "logs":
@@ -420,6 +426,8 @@ export function getDashboardSubheading(copy: DashboardCopyLabels, view: Dashboar
       return copy.rebootsWorkspaceDescription;
     case "config":
       return copy.configWorkspaceDescription;
+    case "time":
+      return copy.timeWorkspaceDescription;
     case "services":
       return copy.servicesWorkspaceDescription;
     case "logs":
