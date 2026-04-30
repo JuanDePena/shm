@@ -102,6 +102,37 @@ test("renderDashboardPage renders only the active workspace body", () => {
   assert.doesNotMatch(html, /id="section-logs"/);
 });
 
+test("dashboard sidebar renders logical collapsible groups", () => {
+  const html = renderView(createDashboardData(), "overview");
+  const groupIds = [
+    "continuity",
+    "control-plane",
+    "observability",
+    "package-management",
+    "resources",
+    "security",
+    "system"
+  ];
+  let previousIndex = -1;
+
+  for (const groupId of groupIds) {
+    const index = html.indexOf(`data-nav-group-id="${groupId}"`);
+    assert.ok(index > previousIndex, `${groupId} should render after the previous group`);
+    previousIndex = index;
+  }
+
+  assert.match(html, /data-nav-group-toggle/);
+  assert.match(html, /simplehost:sidebar:collapsed-groups:v1/);
+
+  const packageGroup = html.slice(
+    html.indexOf('data-nav-group-id="package-management"'),
+    html.indexOf('data-nav-group-id="resources"')
+  );
+  assert.ok(packageGroup.indexOf(">Packages<") < packageGroup.indexOf(">Reboots<"));
+  assert.ok(packageGroup.indexOf(">Reboots<") < packageGroup.indexOf(">Repositories<"));
+  assert.ok(packageGroup.indexOf(">Repositories<") < packageGroup.indexOf(">Updates<"));
+});
+
 test("runtime workspaces select one row and render only that row detail", () => {
   const cases: Array<{
     name: string;

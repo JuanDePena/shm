@@ -168,7 +168,99 @@ export function renderAdminShellClientScript(): string {
         const sidebarSearch = document.querySelector("[data-sidebar-search]");
         const navItems = Array.from(document.querySelectorAll("[data-nav-item]"));
         const navGroups = Array.from(document.querySelectorAll("[data-nav-group]"));
+        const sidebarGroupStorageKey = "simplehost:sidebar:collapsed-groups:v1";
         let navScrollTicking = false;
+        const readCollapsedSidebarGroups = () => {
+          try {
+            const rawValue = window.localStorage.getItem(sidebarGroupStorageKey);
+            const parsed = rawValue ? JSON.parse(rawValue) : [];
+            return new Set(Array.isArray(parsed) ? parsed.filter((entry) => typeof entry === "string") : []);
+          } catch (_error) {
+            return new Set();
+          }
+        };
+        const writeCollapsedSidebarGroups = (collapsedGroups) => {
+          try {
+            window.localStorage.setItem(
+              sidebarGroupStorageKey,
+              JSON.stringify(Array.from(collapsedGroups).sort())
+            );
+          } catch (_error) {
+            // Ignore storage failures and keep the in-memory group state.
+          }
+        };
+        const collapsedSidebarGroups = readCollapsedSidebarGroups();
+        const setSidebarGroupCollapsed = (group, collapsed) => {
+          if (!(group instanceof HTMLElement)) {
+            return;
+          }
+
+          const links = group.querySelector("[data-nav-group-links]");
+          const toggle = group.querySelector("[data-nav-group-toggle]");
+
+          group.classList.toggle("sidebar-group-collapsed", collapsed);
+
+          if (links instanceof HTMLElement) {
+            links.hidden = collapsed;
+          }
+
+          if (toggle instanceof HTMLButtonElement) {
+            toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+          }
+        };
+        const resolveSidebarGroupCollapsed = (group) => {
+          if (!(group instanceof HTMLElement)) {
+            return false;
+          }
+
+          const groupId = group.getAttribute("data-nav-group-id") ?? "";
+          const activeGroup = group.getAttribute("data-nav-group-active") === "true";
+          const defaultCollapsed =
+            group.getAttribute("data-nav-group-default-collapsed") === "true";
+
+          if (activeGroup) {
+            return false;
+          }
+
+          return groupId ? collapsedSidebarGroups.has(groupId) : defaultCollapsed;
+        };
+        const applySidebarGroupState = () => {
+          navGroups.forEach((group) => {
+            setSidebarGroupCollapsed(group, resolveSidebarGroupCollapsed(group));
+          });
+        };
+
+        navGroups.forEach((group) => {
+          if (!(group instanceof HTMLElement)) {
+            return;
+          }
+
+          const toggle = group.querySelector("[data-nav-group-toggle]");
+          const groupId = group.getAttribute("data-nav-group-id") ?? "";
+
+          if (!(toggle instanceof HTMLButtonElement)) {
+            return;
+          }
+
+          toggle.addEventListener("click", () => {
+            const collapsed = !group.classList.contains("sidebar-group-collapsed");
+            setSidebarGroupCollapsed(group, collapsed);
+
+            if (!groupId) {
+              return;
+            }
+
+            if (collapsed) {
+              collapsedSidebarGroups.add(groupId);
+            } else {
+              collapsedSidebarGroups.delete(groupId);
+            }
+
+            writeCollapsedSidebarGroups(collapsedSidebarGroups);
+          });
+        });
+
+        applySidebarGroupState();
 
         const setActiveNav = (targetId) => {
           navItems.forEach((item) => {
@@ -238,7 +330,23 @@ export function renderAdminShellClientScript(): string {
               const hasVisibleItem = Array.from(group.querySelectorAll("[data-nav-item]")).some(
                 (item) => item instanceof HTMLElement && item.style.display !== "none"
               );
+              const links = group.querySelector("[data-nav-group-links]");
+              const toggle = group.querySelector("[data-nav-group-toggle]");
               group.style.display = hasVisibleItem ? "" : "none";
+
+              if (query && hasVisibleItem) {
+                group.classList.remove("sidebar-group-collapsed");
+
+                if (links instanceof HTMLElement) {
+                  links.hidden = false;
+                }
+
+                if (toggle instanceof HTMLButtonElement) {
+                  toggle.setAttribute("aria-expanded", "true");
+                }
+              } else if (!query) {
+                setSidebarGroupCollapsed(group, resolveSidebarGroupCollapsed(group));
+              }
             });
           };
 

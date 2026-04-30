@@ -29,6 +29,7 @@ export interface AdminNavGroup {
   id: string;
   label: string;
   items: AdminNavItem[];
+  defaultCollapsed?: boolean;
 }
 
 export interface AdminShellProps {

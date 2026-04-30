@@ -76,6 +76,11 @@ type DashboardShellCopy = DashboardCopyLabels & {
   navMail: string;
   navNodes: string;
   navOperations: string;
+  navGroupContinuity: string;
+  navGroupObservability: string;
+  navGroupPackages: string;
+  navGroupSecurity: string;
+  navGroupSystem: string;
   navOverview: string;
   navProxies: string;
   navResources: string;
@@ -220,6 +225,20 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
             copy.latestReconciliation
           ],
           active: view === "overview"
+        },
+        {
+          id: "jobs",
+          label: copy.navJobs,
+          href: buildDashboardViewUrl("jobs"),
+          badge: String(data.jobHistory.length),
+          active: view === "jobs" || view === "job-history"
+        },
+        {
+          id: "audit",
+          label: copy.navAudit,
+          href: buildDashboardViewUrl("audit"),
+          badge: String(data.auditEvents.length),
+          active: view === "audit"
         }
       ]
     },
@@ -253,13 +272,6 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
             (view === "desired-state" && resolvedDesiredStateTab === "desired-state-zones")
         },
         {
-          id: "proxies",
-          label: copy.navProxies,
-          href: buildDashboardViewUrl("proxies", undefined, focus),
-          badge: String(data.desiredState.spec.apps.length),
-          active: view === "proxies"
-        },
-        {
           id: "apps",
           label: copy.navApps,
           href: buildDashboardViewUrl("apps", undefined, focus),
@@ -267,6 +279,13 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
           active:
             view === "apps" ||
             (view === "desired-state" && resolvedDesiredStateTab === "desired-state-apps")
+        },
+        {
+          id: "proxies",
+          label: copy.navProxies,
+          href: buildDashboardViewUrl("proxies", undefined, focus),
+          badge: String(data.desiredState.spec.apps.length),
+          active: view === "proxies"
         },
         {
           id: "databases",
@@ -287,8 +306,8 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
       ]
     },
     {
-      id: "operations",
-      label: copy.navOperations,
+      id: "continuity",
+      label: copy.navGroupContinuity,
       items: [
         {
           id: "backup-policies",
@@ -312,6 +331,19 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
           href: buildDashboardViewUrl("rustdesk"),
           badge: String(data.rustdesk.nodes.length),
           active: view === "rustdesk"
+        }
+      ]
+    },
+    {
+      id: "package-management",
+      label: copy.navGroupPackages,
+      items: [
+        {
+          id: "packages",
+          label: copy.navPackages,
+          href: buildDashboardViewUrl("packages"),
+          badge: String(new Set(data.packages.packages.map((entry) => entry.packageName)).size),
+          active: view === "packages"
         },
         {
           id: "updates",
@@ -333,35 +365,13 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
           href: buildDashboardViewUrl("reboots"),
           badge: String(data.nodeHealth.filter((node) => node.rebootState?.needsReboot).length),
           active: view === "reboots"
-        },
-        {
-          id: "config",
-          label: copy.navConfig,
-          href: buildDashboardViewUrl("config"),
-          badge: String(data.nodeHealth.reduce((count, node) => count + (node.configValidation?.checks.filter((check) => check.status === "failed").length ?? 0), 0)),
-          active: view === "config"
-        },
-        {
-          id: "time",
-          label: copy.navTime,
-          href: buildDashboardViewUrl("time"),
-          badge: String(data.nodeHealth.filter((node) => node.timeSync?.synchronized === false).length),
-          active: view === "time"
-        },
-        {
-          id: "resolver",
-          label: copy.navResolver,
-          href: buildDashboardViewUrl("resolver"),
-          badge: String(data.nodeHealth.filter((node) => node.dnsResolver && node.dnsResolver.nameservers.length === 0 && node.dnsResolver.resolvedServers.length === 0).length),
-          active: view === "resolver"
-        },
-        {
-          id: "accounts",
-          label: copy.navAccounts,
-          href: buildDashboardViewUrl("accounts"),
-          badge: String(data.nodeHealth.reduce((count, node) => count + (node.accounts?.users.filter((user) => user.loginEnabled).length ?? 0), 0)),
-          active: view === "accounts"
-        },
+        }
+      ]
+    },
+    {
+      id: "observability",
+      label: copy.navGroupObservability,
+      items: [
         {
           id: "services",
           label: copy.navServices,
@@ -377,12 +387,32 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
           active: view === "logs"
         },
         {
-          id: "certificates",
-          label: copy.navCertificates,
-          href: buildDashboardViewUrl("certificates"),
-          badge: String(data.nodeHealth.reduce((count, node) => count + (node.tls?.certificates.length ?? 0), 0)),
-          active: view === "certificates"
+          id: "processes",
+          label: copy.navProcesses,
+          href: buildDashboardViewUrl("processes"),
+          badge: String(data.nodeHealth.reduce((count, node) => count + (node.processes?.processes.length ?? 0), 0)),
+          active: view === "processes"
         },
+        {
+          id: "containers",
+          label: copy.navContainers,
+          href: buildDashboardViewUrl("containers"),
+          badge: String(data.nodeHealth.reduce((count, node) => count + (node.containers?.containers.length ?? 0), 0)),
+          active: view === "containers"
+        },
+        {
+          id: "timers",
+          label: copy.navTimers,
+          href: buildDashboardViewUrl("timers"),
+          badge: String(data.nodeHealth.reduce((count, node) => count + (node.timers?.timers.length ?? 0), 0)),
+          active: view === "timers"
+        }
+      ]
+    },
+    {
+      id: "system",
+      label: copy.navGroupSystem,
+      items: [
         {
           id: "storage",
           label: copy.navStorage,
@@ -412,46 +442,45 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
           active: view === "network"
         },
         {
-          id: "processes",
-          label: copy.navProcesses,
-          href: buildDashboardViewUrl("processes"),
-          badge: String(data.nodeHealth.reduce((count, node) => count + (node.processes?.processes.length ?? 0), 0)),
-          active: view === "processes"
+          id: "time",
+          label: copy.navTime,
+          href: buildDashboardViewUrl("time"),
+          badge: String(data.nodeHealth.filter((node) => node.timeSync?.synchronized === false).length),
+          active: view === "time"
         },
         {
-          id: "containers",
-          label: copy.navContainers,
-          href: buildDashboardViewUrl("containers"),
-          badge: String(data.nodeHealth.reduce((count, node) => count + (node.containers?.containers.length ?? 0), 0)),
-          active: view === "containers"
+          id: "resolver",
+          label: copy.navResolver,
+          href: buildDashboardViewUrl("resolver"),
+          badge: String(data.nodeHealth.filter((node) => node.dnsResolver && node.dnsResolver.nameservers.length === 0 && node.dnsResolver.resolvedServers.length === 0).length),
+          active: view === "resolver"
+        }
+      ]
+    },
+    {
+      id: "security",
+      label: copy.navGroupSecurity,
+      items: [
+        {
+          id: "accounts",
+          label: copy.navAccounts,
+          href: buildDashboardViewUrl("accounts"),
+          badge: String(data.nodeHealth.reduce((count, node) => count + (node.accounts?.users.filter((user) => user.loginEnabled).length ?? 0), 0)),
+          active: view === "accounts"
         },
         {
-          id: "timers",
-          label: copy.navTimers,
-          href: buildDashboardViewUrl("timers"),
-          badge: String(data.nodeHealth.reduce((count, node) => count + (node.timers?.timers.length ?? 0), 0)),
-          active: view === "timers"
+          id: "config",
+          label: copy.navConfig,
+          href: buildDashboardViewUrl("config"),
+          badge: String(data.nodeHealth.reduce((count, node) => count + (node.configValidation?.checks.filter((check) => check.status === "failed").length ?? 0), 0)),
+          active: view === "config"
         },
         {
-          id: "selinux",
-          label: copy.navSelinux,
-          href: buildDashboardViewUrl("selinux"),
-          badge: String(data.nodeHealth.filter((node) => node.selinux?.currentMode).length),
-          active: view === "selinux"
-        },
-        {
-          id: "ssh",
-          label: copy.navSsh,
-          href: buildDashboardViewUrl("ssh"),
-          badge: String(data.nodeHealth.filter((node) => node.ssh).length),
-          active: view === "ssh"
-        },
-        {
-          id: "packages",
-          label: copy.navPackages,
-          href: buildDashboardViewUrl("packages"),
-          badge: String(new Set(data.packages.packages.map((entry) => entry.packageName)).size),
-          active: view === "packages"
+          id: "certificates",
+          label: copy.navCertificates,
+          href: buildDashboardViewUrl("certificates"),
+          badge: String(data.nodeHealth.reduce((count, node) => count + (node.tls?.certificates.length ?? 0), 0)),
+          active: view === "certificates"
         },
         {
           id: "firewall",
@@ -468,22 +497,34 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
           active: view === "fail2ban"
         },
         {
-          id: "jobs",
-          label: copy.navJobs,
-          href: buildDashboardViewUrl("jobs"),
-          badge: String(data.jobHistory.length),
-          active: view === "jobs" || view === "job-history"
+          id: "selinux",
+          label: copy.navSelinux,
+          href: buildDashboardViewUrl("selinux"),
+          badge: String(data.nodeHealth.filter((node) => node.selinux?.currentMode).length),
+          active: view === "selinux"
         },
         {
-          id: "audit",
-          label: copy.navAudit,
-          href: buildDashboardViewUrl("audit"),
-          badge: String(data.auditEvents.length),
-          active: view === "audit"
+          id: "ssh",
+          label: copy.navSsh,
+          href: buildDashboardViewUrl("ssh"),
+          badge: String(data.nodeHealth.filter((node) => node.ssh).length),
+          active: view === "ssh"
         }
       ]
     }
   ];
+  const compareSidebarEntries = <Entry extends { id: string; label: string }>(
+    left: Entry,
+    right: Entry
+  ): number =>
+    left.label.localeCompare(right.label, locale, { sensitivity: "base" }) ||
+    left.id.localeCompare(right.id);
+  const orderedSidebarGroups = sidebarGroups
+    .map((group) => ({
+      ...group,
+      items: [...group.items].sort(compareSidebarEntries)
+    }))
+    .sort(compareSidebarEntries);
 
   const renderOverviewSection = (): string => `<section id="section-overview" class="panel section-panel">
     <div class="section-head">
@@ -527,7 +568,7 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
     versionLabel: copy.versionLabel,
     versionValue: version,
     sidebarSearchPlaceholder: copy.sidebarSearchPlaceholder,
-    sidebarGroups,
+    sidebarGroups: orderedSidebarGroups,
     body,
     historyReplaceUrl,
     autoRefreshSeconds: view === "overview" ? 60 : undefined

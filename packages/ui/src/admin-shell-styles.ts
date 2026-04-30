@@ -140,7 +140,33 @@ export function renderAdminShellStyleBlock(): string {
         margin-top: 0.18rem;
       }
 
+      .sidebar-group-toggle {
+        appearance: none;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: 0.38rem;
+        width: 100%;
+        min-height: 1.5rem;
+        padding: 0.08rem 0.12rem 0.08rem 0;
+        border: 0;
+        border-radius: 0.36rem;
+        background: transparent;
+        color: rgba(183, 243, 77, 0.82);
+        box-shadow: none;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .sidebar-group-toggle:hover,
+      .sidebar-group-toggle:focus-visible {
+        color: #d9ff8d;
+        background: rgba(183, 243, 77, 0.05);
+        box-shadow: none;
+      }
+
       .sidebar-group-label {
+        min-width: 0;
         margin: 0.08rem 0 0;
         color: rgba(183, 243, 77, 0.82);
         text-transform: uppercase;
@@ -148,9 +174,44 @@ export function renderAdminShellStyleBlock(): string {
         font-size: 0.69rem;
       }
 
+      .sidebar-group-toggle:hover .sidebar-group-label,
+      .sidebar-group-toggle:focus-visible .sidebar-group-label {
+        color: #d9ff8d;
+      }
+
+      .sidebar-group-count {
+        min-width: 1.15rem;
+        padding: 0.08rem 0.28rem;
+        border-radius: 999px;
+        background: rgba(239, 247, 255, 0.08);
+        color: rgba(239, 247, 255, 0.68);
+        font-size: 0.66rem;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .sidebar-group-chevron {
+        width: 0.42rem;
+        height: 0.42rem;
+        margin-right: 0.08rem;
+        border-right: 1.5px solid currentColor;
+        border-bottom: 1.5px solid currentColor;
+        transform: rotate(45deg);
+        transform-origin: center;
+        transition: transform 140ms ease;
+      }
+
+      .sidebar-group-collapsed .sidebar-group-chevron {
+        transform: rotate(-45deg);
+      }
+
       .sidebar-links {
         display: grid;
         gap: 0.14rem;
+      }
+
+      .sidebar-links[hidden] {
+        display: none;
       }
 
       .sidebar-link {

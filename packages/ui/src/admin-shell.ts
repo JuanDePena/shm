@@ -8,6 +8,8 @@ export function renderAdminShell(props: AdminShellProps): string {
   const noticeHtml = renderNotice(props.notice);
   const sidebarGroupsHtml = props.sidebarGroups
     .map((group) => {
+      const activeGroup = group.items.some((item) => item.active);
+      const groupLinksId = `sidebar-group-${group.id}-links`;
       const itemsHtml = group.items
         .map(
           (item) => `<a
@@ -28,9 +30,25 @@ export function renderAdminShell(props: AdminShellProps): string {
         )
         .join("");
 
-      return `<section class="sidebar-group" data-nav-group>
-        <p class="sidebar-group-label">${escapeHtml(group.label)}</p>
-        <div class="sidebar-links">${itemsHtml}</div>
+      return `<section
+        class="sidebar-group"
+        data-nav-group
+        data-nav-group-id="${escapeHtml(group.id)}"
+        data-nav-group-active="${activeGroup ? "true" : "false"}"
+        data-nav-group-default-collapsed="${group.defaultCollapsed ? "true" : "false"}"
+      >
+        <button
+          type="button"
+          class="sidebar-group-toggle"
+          data-nav-group-toggle
+          aria-expanded="true"
+          aria-controls="${escapeHtml(groupLinksId)}"
+        >
+          <span class="sidebar-group-label">${escapeHtml(group.label)}</span>
+          <span class="sidebar-group-count">${escapeHtml(String(group.items.length))}</span>
+          <span class="sidebar-group-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="sidebar-links" id="${escapeHtml(groupLinksId)}" data-nav-group-links>${itemsHtml}</div>
       </section>`;
     })
     .join("");
