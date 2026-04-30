@@ -27,10 +27,12 @@ for work frequently, but full runtime snapshots refresh on
 When a poll arrives without a runtime snapshot, the control plane preserves the
 last reported snapshot instead of clearing operational view data.
 
-The control plane also caches resource-drift summaries for 60 seconds. Overview
-and the Drift workspace both depend on the same reconciliation projection, so
-sharing that short-lived result avoids recalculating desired-state drift twice
-during one dashboard bootstrap while keeping operator-facing counts fresh.
+The control plane also caches resource-drift summaries for 60 seconds and
+prewarms that cache at startup. Overview and the Drift workspace both depend on
+the same reconciliation projection, so sharing that short-lived result avoids
+recalculating desired-state drift twice during one dashboard bootstrap while
+keeping operator-facing counts fresh. Expired drift summaries are served while a
+background refresh rebuilds the next value.
 
 Dashboard bootstraps request compact job history outside the Jobs workspace.
 Those compact rows keep timestamps, status, resource keys and summaries for

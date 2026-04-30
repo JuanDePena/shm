@@ -1341,7 +1341,8 @@ const resourceDriftCacheTtlMs = 60 * 1000;
 
 interface ResourceDriftCacheEntry {
   expiresAtMs: number;
-  promise: Promise<ResourceDriftSummary[]>;
+  promise?: Promise<ResourceDriftSummary[]>;
+  value?: ResourceDriftSummary[];
 }
 
 function sortResourceDriftSummaries(
@@ -1417,20 +1418,64 @@ export function createControlPlaneOperationsMethods(
   const { pool, jobPayloadKey } = context;
   let resourceDriftCache: ResourceDriftCacheEntry | undefined;
 
-  const loadResourceDriftSummaries = (): Promise<ResourceDriftSummary[]> => {
+  const refreshResourceDriftSummaries = (): Promise<ResourceDriftSummary[]> => {
     const now = Date.now();
+    const existingPromise = resourceDriftCache?.promise;
 
-    if (resourceDriftCache && resourceDriftCache.expiresAtMs > now) {
-      return resourceDriftCache.promise;
+    if (existingPromise) {
+      return existingPromise;
     }
 
-    const promise = withTransaction(pool, async (client) =>
+    const promise: Promise<ResourceDriftSummary[]> = withTransaction(pool, async (client) =>
       buildResourceDriftSummaries(client, jobPayloadKey)
     );
     resourceDriftCache = {
+      ...resourceDriftCache,
       expiresAtMs: now + resourceDriftCacheTtlMs,
       promise
     };
+
+    promise
+      .then((value) => {
+        resourceDriftCache = {
+          expiresAtMs: Date.now() + resourceDriftCacheTtlMs,
+          value
+        };
+      })
+      .catch(() => {
+        if (resourceDriftCache?.value) {
+          resourceDriftCache = {
+            expiresAtMs: resourceDriftCache.expiresAtMs,
+            value: resourceDriftCache.value
+          };
+          return;
+        }
+
+        if (resourceDriftCache?.promise === promise) {
+          resourceDriftCache = undefined;
+        }
+      });
+
+    return promise;
+  };
+
+  const loadResourceDriftSummaries = (): Promise<ResourceDriftSummary[]> => {
+    const now = Date.now();
+
+    if (resourceDriftCache?.value && resourceDriftCache.expiresAtMs > now) {
+      return Promise.resolve(resourceDriftCache.value);
+    }
+
+    if (resourceDriftCache?.value) {
+      void refreshResourceDriftSummaries();
+      return Promise.resolve(resourceDriftCache.value);
+    }
+
+    if (resourceDriftCache?.promise) {
+      return resourceDriftCache.promise;
+    }
+
+    const promise = refreshResourceDriftSummaries();
 
     promise.catch(() => {
       if (resourceDriftCache?.promise === promise) {
@@ -1440,6 +1485,8 @@ export function createControlPlaneOperationsMethods(
 
     return promise;
   };
+
+  void refreshResourceDriftSummaries();
 
   return {
     async dispatchZoneSync(zoneName, presentedToken) {
