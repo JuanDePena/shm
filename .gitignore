@@ -5,3 +5,4 @@ coverage/
 *.tsbuildinfo
 .env
 .tmp/
+docs/MIGRATIONS/vps-old-temporary-mail-credentials.md
