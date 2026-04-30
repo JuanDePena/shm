@@ -12,6 +12,7 @@ export interface AgentRuntimeConfig {
   stateDir: string;
   logDir: string;
   heartbeatMs: number;
+  runtimeSnapshotIntervalMs: number;
   version: string;
   services: {
     containers: {
@@ -154,6 +155,11 @@ export function createAgentRuntimeConfig(
     stateDir,
     logDir: readString(env.SIMPLEHOST_LOG_DIR, "/var/log/simplehost"),
     heartbeatMs: readPositiveInt(env.SIMPLEHOST_HEARTBEAT_MS, 10000),
+    runtimeSnapshotIntervalMs: readPositiveInt(
+      env.SIMPLEHOST_AGENT_RUNTIME_SNAPSHOT_INTERVAL_MS ??
+        env.SIMPLEHOST_RUNTIME_SNAPSHOT_INTERVAL_MS,
+      60000
+    ),
     version: readString(env.SIMPLEHOST_VERSION, defaultVersion),
     services: {
       containers: {

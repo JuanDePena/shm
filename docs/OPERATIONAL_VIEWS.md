@@ -21,6 +21,12 @@ needed for sidebar counts and cross-workspace navigation. Future per-view API
 loading can reduce data transfer further, but the present contract is that only
 the selected workspace renderer should execute for a dashboard request.
 
+Agent job polling and runtime reporting are separate cadences. Nodes may poll
+for work frequently, but full runtime snapshots refresh on
+`SIMPLEHOST_AGENT_RUNTIME_SNAPSHOT_INTERVAL_MS`, which defaults to 60 seconds.
+When a poll arrives without a runtime snapshot, the control plane preserves the
+last reported snapshot instead of clearing operational view data.
+
 ## Overview and Reconciliation
 
 Overview is the lightweight landing workspace. It keeps platform status in a

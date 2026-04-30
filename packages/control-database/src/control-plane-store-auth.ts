@@ -691,14 +691,16 @@ export function createControlPlaneAuthMethods(
           `UPDATE control_plane_nodes
            SET hostname = $2,
                version = $3,
-               runtime_snapshot = $4::jsonb,
+               runtime_snapshot = COALESCE($4::jsonb, runtime_snapshot),
                last_seen_at = $5
            WHERE node_id = $1`,
           [
             request.nodeId,
             request.hostname,
             request.version,
-            JSON.stringify(request.runtimeSnapshot ?? {}),
+            request.runtimeSnapshot === undefined
+              ? null
+              : JSON.stringify(request.runtimeSnapshot),
             claimedAt
           ]
         );

@@ -147,6 +147,12 @@ interface CommandResult {
   exitCode: number;
 }
 
+interface ManagerAgentRuntimeCache {
+  runtimeSnapshot?: AgentNodeRuntimeSnapshot;
+  runtimeSnapshotCollectedAtMs: number;
+  refreshAfterJob: boolean;
+}
+
 async function writeLastAppliedState(
   desiredStateVersion: string,
   lastCompletedJobId?: string
@@ -3957,23 +3963,51 @@ async function executeClaimedJob(job: AgentJobEnvelope): Promise<void> {
 }
 
 export async function runManagerAgentCycle(): Promise<void> {
+  await runManagerAgentCycleWithCache({
+    runtimeSnapshotCollectedAtMs: 0,
+    refreshAfterJob: true
+  });
+}
+
+async function runManagerAgentCycleWithCache(
+  runtimeCache: ManagerAgentRuntimeCache
+): Promise<void> {
   const config = createAgentRuntimeConfig();
   const snapshot = await createNodeSnapshot();
-  const runtimeSnapshot = await collectRuntimeSnapshot();
-  const registrationToken = snapshot.nodeToken ?? config.enrollmentToken;
+  const shouldRefreshRuntimeSnapshot =
+    runtimeCache.refreshAfterJob ||
+    !runtimeCache.runtimeSnapshot ||
+    Date.now() - runtimeCache.runtimeSnapshotCollectedAtMs >=
+      config.runtimeSnapshotIntervalMs;
+  let freshRuntimeSnapshot: AgentNodeRuntimeSnapshot | undefined;
+  let nodeToken = snapshot.nodeToken;
 
-  if (!registrationToken) {
-    throw new Error(
-      "SIMPLEHOST_ENROLLMENT_TOKEN is required until SimpleHost Control issues a node bearer token."
+  if (shouldRefreshRuntimeSnapshot || !nodeToken) {
+    const registrationToken = snapshot.nodeToken ?? config.enrollmentToken;
+
+    if (!registrationToken) {
+      throw new Error(
+        "SIMPLEHOST_ENROLLMENT_TOKEN is required until SimpleHost Control issues a node bearer token."
+      );
+    }
+
+    freshRuntimeSnapshot = await collectRuntimeSnapshot();
+    runtimeCache.runtimeSnapshot = freshRuntimeSnapshot;
+    runtimeCache.runtimeSnapshotCollectedAtMs = Date.now();
+    runtimeCache.refreshAfterJob = false;
+
+    const registration = await registerNode(
+      config.controlPlaneUrl,
+      createRegistrationRequest(snapshot, freshRuntimeSnapshot),
+      registrationToken
+    );
+    nodeToken = registration.nodeToken ?? snapshot.nodeToken;
+
+    console.log(renderNodeSnapshot(snapshot));
+    console.log(
+      `Registered with ${config.controlPlaneUrl} at ${registration.acceptedAt}. Poll every ${registration.pollIntervalMs}ms. Runtime snapshot every ${config.runtimeSnapshotIntervalMs}ms.`
     );
   }
-
-  const registration = await registerNode(
-    config.controlPlaneUrl,
-    createRegistrationRequest(snapshot, runtimeSnapshot),
-    registrationToken
-  );
-  const nodeToken = registration.nodeToken ?? snapshot.nodeToken;
 
   if (!nodeToken) {
     throw new Error(`SimpleHost Control did not issue a node token for ${config.nodeId}.`);
@@ -3989,24 +4023,23 @@ export async function runManagerAgentCycle(): Promise<void> {
     nodeToken
   });
 
-  console.log(renderNodeSnapshot(snapshot));
-  console.log(
-    `Registered with ${config.controlPlaneUrl} at ${registration.acceptedAt}. Poll every ${registration.pollIntervalMs}ms.`
-  );
-
   const flushedReports = await flushBufferedReports();
 
   if (flushedReports > 0) {
     console.log(`Delivered ${flushedReports} buffered report(s).`);
   }
 
-  const claimed = await claimJobs(config.controlPlaneUrl, {
-    nodeId: config.nodeId,
-    hostname: config.hostname,
-    version: config.version,
-    maxJobs: 4,
-    runtimeSnapshot
-  }, nodeToken);
+  const claimed = await claimJobs(
+    config.controlPlaneUrl,
+    {
+      nodeId: config.nodeId,
+      hostname: config.hostname,
+      version: config.version,
+      maxJobs: 4,
+      runtimeSnapshot: freshRuntimeSnapshot
+    },
+    nodeToken
+  );
 
   if (claimed.jobs.length === 0) {
     console.log("No jobs available.");
@@ -4016,15 +4049,21 @@ export async function runManagerAgentCycle(): Promise<void> {
   for (const job of claimed.jobs) {
     await executeClaimedJob(job);
   }
+
+  runtimeCache.refreshAfterJob = true;
 }
 
 export async function startManagerAgent(): Promise<void> {
   const config = createAgentRuntimeConfig();
   const runOnce = process.env.SIMPLEHOST_RUN_ONCE === "true";
+  const runtimeCache: ManagerAgentRuntimeCache = {
+    runtimeSnapshotCollectedAtMs: 0,
+    refreshAfterJob: true
+  };
 
   do {
     try {
-      await runManagerAgentCycle();
+      await runManagerAgentCycleWithCache(runtimeCache);
     } catch (error: unknown) {
       console.error(error);
     }
