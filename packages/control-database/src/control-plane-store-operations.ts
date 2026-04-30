@@ -8,13 +8,21 @@ import {
   createDefaultMailPolicy,
   createDispatchedJobEnvelope,
   type DnsSyncPayload,
+  type EnvironmentParameterMutationRequest,
+  type EnvironmentParameterSummary,
+  type EnvironmentParametersSnapshot,
   type Fail2BanApplyPayload,
   type FirewallApplyPayload,
   type PackageInstallPayload,
   type PackageInventoryCollectPayload,
   type MailSyncPayload,
+  type OperationHistoryPurgeSummary,
   type ProxyRenderPayload,
-  type ResourceDriftSummary
+  type ResourceDriftSummary,
+  operationHistoryRetentionDaysParameterKey,
+  operationHistoryRetentionDefaultDays,
+  operationHistoryRetentionMaximumDays,
+  operationHistoryRetentionMinimumDays
 } from "@simplehost/control-contracts";
 
 import { requireAuthorizedUser } from "./control-plane-store-auth.js";
@@ -57,6 +65,7 @@ import type {
   ControlPlaneOperationsMethods,
   DatabaseDispatchRow,
   DriftStatusRow,
+  EnvironmentParameterRow,
   InventoryNodeRow,
   InventoryRecordRow,
   InstalledPackageRow,
@@ -93,6 +102,281 @@ function isMissingColumnError(error: unknown, columnName: string): boolean {
     typeof candidate.message === "string" &&
     candidate.message.includes(columnName)
   );
+}
+
+const environmentParameterKeyPattern = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const sensitiveParameterKeyPattern =
+  /(PASSWORD|PASS|TOKEN|SECRET|PRIVATE|CREDENTIAL|DATABASE_URL|DSN|COOKIE|SALT|KEY)/i;
+const dayMs = 24 * 60 * 60 * 1000;
+
+function normalizeDatabaseTimestamp(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function normalizeEnvironmentParameterKey(key: string): string {
+  const normalized = key.trim();
+
+  if (!environmentParameterKeyPattern.test(normalized)) {
+    throw new Error(
+      "Parameter keys must start with a letter or underscore and contain only letters, numbers and underscores."
+    );
+  }
+
+  return normalized;
+}
+
+function normalizeParameterDescription(value: string | undefined): string | null {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : null;
+}
+
+function isSensitiveParameter(key: string, explicit = false): boolean {
+  return explicit || sensitiveParameterKeyPattern.test(key);
+}
+
+function parseOperationHistoryRetentionDays(value: string | undefined): number | null {
+  const parsed = Number.parseInt(value ?? "", 10);
+
+  if (
+    !Number.isInteger(parsed) ||
+    parsed < operationHistoryRetentionMinimumDays ||
+    parsed > operationHistoryRetentionMaximumDays
+  ) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function normalizeOperationHistoryRetentionValue(value: string): string {
+  const parsed = parseOperationHistoryRetentionDays(value.trim());
+
+  if (parsed === null) {
+    throw new Error(
+      `Retention must be an integer between ${operationHistoryRetentionMinimumDays} and ${operationHistoryRetentionMaximumDays} days.`
+    );
+  }
+
+  return String(parsed);
+}
+
+function renderParameterValue(
+  key: string,
+  value: string,
+  sensitive: boolean
+): Pick<EnvironmentParameterSummary, "value" | "displayValue" | "sensitive"> {
+  const effectiveSensitive = isSensitiveParameter(key, sensitive);
+
+  if (effectiveSensitive) {
+    return {
+      value: null,
+      displayValue: "[redacted]",
+      sensitive: true
+    };
+  }
+
+  return {
+    value,
+    displayValue: value,
+    sensitive: false
+  };
+}
+
+function toUiEnvironmentParameterSummary(
+  row: EnvironmentParameterRow
+): EnvironmentParameterSummary {
+  const value = renderParameterValue(
+    row.parameter_key,
+    row.parameter_value,
+    row.is_sensitive
+  );
+
+  return {
+    key: row.parameter_key,
+    ...value,
+    source: "ui",
+    createdFromUi: row.created_from_ui,
+    editable: row.created_from_ui,
+    deletable: row.created_from_ui,
+    description: row.description ?? undefined,
+    createdAt: normalizeDatabaseTimestamp(row.created_at),
+    updatedAt: normalizeDatabaseTimestamp(row.updated_at)
+  };
+}
+
+function toRuntimeEnvironmentParameterSummary(
+  key: string,
+  value: string
+): EnvironmentParameterSummary {
+  return {
+    key,
+    ...renderParameterValue(key, value, false),
+    source: "runtime",
+    createdFromUi: false,
+    editable: false,
+    deletable: false
+  };
+}
+
+async function buildEnvironmentParametersSnapshot(
+  client: PoolClient,
+  runtimeEnv: NodeJS.ProcessEnv
+): Promise<EnvironmentParametersSnapshot> {
+  const result = await client.query<EnvironmentParameterRow>(
+    `SELECT
+       parameter_key,
+       parameter_value,
+       description,
+       is_sensitive,
+       created_from_ui,
+       created_by_user_id,
+       updated_by_user_id,
+       created_at,
+       updated_at
+     FROM shp_environment_parameters
+     ORDER BY parameter_key ASC`
+  );
+  const uiKeys = new Set(result.rows.map((row) => row.parameter_key));
+  const runtimeParameters = Object.entries(runtimeEnv)
+    .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+    .filter(([key]) => !uiKeys.has(key))
+    .map(([key, value]) => toRuntimeEnvironmentParameterSummary(key, value));
+  const parameters = [
+    ...result.rows.map(toUiEnvironmentParameterSummary),
+    ...runtimeParameters
+  ].sort((left, right) => left.key.localeCompare(right.key));
+
+  return {
+    generatedAt: new Date().toISOString(),
+    parameterCount: parameters.length,
+    runtimeCount: Object.values(runtimeEnv).filter((value) => typeof value === "string").length,
+    uiManagedCount: result.rows.length,
+    parameters
+  };
+}
+
+function normalizeEnvironmentParameterRequest(
+  request: EnvironmentParameterMutationRequest
+): EnvironmentParameterMutationRequest {
+  const key = normalizeEnvironmentParameterKey(request.key);
+
+  return {
+    key,
+    value:
+      key === operationHistoryRetentionDaysParameterKey && request.value !== undefined
+        ? normalizeOperationHistoryRetentionValue(request.value)
+        : request.value,
+    description:
+      request.description === undefined
+        ? undefined
+        : (normalizeParameterDescription(request.description) ?? ""),
+    sensitive: request.sensitive
+  };
+}
+
+async function resolveOperationHistoryRetention(
+  client: PoolClient,
+  runtimeEnv: NodeJS.ProcessEnv,
+  now = new Date()
+): Promise<Omit<OperationHistoryPurgeSummary, "generatedAt" | "deletedAuditEventCount" | "deletedJobCount" | "deletedJobResultCount" | "keptLatestResourceJobCount">> {
+  const result = await client.query<{ parameter_value: string }>(
+    `SELECT parameter_value
+     FROM shp_environment_parameters
+     WHERE parameter_key = $1`,
+    [operationHistoryRetentionDaysParameterKey]
+  );
+  const runtimeValue = runtimeEnv[operationHistoryRetentionDaysParameterKey];
+  const source = result.rows[0]
+    ? "ui"
+    : typeof runtimeValue === "string"
+      ? "runtime"
+      : "default";
+  const retentionDays =
+    parseOperationHistoryRetentionDays(result.rows[0]?.parameter_value ?? runtimeValue) ??
+    operationHistoryRetentionDefaultDays;
+
+  return {
+    parameterKey: operationHistoryRetentionDaysParameterKey,
+    retentionDays,
+    cutoffAt: new Date(now.getTime() - retentionDays * dayMs).toISOString(),
+    source
+  };
+}
+
+export async function purgeOperationalHistoryRows(
+  client: PoolClient,
+  cutoffAt: string
+): Promise<Pick<OperationHistoryPurgeSummary, "deletedAuditEventCount" | "deletedJobCount" | "deletedJobResultCount" | "keptLatestResourceJobCount">> {
+  const jobResult = await client.query<{
+    deleted_job_count: string;
+    deleted_job_result_count: string;
+    kept_latest_resource_job_count: string;
+  }>(
+    `WITH latest_resource_jobs AS (
+       SELECT DISTINCT ON (node_id, kind, resource_key)
+         id
+       FROM control_plane_jobs
+       WHERE resource_key IS NOT NULL
+       ORDER BY node_id, kind, resource_key, created_at DESC
+     ),
+     purgeable_jobs AS (
+       SELECT jobs.id
+       FROM control_plane_jobs jobs
+       WHERE jobs.completed_at IS NOT NULL
+         AND jobs.completed_at < $1::timestamptz
+         AND NOT EXISTS (
+           SELECT 1
+           FROM latest_resource_jobs latest
+           WHERE latest.id = jobs.id
+         )
+     ),
+     purgeable_job_results AS (
+       SELECT COUNT(*)::text AS count
+       FROM control_plane_job_results results
+       WHERE results.job_id IN (SELECT id FROM purgeable_jobs)
+     ),
+     deleted_jobs AS (
+       DELETE FROM control_plane_jobs jobs
+       WHERE jobs.id IN (SELECT id FROM purgeable_jobs)
+       RETURNING jobs.id
+     )
+     SELECT
+       (SELECT COUNT(*)::text FROM deleted_jobs) AS deleted_job_count,
+       (SELECT count FROM purgeable_job_results) AS deleted_job_result_count,
+       (SELECT COUNT(*)::text FROM latest_resource_jobs) AS kept_latest_resource_job_count`,
+    [cutoffAt]
+  );
+  const auditResult = await client.query<{ deleted_audit_event_count: string }>(
+    `WITH latest_inventory_export AS (
+       SELECT event_id
+       FROM shp_audit_events
+       WHERE event_type = 'inventory.exported'
+       ORDER BY occurred_at DESC
+       LIMIT 1
+     ),
+     deleted_events AS (
+       DELETE FROM shp_audit_events events
+       WHERE events.occurred_at < $1::timestamptz
+         AND NOT EXISTS (
+           SELECT 1
+           FROM latest_inventory_export latest
+           WHERE latest.event_id = events.event_id
+         )
+       RETURNING events.event_id
+     )
+     SELECT COUNT(*)::text AS deleted_audit_event_count
+     FROM deleted_events`,
+    [cutoffAt]
+  );
+  const jobRow = jobResult.rows[0];
+  const auditRow = auditResult.rows[0];
+
+  return {
+    deletedAuditEventCount: Number(auditRow?.deleted_audit_event_count ?? 0),
+    deletedJobCount: Number(jobRow?.deleted_job_count ?? 0),
+    deletedJobResultCount: Number(jobRow?.deleted_job_result_count ?? 0),
+    keptLatestResourceJobCount: Number(jobRow?.kept_latest_resource_job_count ?? 0)
+  };
 }
 
 async function hasMailPolicyTable(client: PoolClient): Promise<boolean> {
@@ -1407,12 +1691,14 @@ async function buildResourceDriftSummaries(
 interface ControlPlaneOperationsContext {
   pool: Pool;
   jobPayloadKey: Buffer | null;
+  runtimeEnv?: NodeJS.ProcessEnv;
 }
 
 export function createControlPlaneOperationsMethods(
   context: ControlPlaneOperationsContext
 ): ControlPlaneOperationsMethods {
   const { pool, jobPayloadKey } = context;
+  const runtimeEnv = context.runtimeEnv ?? process.env;
   let resourceDriftCache: ResourceDriftCacheEntry | undefined;
 
   const refreshResourceDriftSummaries = (): Promise<ResourceDriftSummary[]> => {
@@ -2121,6 +2407,186 @@ export function createControlPlaneOperationsMethods(
             payload: sanitizePayload(job.envelope.payload) as Record<string, unknown>
           }))
         };
+      });
+    },
+
+    async purgeOperationalHistory(presentedToken) {
+      return withTransaction(pool, async (client) => {
+        let actorId: string | undefined;
+
+        if (presentedToken !== undefined) {
+          const actor = await requireAuthorizedUser(client, presentedToken, [
+            "platform_admin",
+            "platform_operator"
+          ]);
+          actorId = actor.userId;
+        }
+
+        const retention = await resolveOperationHistoryRetention(client, runtimeEnv);
+        const deleted = await purgeOperationalHistoryRows(client, retention.cutoffAt);
+        const summary: OperationHistoryPurgeSummary = {
+          generatedAt: new Date().toISOString(),
+          ...retention,
+          ...deleted
+        };
+
+        await insertAuditEvent(client, {
+          actorType: actorId ? "user" : "worker",
+          actorId,
+          eventType: "history.purged",
+          entityType: "operations",
+          entityId: "history",
+          payload: { ...summary }
+        });
+
+        return summary;
+      });
+    },
+
+    async listEnvironmentParameters(presentedToken) {
+      return withTransaction(pool, async (client) => {
+        await requireAuthorizedUser(client, presentedToken, [
+          "platform_admin",
+          "platform_operator"
+        ]);
+
+        return buildEnvironmentParametersSnapshot(client, runtimeEnv);
+      });
+    },
+
+    async upsertEnvironmentParameter(request, presentedToken) {
+      return withTransaction(pool, async (client) => {
+        const actor = await requireAuthorizedUser(client, presentedToken, [
+          "platform_admin",
+          "platform_operator"
+        ]);
+        const normalized = normalizeEnvironmentParameterRequest(request);
+        const existingResult = await client.query<EnvironmentParameterRow>(
+          `SELECT
+             parameter_key,
+             parameter_value,
+             description,
+             is_sensitive,
+             created_from_ui,
+             created_by_user_id,
+             updated_by_user_id,
+             created_at,
+             updated_at
+           FROM shp_environment_parameters
+           WHERE parameter_key = $1`,
+          [normalized.key]
+        );
+        const existing = existingResult.rows[0];
+
+        if (existing && !existing.created_from_ui) {
+          throw new Error("Only UI-created parameters can be edited.");
+        }
+
+        if (!existing && Object.prototype.hasOwnProperty.call(runtimeEnv, normalized.key)) {
+          throw new Error("Runtime parameters are read-only. Use a new UI-managed parameter key.");
+        }
+
+        if (!existing && normalized.value === undefined) {
+          throw new Error("Parameter value is required when creating a parameter.");
+        }
+
+        const nextValue = normalized.value ?? existing?.parameter_value ?? "";
+        const nextDescription =
+          normalized.description === undefined
+            ? existing?.description ?? null
+            : normalized.description || null;
+        const nextSensitive = isSensitiveParameter(
+          normalized.key,
+          normalized.sensitive ?? existing?.is_sensitive ?? false
+        );
+
+        await client.query(
+          `INSERT INTO shp_environment_parameters (
+             parameter_key,
+             parameter_value,
+             description,
+             is_sensitive,
+             created_from_ui,
+             created_by_user_id,
+             updated_by_user_id,
+             created_at,
+             updated_at
+           )
+           VALUES ($1, $2, $3, $4, TRUE, $5, $5, NOW(), NOW())
+           ON CONFLICT (parameter_key) DO UPDATE SET
+             parameter_value = EXCLUDED.parameter_value,
+             description = EXCLUDED.description,
+             is_sensitive = EXCLUDED.is_sensitive,
+             created_from_ui = TRUE,
+             updated_by_user_id = EXCLUDED.updated_by_user_id,
+             updated_at = NOW()`,
+          [
+            normalized.key,
+            nextValue,
+            nextDescription,
+            nextSensitive,
+            actor.userId
+          ]
+        );
+
+        await insertAuditEvent(client, {
+          actorType: "user",
+          actorId: actor.userId,
+          eventType: existing ? "parameter.updated" : "parameter.created",
+          entityType: "parameter",
+          entityId: normalized.key,
+          payload: {
+            key: normalized.key,
+            sensitive: nextSensitive,
+            createdFromUi: true
+          }
+        });
+
+        return buildEnvironmentParametersSnapshot(client, runtimeEnv);
+      });
+    },
+
+    async deleteEnvironmentParameter(key, presentedToken) {
+      return withTransaction(pool, async (client) => {
+        const actor = await requireAuthorizedUser(client, presentedToken, [
+          "platform_admin",
+          "platform_operator"
+        ]);
+        const normalizedKey = normalizeEnvironmentParameterKey(key);
+        const existingResult = await client.query<Pick<EnvironmentParameterRow, "created_from_ui">>(
+          `SELECT created_from_ui
+           FROM shp_environment_parameters
+           WHERE parameter_key = $1`,
+          [normalizedKey]
+        );
+        const existing = existingResult.rows[0];
+
+        if (!existing) {
+          throw new Error(`Parameter ${normalizedKey} does not exist.`);
+        }
+
+        if (!existing.created_from_ui) {
+          throw new Error("Only UI-created parameters can be deleted.");
+        }
+
+        await client.query(
+          `DELETE FROM shp_environment_parameters
+           WHERE parameter_key = $1`,
+          [normalizedKey]
+        );
+
+        await insertAuditEvent(client, {
+          actorType: "user",
+          actorId: actor.userId,
+          eventType: "parameter.deleted",
+          entityType: "parameter",
+          entityId: normalizedKey,
+          payload: {
+            key: normalizedKey
+          }
+        });
+
+        return buildEnvironmentParametersSnapshot(client, runtimeEnv);
       });
     },
 

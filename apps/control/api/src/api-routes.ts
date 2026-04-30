@@ -13,6 +13,7 @@ import { readBearerToken, writeJson } from "./api-http.js";
 import { handleMailRoutes } from "./api-mail-routes.js";
 import { handleNodeAgentRoutes } from "./api-node-agent-routes.js";
 import { handleOperationsRoutes } from "./api-operations-routes.js";
+import { handleParameterRoutes } from "./api-parameter-routes.js";
 import { type ApiRouteContext } from "./api-route-context.js";
 import { handleResourceRoutes } from "./api-resource-routes.js";
 
@@ -32,6 +33,11 @@ const rootEndpoints = [
   "GET /v1/resources/drift",
   "POST /v1/reconcile/run",
   "GET /v1/operations/overview",
+  "POST /v1/operations/history/purge",
+  "GET /v1/parameters",
+  "POST /v1/parameters",
+  "PUT /v1/parameters/:key",
+  "DELETE /v1/parameters/:key",
   "GET /v1/nodes/health",
   "GET /v1/platform/rustdesk",
   "GET /v1/mail/overview",
@@ -126,6 +132,7 @@ export function createApiRequestHandler({
     for (const handler of [
       handleAuthRoutes,
       handleResourceRoutes,
+      handleParameterRoutes,
       handleMailRoutes,
       handleOperationsRoutes,
       handleNodeAgentRoutes

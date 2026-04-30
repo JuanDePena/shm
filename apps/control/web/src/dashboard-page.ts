@@ -3,7 +3,11 @@ import {
   renderDataTable,
   type PanelNotice
 } from "@simplehost/ui";
-import type { MailboxCredentialReveal } from "@simplehost/control-contracts";
+import {
+  operationHistoryRetentionDaysParameterKey,
+  operationHistoryRetentionDefaultDays,
+  type MailboxCredentialReveal
+} from "@simplehost/control-contracts";
 
 import { type DashboardData } from "./api-client.js";
 import {
@@ -17,6 +21,7 @@ import { renderResourceDriftWorkspace } from "./dashboard-drift.js";
 import { renderJobHistoryWorkspace } from "./dashboard-jobs.js";
 import { renderNodeHealthWorkspace } from "./dashboard-node-health.js";
 import { renderPackagesWorkspace } from "./dashboard-packages.js";
+import { renderParametersWorkspace } from "./dashboard-parameters.js";
 import {
   renderFail2BanWorkspace,
   renderFirewallWorkspace
@@ -329,6 +334,19 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
          missing: data.overview.latestReconciliation.missingCredentialCount
        }))}</p>`
     : `<p class="muted">${escapeHtml(copy.noReconciliationRun)}</p>`;
+  const historyRetentionParameter = data.parameters.parameters.find(
+    (parameter) => parameter.key === operationHistoryRetentionDaysParameterKey
+  );
+  const parsedHistoryRetentionDays = Number.parseInt(
+    historyRetentionParameter?.value ?? historyRetentionParameter?.displayValue ?? "",
+    10
+  );
+  const historyRetentionDays = Number.isInteger(parsedHistoryRetentionDays)
+    ? parsedHistoryRetentionDays
+    : operationHistoryRetentionDefaultDays;
+  const historyRetentionCutoffAt = new Date(
+    now - historyRetentionDays * 24 * 60 * 60 * 1000
+  ).toISOString();
 
   const reconciliationPanel = `<div class="action-grid">
       <article class="action-card action-card-strong">
@@ -346,6 +364,37 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
               "Run a new reconciliation cycle? Missing work across DNS, proxy and databases may be queued."
             )}"
           >${escapeHtml(copy.actionsRunReconciliation)}</button>
+        </form>
+      </article>
+      <article class="action-card">
+        <span class="action-eyebrow">Retention</span>
+        <h3>${escapeHtml(copy.historyRetentionTitle)}</h3>
+        <p class="muted">${escapeHtml(copy.historyRetentionDescription)}</p>
+        <div class="action-card-context">
+          <span class="action-card-context-title">${escapeHtml(copy.historyRetentionParameterLabel)}</span>
+          ${renderActionFacts([
+            {
+              label: copy.historyRetentionParameterLabel,
+              value: `<span class="mono">${escapeHtml(operationHistoryRetentionDaysParameterKey)}</span>`
+            },
+            {
+              label: copy.historyRetentionDaysLabel,
+              value: escapeHtml(String(historyRetentionDays))
+            },
+            {
+              label: copy.historyRetentionCutoffLabel,
+              value: escapeHtml(formatDate(historyRetentionCutoffAt, locale))
+            }
+          ])}
+        </div>
+        <form method="post" action="/actions/operations-history-purge">
+          <input type="hidden" name="returnTo" value="${escapeHtml(currentPath)}" />
+          <button
+            type="submit"
+            data-confirm="${escapeHtml(
+              "Purge old audit and job history rows using the configured retention?"
+            )}"
+          >${escapeHtml(copy.purgeHistoryAction)}</button>
         </form>
       </article>
     </div>`;
@@ -777,6 +826,18 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
         });
       case "fail2ban":
         return renderFail2BanWorkspace({
+          copy,
+          data,
+          locale,
+          currentPath,
+          focus,
+          formatDate,
+          renderFocusLink: renderFocusLinkWithPill,
+          renderPill,
+          renderSignalStrip
+        });
+      case "parameters":
+        return renderParametersWorkspace({
           copy,
           data,
           locale,

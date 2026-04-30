@@ -26,6 +26,7 @@ Together, they provide a focused platform for managing:
 - host and container services
 - mail infrastructure
 - backups and operational jobs
+- control-plane parameters and runtime diagnostics
 
 ## Value Proposition
 
@@ -37,6 +38,7 @@ Instead of treating each node as a snowflake, it gives operators:
 - an operator UI for state, actions, diagnostics, and history
 - a node agent that turns desired state into actual runtime changes
 - auditable packaging, release, staging, promotion, cutover, and rollback workflows
+- bounded operational history retention for audit and job diagnostics
 
 The goal is not to become a generic cloud. The goal is to run a known stack well, with high operator clarity and low operational ambiguity.
 

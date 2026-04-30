@@ -319,6 +319,13 @@ export function createMailReleaseBaselineData(): DashboardData {
       nodeCount: 1,
       packageCount: 0,
       packages: []
+    },
+    parameters: {
+      generatedAt: "2026-04-21T00:00:00.000Z",
+      parameterCount: 0,
+      runtimeCount: 0,
+      uiManagedCount: 0,
+      parameters: []
     }
   } as unknown as DashboardData;
 }

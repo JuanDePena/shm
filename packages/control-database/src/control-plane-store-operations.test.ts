@@ -12,6 +12,7 @@ import { createQueuedDispatchJob } from "./control-plane-store-helpers.js";
 import {
   buildZoneDnsPlans,
   mergeJobHistoryRows,
+  purgeOperationalHistoryRows,
   shouldDispatchQueuedJob
 } from "./control-plane-store-operations.js";
 import type { JobHistoryRow } from "./control-plane-store-types.js";
@@ -154,6 +155,59 @@ test("mergeJobHistoryRows de-duplicates dns.sync rows already present in the rec
 
   assert.equal(merged.length, 1);
   assert.equal(merged[0]?.id, "job-dns-1");
+});
+
+test("purgeOperationalHistoryRows preserves latest resource jobs while deleting old history", async () => {
+  const statements: string[] = [];
+  const client = {
+    query: async (statement: string, params?: unknown[]) => {
+      statements.push(statement);
+      assert.deepEqual(params, ["2026-01-30T00:00:00.000Z"]);
+
+      if (statement.includes("latest_resource_jobs")) {
+        assert.match(statement, /resource_key IS NOT NULL/);
+        assert.match(statement, /jobs\.completed_at IS NOT NULL/);
+        assert.match(statement, /jobs\.completed_at < \$1::timestamptz/);
+        assert.match(statement, /NOT EXISTS/);
+
+        return {
+          rows: [
+            {
+              deleted_job_count: "3",
+              deleted_job_result_count: "3",
+              kept_latest_resource_job_count: "5"
+            }
+          ]
+        };
+      }
+
+      if (statement.includes("latest_inventory_export")) {
+        assert.match(statement, /event_type = 'inventory\.exported'/);
+        assert.match(statement, /events\.occurred_at < \$1::timestamptz/);
+        assert.match(statement, /NOT EXISTS/);
+
+        return {
+          rows: [
+            {
+              deleted_audit_event_count: "2"
+            }
+          ]
+        };
+      }
+
+      throw new Error(`Unexpected purge query: ${statement}`);
+    }
+  } as unknown as PoolClient;
+
+  const summary = await purgeOperationalHistoryRows(client, "2026-01-30T00:00:00.000Z");
+
+  assert.equal(statements.length, 2);
+  assert.deepEqual(summary, {
+    deletedAuditEventCount: 2,
+    deletedJobCount: 3,
+    deletedJobResultCount: 3,
+    keptLatestResourceJobCount: 5
+  });
 });
 
 test("buildZoneDnsPlans publishes node hostnames and dispatches primary plus secondary plans", async () => {

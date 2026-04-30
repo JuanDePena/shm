@@ -9,6 +9,7 @@ import type {
   NodeHealthSnapshot,
   OperationsOverview,
   PackageInventorySnapshot,
+  EnvironmentParametersSnapshot,
   ResourceDriftSummary,
   RustDeskOverview
 } from "@simplehost/control-contracts";
@@ -29,6 +30,7 @@ export interface ControlDashboardBootstrap {
   rustdesk: RustDeskOverview;
   mail: MailOverview;
   packages: PackageInventorySnapshot;
+  parameters: EnvironmentParametersSnapshot;
 }
 
 export interface ControlAuthenticatedDashboardBootstrap {
@@ -49,6 +51,7 @@ export interface ControlDashboardBootstrapLoaders {
   getRustDesk(token: string): Promise<RustDeskOverview>;
   getMail(token: string): Promise<MailOverview>;
   getPackages(token: string): Promise<PackageInventorySnapshot>;
+  getParameters(token: string): Promise<EnvironmentParametersSnapshot>;
 }
 
 export type ControlDashboardBootstrapDataLoaders = Omit<
@@ -72,7 +75,8 @@ export async function loadControlDashboardBootstrap(
     backups,
     rustdesk,
     mail,
-    packages
+    packages,
+    parameters
   ] = await Promise.all([
     loaders.getCurrentUser(token),
     loaders.getOverview(token),
@@ -85,7 +89,8 @@ export async function loadControlDashboardBootstrap(
     loaders.getBackups(token),
     loaders.getRustDesk(token),
     loaders.getMail(token),
-    loaders.getPackages(token)
+    loaders.getPackages(token),
+    loaders.getParameters(token)
   ]);
 
   return {
@@ -100,7 +105,8 @@ export async function loadControlDashboardBootstrap(
     backups,
     rustdesk,
     mail,
-    packages
+    packages,
+    parameters
   };
 }
 
@@ -121,7 +127,8 @@ export async function loadAuthenticatedControlDashboardBootstrap(
     backups,
     rustdesk,
     mail,
-    packages
+    packages,
+    parameters
   ] = await Promise.all([
     loaders.getOverview(session.token),
     loaders.getInventory(session.token),
@@ -133,7 +140,8 @@ export async function loadAuthenticatedControlDashboardBootstrap(
     loaders.getBackups(session.token),
     loaders.getRustDesk(session.token),
     loaders.getMail(session.token),
-    loaders.getPackages(session.token)
+    loaders.getPackages(session.token),
+    loaders.getParameters(session.token)
   ]);
 
   return {
@@ -150,7 +158,8 @@ export async function loadAuthenticatedControlDashboardBootstrap(
       backups,
       rustdesk,
       mail,
-      packages
+      packages,
+      parameters
     }
   };
 }

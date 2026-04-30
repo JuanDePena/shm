@@ -86,6 +86,15 @@ export const handleResourceRoutes: ApiRouteHandler = async ({
     return true;
   }
 
+  if (request.method === "POST" && url.pathname === "/v1/operations/history/purge") {
+    writeJson(
+      response,
+      200,
+      await controlPlaneStore.purgeOperationalHistory(bearerToken)
+    );
+    return true;
+  }
+
   if (request.method === "GET" && url.pathname === "/v1/resources/drift") {
     writeJson(
       response,

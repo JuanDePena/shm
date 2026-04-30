@@ -17,6 +17,37 @@ function createDashboardData(): DashboardData {
     globalRoles: ["platform_admin"],
     tenantMemberships: []
   };
+  data.parameters = {
+    generatedAt: "2026-04-29T00:00:00.000Z",
+    parameterCount: 2,
+    runtimeCount: 1,
+    uiManagedCount: 1,
+    parameters: [
+      {
+        key: "SIMPLEHOST_UI_FLAG",
+        value: "enabled",
+        displayValue: "enabled",
+        source: "ui",
+        sensitive: false,
+        createdFromUi: true,
+        editable: true,
+        deletable: true,
+        description: "UI managed flag",
+        createdAt: "2026-04-29T00:00:00.000Z",
+        updatedAt: "2026-04-29T00:00:00.000Z"
+      },
+      {
+        key: "PATH",
+        value: "/usr/bin",
+        displayValue: "/usr/bin",
+        source: "runtime",
+        sensitive: false,
+        createdFromUi: false,
+        editable: false,
+        deletable: false
+      }
+    ]
+  };
   return data;
 }
 
@@ -157,7 +188,10 @@ test("dashboard sidebar renders logical collapsible groups", () => {
   );
   assert.ok(controlPlaneGroup.indexOf(">Overview<") < controlPlaneGroup.indexOf(">Audit<"));
   assert.ok(controlPlaneGroup.indexOf(">Audit<") < controlPlaneGroup.indexOf(">Jobs<"));
-  assert.ok(controlPlaneGroup.indexOf(">Jobs<") < controlPlaneGroup.indexOf(">Reconciliation<"));
+  assert.ok(controlPlaneGroup.indexOf(">Jobs<") < controlPlaneGroup.indexOf(">Parameters<"));
+  assert.ok(
+    controlPlaneGroup.indexOf(">Parameters<") < controlPlaneGroup.indexOf(">Reconciliation<")
+  );
 
   const continuityGroup = html.slice(
     html.indexOf('data-nav-group-id="continuity"'),
@@ -179,6 +213,23 @@ test("dashboard sidebar renders logical collapsible groups", () => {
   );
   assert.ok(resourcesGroup.indexOf(">Proxies<") < resourcesGroup.indexOf(">RustDesk<"));
   assert.ok(resourcesGroup.indexOf(">RustDesk<") < resourcesGroup.indexOf(">Tenants<"));
+});
+
+test("parameters workspace edits only UI-created parameters", () => {
+  const data = createDashboardData();
+  const uiHtml = renderView(data, "parameters", "SIMPLEHOST_UI_FLAG");
+  const uiDetail = detailRegion(uiHtml, "Edit UI parameter");
+
+  assert.match(uiHtml, /id="section-parameters"/);
+  assert.match(uiHtml, />Selected</);
+  assert.match(uiDetail, /name="key" value="SIMPLEHOST_UI_FLAG"/);
+  assert.match(uiDetail, /Delete parameter/);
+
+  const runtimeHtml = renderView(data, "parameters", "PATH");
+  const runtimeDetail = detailRegion(runtimeHtml, "Runtime parameter");
+
+  assert.match(runtimeDetail, /Runtime parameters are read-only/);
+  assert.doesNotMatch(runtimeDetail, /Delete parameter/);
 });
 
 test("runtime workspaces select one row and render only that row detail", () => {

@@ -39,15 +39,27 @@ Those compact rows keep timestamps, status, resource keys and summaries for
 navigation badges and related-job panels, but omit large payload/result detail
 documents until the operator opens Jobs.
 
-## Overview and Reconciliation
+## Overview, Parameters and Reconciliation
 
 Overview is the lightweight landing workspace. It keeps platform status in a
 dedicated Status panel with headline counts first and operational signals below,
 then leaves execution controls to specialized workspaces.
 
+The Parameters workspace lives under Control plane after Jobs. It lists runtime
+environment variables as read-only records with sensitive values redacted by key
+pattern, and stores UI-created parameters in PostgreSQL so operators can create,
+edit and delete only entries that originated from the UI. This avoids exposing
+or mutating the process environment while still reducing trips to the terminal
+for control-plane parameter inventory.
+
 The Reconciliation workspace lives under Control plane and owns the explicit
 `Run reconciliation` action. This keeps the landing view focused on posture
 while still keeping catalog comparison and missing-work dispatch one click away.
+It also exposes operational history retention. The worker and manual purge
+action use the `SIMPLEHOST_HISTORY_RETENTION_DAYS` parameter, defaulting to 90
+days, to remove old audit events and completed job history rows while preserving
+the latest job per resource so drift and dispatch decisions keep their current
+state.
 
 ## Updates
 

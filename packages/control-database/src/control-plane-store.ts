@@ -47,7 +47,8 @@ export async function createPostgresControlPlaneStore(
     }),
     ...createControlPlaneOperationsMethods({
       pool,
-      jobPayloadKey
+      jobPayloadKey,
+      runtimeEnv: process.env
     }),
     async close() {
       await pool.end();

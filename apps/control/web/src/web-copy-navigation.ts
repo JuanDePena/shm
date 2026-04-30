@@ -16,6 +16,7 @@ export const navigationCopyByLocale = {
     navNodeHealth: "Node health",
     navDrift: "Resource drift",
     navJobs: "Jobs",
+    navParameters: "Parameters",
     navBackups: "Backups",
     navRustDesk: "RustDesk",
     navUpdates: "Updates",
@@ -103,6 +104,8 @@ export const navigationCopyByLocale = {
       "Monitor firewalld posture and apply the SimpleHost baseline without leaving the control plane.",
     fail2banWorkspaceDescription:
       "Monitor jails, failed attempts and bans, then apply the managed SSH jail baseline.",
+    parametersWorkspaceDescription:
+      "Runtime environment parameters plus UI-managed entries for control-plane operations.",
     reconciliationWorkspaceDescription:
       "Compare desired resources with the latest applied state and dispatch missing platform work.",
     rustdeskWorkspaceDescription:
@@ -122,6 +125,7 @@ export const navigationCopyByLocale = {
     navNodeHealth: "Salud de nodos",
     navDrift: "Drift de recursos",
     navJobs: "Jobs",
+    navParameters: "Parameters",
     navBackups: "Backups",
     navRustDesk: "RustDesk",
     navUpdates: "Updates",
@@ -214,6 +218,8 @@ export const navigationCopyByLocale = {
       "Monitorea la postura de firewalld y aplica el baseline SimpleHost sin salir del plano de control.",
     fail2banWorkspaceDescription:
       "Monitorea jails, intentos fallidos y bans, y aplica el baseline SSH gestionado.",
+    parametersWorkspaceDescription:
+      "Variables de entorno runtime y entradas gestionadas desde UI para operaciones del control plane.",
     reconciliationWorkspaceDescription:
       "Compara recursos deseados con el último estado aplicado y despacha trabajo faltante de plataforma.",
     rustdeskWorkspaceDescription:

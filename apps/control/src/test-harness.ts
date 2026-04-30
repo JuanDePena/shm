@@ -161,6 +161,13 @@ export function createDashboardBootstrap(
       nodeCount: 0,
       packageCount: 0,
       packages: []
+    },
+    parameters: {
+      generatedAt: new Date().toISOString(),
+      parameterCount: 0,
+      runtimeCount: 0,
+      uiManagedCount: 0,
+      parameters: []
     }
   } as unknown as ControlDashboardBootstrap;
 }
@@ -362,6 +369,26 @@ export function createStubApiSurface(args: {
 
         writeJson(response, 200, args.dashboard.overview);
         return;
+      case "/v1/operations/history/purge":
+        if (request.method === "POST") {
+          writeJson(response, 200, {
+            generatedAt: new Date().toISOString(),
+            parameterKey: "SIMPLEHOST_HISTORY_RETENTION_DAYS",
+            retentionDays: 90,
+            cutoffAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+            source: "ui",
+            deletedAuditEventCount: 0,
+            deletedJobCount: 0,
+            deletedJobResultCount: 0,
+            keptLatestResourceJobCount: 0
+          });
+          return;
+        }
+        writeJson(response, 404, {
+          error: "Not Found",
+          path: url.pathname
+        });
+        return;
       case "/v1/inventory/summary":
         writeJson(response, 200, args.dashboard.inventory);
         return;
@@ -391,6 +418,9 @@ export function createStubApiSurface(args: {
         return;
       case "/v1/packages/summary":
         writeJson(response, 200, args.dashboard.packages);
+        return;
+      case "/v1/parameters":
+        writeJson(response, 200, args.dashboard.parameters);
         return;
       case "/v1/apps/adudoc/proxy-preview":
         if (args.proxyPreviewError) {

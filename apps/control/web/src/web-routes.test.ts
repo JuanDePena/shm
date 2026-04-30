@@ -40,6 +40,15 @@ function createStubApi(
     loadDashboardData: async () => {
       throw new Error("Unexpected dashboard load in test");
     },
+    loadParameters: async () => {
+      throw new Error("Unexpected parameters load in test");
+    },
+    upsertParameter: async () => {
+      throw new Error("Unexpected parameter upsert in test");
+    },
+    deleteParameter: async () => {
+      throw new Error("Unexpected parameter delete in test");
+    },
     loadRustDeskPublicConnection: async () => {
       throw new Error("Unexpected RustDesk load in test");
     },
@@ -51,6 +60,9 @@ function createStubApi(
     },
     runReconciliation: async () => {
       throw new Error("Unexpected reconciliation run in test");
+    },
+    purgeOperationalHistory: async () => {
+      throw new Error("Unexpected history purge in test");
     },
     syncZone: async () => {
       throw new Error("Unexpected zone sync in test");
@@ -235,6 +247,96 @@ test("missing session on protected routes redirects to login", async () => {
   assert.equal(response.statusCode, 303);
   assert.equal(response.headers.location, "/login?notice=Session%20required&kind=error");
   assert.match(String(response.headers["set-cookie"]), /shp_session=;/);
+});
+
+test("parameter and history actions call the authenticated API and return to the dashboard", async () => {
+  const savedRequests: Array<{ key: string; value?: string; sensitive?: boolean }> = [];
+  const deletedKeys: string[] = [];
+  const handler = createControlWebSurface(
+    {
+      config: createConfig(),
+      startedAt: Date.now()
+    },
+    createStubApi({
+      resolveSession: async () => ({
+        state: "authenticated",
+        token: "test-token",
+        currentUser: {
+          userId: "user-1",
+          email: "ops@example.com",
+          displayName: "Ops",
+          status: "active",
+          globalRoles: ["platform_admin"],
+          tenantMemberships: []
+        }
+      }),
+      upsertParameter: async (token, request) => {
+        assert.equal(token, "test-token");
+        savedRequests.push(request);
+      },
+      deleteParameter: async (token, key) => {
+        assert.equal(token, "test-token");
+        deletedKeys.push(key);
+      },
+      purgeOperationalHistory: async (token) => {
+        assert.equal(token, "test-token");
+        return {
+          generatedAt: "2026-04-30T00:00:00.000Z",
+          parameterKey: "SIMPLEHOST_HISTORY_RETENTION_DAYS",
+          retentionDays: 90,
+          cutoffAt: "2026-01-30T00:00:00.000Z",
+          source: "ui",
+          deletedAuditEventCount: 2,
+          deletedJobCount: 3,
+          deletedJobResultCount: 3,
+          keptLatestResourceJobCount: 4
+        };
+      }
+    })
+  ).requestListener;
+
+  const upsertResponse = await invokeRequestHandler(handler, {
+    method: "POST",
+    url: "/actions/parameters/upsert",
+    body: "key=SIMPLEHOST_TEST&value=enabled&description=flag&sensitive=on&returnTo=%2F%3Fview%3Dparameters",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+      cookie: "shp_session=test-token"
+    }
+  });
+
+  assert.equal(upsertResponse.statusCode, 303);
+  assert.equal(savedRequests[0]?.key, "SIMPLEHOST_TEST");
+  assert.equal(savedRequests[0]?.value, "enabled");
+  assert.equal(savedRequests[0]?.sensitive, true);
+  assert.match(String(upsertResponse.headers.location), /view=parameters/);
+
+  const deleteResponse = await invokeRequestHandler(handler, {
+    method: "POST",
+    url: "/actions/parameters/delete",
+    body: "key=SIMPLEHOST_TEST&returnTo=%2F%3Fview%3Dparameters",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+      cookie: "shp_session=test-token"
+    }
+  });
+
+  assert.equal(deleteResponse.statusCode, 303);
+  assert.deepEqual(deletedKeys, ["SIMPLEHOST_TEST"]);
+
+  const purgeResponse = await invokeRequestHandler(handler, {
+    method: "POST",
+    url: "/actions/operations-history-purge",
+    body: "returnTo=%2F%3Fview%3Dreconciliation",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+      cookie: "shp_session=test-token"
+    }
+  });
+
+  assert.equal(purgeResponse.statusCode, 303);
+  assert.match(String(purgeResponse.headers.location), /view=reconciliation/);
+  assert.match(String(purgeResponse.headers.location), /Purged/);
 });
 
 test("mail validation failures redirect back to the dashboard with an operator-facing notice", async () => {

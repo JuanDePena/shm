@@ -16,6 +16,8 @@ import type {
   DesiredStateApplyResponse,
   DesiredStateExportResponse,
   DispatchedJobEnvelope,
+  EnvironmentParameterMutationRequest,
+  EnvironmentParametersSnapshot,
   Fail2BanApplyRequest,
   FirewallApplyRequest,
   InventoryImportRequest,
@@ -33,6 +35,7 @@ import type {
   NodeHealthSnapshot,
   NodeRegistrationRequest,
   NodeRegistrationResponse,
+  OperationHistoryPurgeSummary,
   OperationsOverview,
   PackageInventoryRefreshRequest,
   PackageInventorySnapshot,
@@ -116,6 +119,18 @@ export interface SessionRow {
   user_id: string;
   expires_at: Date | string;
   revoked_at: Date | string | null;
+}
+
+export interface EnvironmentParameterRow {
+  parameter_key: string;
+  parameter_value: string;
+  description: string | null;
+  is_sensitive: boolean;
+  created_from_ui: boolean;
+  created_by_user_id: string | null;
+  updated_by_user_id: string | null;
+  created_at: Date | string;
+  updated_at: Date | string;
 }
 
 export interface UserGlobalRoleRow {
@@ -499,10 +514,24 @@ export interface ControlPlaneStore {
     presentedToken: string | null
   ): Promise<JobDispatchResponse>;
   runReconciliationCycle(presentedToken?: string | null): Promise<ReconciliationRunSummary>;
+  purgeOperationalHistory(
+    presentedToken?: string | null
+  ): Promise<OperationHistoryPurgeSummary>;
   getOperationsOverview(presentedToken: string | null): Promise<OperationsOverview>;
   getResourceDrift(presentedToken: string | null): Promise<ResourceDriftSummary[]>;
   getNodeHealth(presentedToken: string | null): Promise<NodeHealthSnapshot[]>;
   getPackageInventory(presentedToken: string | null): Promise<PackageInventorySnapshot>;
+  listEnvironmentParameters(
+    presentedToken: string | null
+  ): Promise<EnvironmentParametersSnapshot>;
+  upsertEnvironmentParameter(
+    request: EnvironmentParameterMutationRequest,
+    presentedToken: string | null
+  ): Promise<EnvironmentParametersSnapshot>;
+  deleteEnvironmentParameter(
+    key: string,
+    presentedToken: string | null
+  ): Promise<EnvironmentParametersSnapshot>;
   getRustDeskNodeHealth(): Promise<NodeHealthSnapshot[]>;
   getMailOverview(presentedToken: string | null): Promise<MailOverview>;
   upsertMailPolicy(
@@ -624,10 +653,14 @@ export type ControlPlaneOperationsMethods = Pick<
   | "dispatchFirewallApply"
   | "dispatchFail2BanApply"
   | "runReconciliationCycle"
+  | "purgeOperationalHistory"
   | "getOperationsOverview"
   | "getResourceDrift"
   | "getNodeHealth"
   | "getPackageInventory"
+  | "listEnvironmentParameters"
+  | "upsertEnvironmentParameter"
+  | "deleteEnvironmentParameter"
   | "getRustDeskNodeHealth"
   | "listJobHistory"
   | "listAuditEvents"

@@ -71,6 +71,60 @@ export interface PackageInventorySnapshot {
   packages: InstalledPackageSummary[];
 }
 
+export type EnvironmentParameterSource = "runtime" | "ui";
+
+export interface EnvironmentParameterSummary {
+  key: string;
+  value: string | null;
+  displayValue: string;
+  source: EnvironmentParameterSource;
+  sensitive: boolean;
+  createdFromUi: boolean;
+  editable: boolean;
+  deletable: boolean;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface EnvironmentParametersSnapshot {
+  generatedAt: string;
+  parameterCount: number;
+  runtimeCount: number;
+  uiManagedCount: number;
+  parameters: EnvironmentParameterSummary[];
+}
+
+export interface EnvironmentParameterMutationRequest {
+  key: string;
+  value?: string;
+  description?: string;
+  sensitive?: boolean;
+}
+
+export const operationHistoryRetentionDaysParameterKey =
+  "SIMPLEHOST_HISTORY_RETENTION_DAYS";
+export const operationHistoryRetentionDefaultDays = 90;
+export const operationHistoryRetentionMinimumDays = 1;
+export const operationHistoryRetentionMaximumDays = 3650;
+
+export type OperationHistoryRetentionSource = "ui" | "runtime" | "default";
+
+export interface OperationHistoryRetentionSummary {
+  parameterKey: string;
+  retentionDays: number;
+  cutoffAt: string;
+  source: OperationHistoryRetentionSource;
+}
+
+export interface OperationHistoryPurgeSummary extends OperationHistoryRetentionSummary {
+  generatedAt: string;
+  deletedAuditEventCount: number;
+  deletedJobCount: number;
+  deletedJobResultCount: number;
+  keptLatestResourceJobCount: number;
+}
+
 export interface ReconciliationRunSummary {
   runId: string;
   desiredStateVersion: string;

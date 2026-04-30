@@ -72,6 +72,7 @@ type DashboardShellCopy = DashboardCopyLabels & {
   navDatabases: string;
   navAudit: string;
   navJobs: string;
+  navParameters: string;
   navMail: string;
   navNodes: string;
   navOperations: string;
@@ -236,6 +237,13 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
           href: buildDashboardViewUrl("jobs"),
           badge: String(data.jobHistory.length),
           active: view === "jobs" || view === "job-history"
+        },
+        {
+          id: "parameters",
+          label: copy.navParameters,
+          href: buildDashboardViewUrl("parameters"),
+          badge: String(data.parameters.uiManagedCount),
+          active: view === "parameters"
         },
         {
           id: "audit",

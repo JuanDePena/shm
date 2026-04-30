@@ -11,6 +11,8 @@ import {
   type DesiredStateApplyRequest,
   type DesiredStateExportResponse,
   type DesiredStateSpec,
+  type EnvironmentParameterMutationRequest,
+  type EnvironmentParametersSnapshot,
   type Fail2BanApplyRequest,
   type FirewallApplyRequest,
   type InventoryStateSnapshot,
@@ -22,6 +24,7 @@ import {
   type MailboxWebmailAutologin,
   type MailOverview,
   type NodeHealthSnapshot,
+  type OperationHistoryPurgeSummary,
   type OperationsOverview,
   type PackageInstallRequest,
   type PackageInventoryRefreshRequest,
@@ -83,10 +86,17 @@ export interface ControlWebApi extends ControlAuthSurface {
     options?: DashboardLoadOptions
   ): Promise<DashboardBootstrap>;
   loadDashboardData(token: string): Promise<DashboardData>;
+  loadParameters(token: string): Promise<EnvironmentParametersSnapshot>;
+  upsertParameter(
+    token: string,
+    request: EnvironmentParameterMutationRequest
+  ): Promise<void>;
+  deleteParameter(token: string, key: string): Promise<void>;
   loadRustDeskPublicConnection(): Promise<RustDeskPublicConnectionInfo>;
   exportInventory(token: string): Promise<string>;
   importInventory(token: string, path: string): Promise<InventoryImportSummary>;
   runReconciliation(token: string): Promise<{ generatedJobCount: number; skippedJobCount: number }>;
+  purgeOperationalHistory(token: string): Promise<OperationHistoryPurgeSummary>;
   syncZone(token: string, zoneName: string): Promise<JobDispatchResponse>;
   reconcileApp(
     token: string,
@@ -243,7 +253,9 @@ export function createControlWebApiFromRequest(request: ControlWebApiRequest): C
     getMail: (token: string) =>
       request<MailOverview>("/v1/mail/overview", { token }),
     getPackages: (token: string) =>
-      request<PackageInventorySnapshot>("/v1/packages/summary", { token })
+      request<PackageInventorySnapshot>("/v1/packages/summary", { token }),
+    getParameters: (token: string) =>
+      request<EnvironmentParametersSnapshot>("/v1/parameters", { token })
   });
 
   const api: ControlWebApi = {
@@ -287,6 +299,25 @@ export function createControlWebApiFromRequest(request: ControlWebApiRequest): C
     async loadDashboardData(token: string): Promise<DashboardData> {
       return api.loadDashboardBootstrap(token);
     },
+    loadParameters(token: string): Promise<EnvironmentParametersSnapshot> {
+      return request<EnvironmentParametersSnapshot>("/v1/parameters", { token });
+    },
+    async upsertParameter(
+      token: string,
+      upsertRequest: EnvironmentParameterMutationRequest
+    ): Promise<void> {
+      await request("/v1/parameters", {
+        method: "POST",
+        token,
+        body: upsertRequest
+      });
+    },
+    async deleteParameter(token: string, key: string): Promise<void> {
+      await request(`/v1/parameters/${encodeURIComponent(key)}`, {
+        method: "DELETE",
+        token
+      });
+    },
     loadRustDeskPublicConnection(): Promise<RustDeskPublicConnectionInfo> {
       return request<RustDeskPublicConnectionInfo>("/v1/public/rustdesk");
     },
@@ -313,6 +344,12 @@ export function createControlWebApiFromRequest(request: ControlWebApiRequest): C
           token
         }
       );
+    },
+    purgeOperationalHistory(token: string): Promise<OperationHistoryPurgeSummary> {
+      return request<OperationHistoryPurgeSummary>("/v1/operations/history/purge", {
+        method: "POST",
+        token
+      });
     },
     syncZone(token: string, zoneName: string): Promise<JobDispatchResponse> {
       return request<JobDispatchResponse>(

@@ -33,6 +33,7 @@ export async function runWorkerIteration(
 
   try {
     const reconciliation = await store.runReconciliationCycle();
+    const historyPurge = await store.purgeOperationalHistory();
     const operations = await store.getOperationsOverview(null);
 
     console.log(
@@ -50,6 +51,13 @@ export async function runWorkerIteration(
               missingCredentialCount: reconciliation.missingCredentialCount,
               startedAt: reconciliation.startedAt,
               completedAt: reconciliation.completedAt
+            },
+            historyRetention: {
+              retentionDays: historyPurge.retentionDays,
+              cutoffAt: historyPurge.cutoffAt,
+              deletedJobCount: historyPurge.deletedJobCount,
+              deletedJobResultCount: historyPurge.deletedJobResultCount,
+              deletedAuditEventCount: historyPurge.deletedAuditEventCount
             }
           }
         },

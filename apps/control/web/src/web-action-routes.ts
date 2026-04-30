@@ -4,6 +4,7 @@ import {
   type DatabaseReconcileRequest,
   type Fail2BanApplyRequest,
   type FirewallApplyRequest,
+  type EnvironmentParameterMutationRequest,
   type InventoryImportSummary,
   type JobDispatchResponse,
   type PackageInstallRequest,
@@ -58,6 +59,64 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
         `Reconciliation generated ${result.generatedJobCount} job(s) and skipped ${result.skippedJobCount}.`,
         "success"
       )
+    );
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/actions/operations-history-purge") {
+    const token = await requireSessionToken({ requireSession });
+    const form = await readFormBody(request);
+    const returnTo = form.get("returnTo") ?? "/";
+    const result = await api.purgeOperationalHistory(token);
+
+    redirect(
+      response,
+      noticeReturnTo(
+        returnTo,
+        `Purged ${result.deletedJobCount} job(s), ${result.deletedJobResultCount} result(s), and ${result.deletedAuditEventCount} audit event(s) older than ${result.retentionDays} day(s).`,
+        "success"
+      )
+    );
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/actions/parameters/upsert") {
+    const token = await requireSessionToken({ requireSession });
+    const form = await readFormBody(request);
+    const returnTo = form.get("returnTo") ?? "/";
+    const key = form.get("key")?.trim() ?? "";
+    const value = form.get("value") ?? "";
+    const keepSensitiveWhenBlank = (form.get("keepSensitiveWhenBlank")?.trim() ?? "") === "on";
+    const requestBody: EnvironmentParameterMutationRequest = {
+      key,
+      description: form.get("description")?.trim() ?? "",
+      sensitive: (form.get("sensitive")?.trim() ?? "") === "on"
+    };
+
+    if (!(keepSensitiveWhenBlank && value.length === 0)) {
+      requestBody.value = value;
+    }
+
+    await api.upsertParameter(token, requestBody);
+
+    redirect(
+      response,
+      noticeReturnTo(returnTo, `Saved parameter ${key}.`, "success")
+    );
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/actions/parameters/delete") {
+    const token = await requireSessionToken({ requireSession });
+    const form = await readFormBody(request);
+    const returnTo = form.get("returnTo") ?? "/";
+    const key = form.get("key")?.trim() ?? "";
+
+    await api.deleteParameter(token, key);
+
+    redirect(
+      response,
+      noticeReturnTo(returnTo, `Deleted parameter ${key}.`, "success")
     );
     return true;
   }
