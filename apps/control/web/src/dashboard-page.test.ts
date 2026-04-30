@@ -105,8 +105,8 @@ test("renderDashboardPage renders only the active workspace body", () => {
 test("dashboard sidebar renders logical collapsible groups", () => {
   const html = renderView(createDashboardData(), "overview");
   const groupIds = [
-    "continuity",
     "control-plane",
+    "continuity",
     "observability",
     "package-management",
     "resources",
@@ -123,6 +123,13 @@ test("dashboard sidebar renders logical collapsible groups", () => {
 
   assert.match(html, /data-nav-group-toggle/);
   assert.match(html, /simplehost:sidebar:collapsed-groups:v1/);
+
+  const controlPlaneGroup = html.slice(
+    html.indexOf('data-nav-group-id="control-plane"'),
+    html.indexOf('data-nav-group-id="continuity"')
+  );
+  assert.ok(controlPlaneGroup.indexOf(">Overview<") < controlPlaneGroup.indexOf(">Audit<"));
+  assert.ok(controlPlaneGroup.indexOf(">Audit<") < controlPlaneGroup.indexOf(">Jobs<"));
 
   const packageGroup = html.slice(
     html.indexOf('data-nav-group-id="package-management"'),

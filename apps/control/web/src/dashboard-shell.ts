@@ -519,12 +519,34 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
   ): number =>
     left.label.localeCompare(right.label, locale, { sensitivity: "base" }) ||
     left.id.localeCompare(right.id);
+  const compareSidebarGroups = (
+    left: AdminNavGroup,
+    right: AdminNavGroup
+  ): number =>
+    left.id === right.id
+      ? 0
+      : left.id === "control-plane"
+      ? -1
+      : right.id === "control-plane"
+        ? 1
+        : compareSidebarEntries(left, right);
+  const compareSidebarItems = (
+    left: AdminNavGroup["items"][number],
+    right: AdminNavGroup["items"][number]
+  ): number =>
+    left.id === right.id
+      ? 0
+      : left.id === "overview"
+      ? -1
+      : right.id === "overview"
+        ? 1
+        : compareSidebarEntries(left, right);
   const orderedSidebarGroups = sidebarGroups
     .map((group) => ({
       ...group,
-      items: [...group.items].sort(compareSidebarEntries)
+      items: [...group.items].sort(compareSidebarItems)
     }))
-    .sort(compareSidebarEntries);
+    .sort(compareSidebarGroups);
 
   const renderOverviewSection = (): string => `<section id="section-overview" class="panel section-panel">
     <div class="section-head">
