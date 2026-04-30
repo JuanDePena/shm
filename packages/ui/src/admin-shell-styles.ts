@@ -143,7 +143,7 @@ export function renderAdminShellStyleBlock(): string {
       .sidebar-group-toggle {
         appearance: none;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto auto;
+        grid-template-columns: minmax(0, 1fr) auto;
         align-items: center;
         gap: 0.38rem;
         width: 100%;
@@ -177,17 +177,6 @@ export function renderAdminShellStyleBlock(): string {
       .sidebar-group-toggle:hover .sidebar-group-label,
       .sidebar-group-toggle:focus-visible .sidebar-group-label {
         color: #d9ff8d;
-      }
-
-      .sidebar-group-count {
-        min-width: 1.15rem;
-        padding: 0.08rem 0.28rem;
-        border-radius: 999px;
-        background: rgba(239, 247, 255, 0.08);
-        color: rgba(239, 247, 255, 0.68);
-        font-size: 0.66rem;
-        line-height: 1;
-        text-align: center;
       }
 
       .sidebar-group-chevron {

@@ -56,9 +56,9 @@ Current behavior:
 
 - desktop uses a two-column shell with sidebar plus content
 - mobile collapses into a single-column shell
-- sidebar includes search, grouped navigation, badges, and version footer; groups
-  and links are alphabetized except that `Control plane` and `Overview` remain
-  first
+- sidebar includes search, grouped navigation, item badges, and version footer;
+  groups and links are alphabetized except that `Control plane` and `Overview`
+  remain first
 - dashboard routes render only the active workspace body; shared chrome and
   global counts can be derived up front, but inactive workspace sections should
   not be pre-rendered

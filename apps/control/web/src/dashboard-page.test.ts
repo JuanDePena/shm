@@ -122,6 +122,7 @@ test("dashboard sidebar renders logical collapsible groups", () => {
   }
 
   assert.match(html, /data-nav-group-toggle/);
+  assert.doesNotMatch(html, /sidebar-group-count/);
   assert.match(html, /simplehost:sidebar:collapsed-groups:v1/);
 
   const controlPlaneGroup = html.slice(

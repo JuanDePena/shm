@@ -45,7 +45,6 @@ export function renderAdminShell(props: AdminShellProps): string {
           aria-controls="${escapeHtml(groupLinksId)}"
         >
           <span class="sidebar-group-label">${escapeHtml(group.label)}</span>
-          <span class="sidebar-group-count">${escapeHtml(String(group.items.length))}</span>
           <span class="sidebar-group-chevron" aria-hidden="true"></span>
         </button>
         <div class="sidebar-links" id="${escapeHtml(groupLinksId)}" data-nav-group-links>${itemsHtml}</div>
