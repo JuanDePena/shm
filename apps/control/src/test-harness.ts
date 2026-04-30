@@ -198,6 +198,7 @@ export function createTestContext(args: {
       web: { host: "127.0.0.1", port: args.webPort ?? 3200 },
       worker: {
         pollIntervalMs: 5000,
+        reconciliationIntervalMs: 5 * 60 * 1000,
         logLevel: "info"
       }
     } as ControlProcessContext["config"] & ControlWebProcessContext["config"],

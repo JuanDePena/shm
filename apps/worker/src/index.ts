@@ -4,15 +4,14 @@ import { fileURLToPath } from "node:url";
 
 import { createControlRuntimeConfig } from "@simplehost/control-config";
 import { createControlApiMetadata } from "@simplehost/control-contracts";
-import {
-  createControlDatabaseHealthSummary,
-  createPostgresControlPlaneStore
-} from "@simplehost/control-database";
+import { createPostgresControlPlaneStore } from "@simplehost/control-database";
 
-export async function runWorkerIteration(): Promise<void> {
-  const config = createControlRuntimeConfig();
-  const metadata = createControlApiMetadata("worker", config.version);
-  const controlPlaneStore = await createPostgresControlPlaneStore(config.database.url, {
+type WorkerStore = Awaited<ReturnType<typeof createPostgresControlPlaneStore>>;
+
+function createWorkerStore(
+  config: ReturnType<typeof createControlRuntimeConfig>
+): Promise<WorkerStore> {
+  return createPostgresControlPlaneStore(config.database.url, {
     pollIntervalMs: config.worker.pollIntervalMs,
     bootstrapEnrollmentToken: config.auth.bootstrapEnrollmentToken,
     sessionTtlSeconds: config.auth.sessionTtlSeconds,
@@ -22,49 +21,67 @@ export async function runWorkerIteration(): Promise<void> {
     defaultInventoryImportPath: config.inventory.importPath,
     jobPayloadSecret: config.jobs.payloadSecret
   });
+}
+
+export async function runWorkerIteration(
+  controlPlaneStore?: WorkerStore,
+  config = createControlRuntimeConfig()
+): Promise<void> {
+  const metadata = createControlApiMetadata("worker", config.version);
+  const ownsStore = !controlPlaneStore;
+  const store = controlPlaneStore ?? await createWorkerStore(config);
 
   try {
-    const reconciliation = await controlPlaneStore.runReconciliationCycle();
-    const stateSnapshot = await controlPlaneStore.getStateSnapshot();
+    const reconciliation = await store.runReconciliationCycle();
+    const operations = await store.getOperationsOverview(null);
 
     console.log(
       JSON.stringify(
         {
           metadata,
-          database: createControlDatabaseHealthSummary(config.database.url),
           controlPlane: {
-            registeredNodes: stateSnapshot.nodes.length,
-            pendingJobCount: Object.values(stateSnapshot.pendingJobs).reduce(
-              (count, jobs) => count + jobs.length,
-              0
-            ),
-            reportedResultCount: stateSnapshot.reportedResults.length,
-            reconciliation
-          },
-          operations: await controlPlaneStore.getOperationsOverview(null)
+            pendingJobCount: operations.pendingJobCount,
+            failedJobCount: operations.failedJobCount,
+            driftedResourceCount: operations.driftedResourceCount,
+            reconciliation: {
+              runId: reconciliation.runId,
+              generatedJobCount: reconciliation.generatedJobCount,
+              skippedJobCount: reconciliation.skippedJobCount,
+              missingCredentialCount: reconciliation.missingCredentialCount,
+              startedAt: reconciliation.startedAt,
+              completedAt: reconciliation.completedAt
+            }
+          }
         },
         null,
-        2
+        config.worker.logLevel === "debug" ? 2 : 0
       )
     );
   } finally {
-    await controlPlaneStore.close();
+    if (ownsStore) {
+      await store.close();
+    }
   }
 }
 
 export async function startPanelWorker(): Promise<void> {
   const config = createControlRuntimeConfig();
   const runOnce = process.env.SIMPLEHOST_WORKER_RUN_ONCE === "true";
+  const controlPlaneStore = await createWorkerStore(config);
 
-  do {
-    await runWorkerIteration();
+  try {
+    do {
+      await runWorkerIteration(controlPlaneStore, config);
 
-    if (runOnce) {
-      break;
-    }
+      if (runOnce) {
+        break;
+      }
 
-    await sleep(config.worker.pollIntervalMs);
-  } while (true);
+      await sleep(config.worker.reconciliationIntervalMs);
+    } while (true);
+  } finally {
+    await controlPlaneStore.close();
+  }
 }
 
 function isMainModule(): boolean {

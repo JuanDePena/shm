@@ -220,7 +220,7 @@ The control UI shows:
 - cross-node filesystem inventory with byte and inode usage
 - pressure counters for filesystems above the warning threshold
 - selected-node cards for mounts and tracked paths such as `/root`, `/home`,
-  `/etc`, `/opt`, `/srv`, `/var`, logs, backups and the active release root
+  `/etc`, `/opt`, `/srv`, `/var`, logs and backups
 
 This view is for triage and capacity awareness. Destructive cleanup operations
 should remain outside the UI until they can be modeled as audited, reversible

@@ -7,6 +7,7 @@ export interface ControlListenerConfig {
 
 export interface ControlWorkerConfig {
   pollIntervalMs: number;
+  reconciliationIntervalMs: number;
   logLevel: "debug" | "info" | "warn" | "error";
 }
 
@@ -111,6 +112,10 @@ export function createControlRuntimeConfig(
     },
     worker: {
       pollIntervalMs: readPositiveInt(env.SIMPLEHOST_WORKER_POLL_INTERVAL_MS, 5000),
+      reconciliationIntervalMs: readPositiveInt(
+        env.SIMPLEHOST_WORKER_RECONCILE_INTERVAL_MS,
+        5 * 60 * 1000
+      ),
       logLevel: readString(env.SIMPLEHOST_LOG_LEVEL, "info") as ControlWorkerConfig["logLevel"]
     },
     database: {

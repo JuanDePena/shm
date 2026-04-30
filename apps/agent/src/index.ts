@@ -114,8 +114,8 @@ const journalEntriesPerService = 8;
 const journalEntryLimit = 120;
 const packageUpdateLimit = 500;
 const letsEncryptLiveDir = "/etc/letsencrypt/live";
+const storageUsageTimeoutMs = 2500;
 const trackedStoragePaths = [
-  "/",
   "/root",
   "/home",
   "/etc",
@@ -123,9 +123,7 @@ const trackedStoragePaths = [
   "/var",
   "/var/log",
   "/srv",
-  "/srv/backups",
-  "/opt/simplehostman",
-  "/opt/simplehostman/release"
+  "/srv/backups"
 ] as const;
 
 type MailboxUsageEntry = NonNullable<MailServiceSnapshot["mailboxUsage"]>[number];
@@ -1784,7 +1782,12 @@ async function inspectStoragePath(
     return undefined;
   }
 
-  const output = await commandOutput("du", ["-sB1", "-x", targetPath]);
+  const output = await commandOutputWithExitCodes(
+    "du",
+    ["-sB1", "-x", targetPath],
+    [0],
+    storageUsageTimeoutMs
+  );
   const usedBytes = output ? Number.parseInt(output.split(/\s+/g)[0] ?? "", 10) : undefined;
   const filesystem = findFilesystemForPath(filesystems, targetPath);
 
@@ -1804,11 +1807,17 @@ async function inspectStorage(): Promise<AgentNodeRuntimeSnapshot["storage"]> {
     commandOutput("df", ["-Pi", "-x", "tmpfs", "-x", "devtmpfs"])
   ]);
   const filesystems = applyDfInodes(parseDfBytes(dfBytes), dfInodes);
-  const paths = (
-    await Promise.all(trackedStoragePaths.map((targetPath) => inspectStoragePath(targetPath, filesystems)))
-  )
-    .filter((entry): entry is StoragePathUsageSnapshot => Boolean(entry))
-    .sort((left, right) => left.path.localeCompare(right.path));
+  const paths: StoragePathUsageSnapshot[] = [];
+
+  for (const targetPath of trackedStoragePaths) {
+    const entry = await inspectStoragePath(targetPath, filesystems);
+
+    if (entry) {
+      paths.push(entry);
+    }
+  }
+
+  paths.sort((left, right) => left.path.localeCompare(right.path));
 
   return {
     filesystems,
