@@ -1337,6 +1337,75 @@ export async function buildReconciliationCandidates(
   };
 }
 
+const resourceDriftCacheTtlMs = 60 * 1000;
+
+interface ResourceDriftCacheEntry {
+  expiresAtMs: number;
+  promise: Promise<ResourceDriftSummary[]>;
+}
+
+function sortResourceDriftSummaries(
+  summaries: ResourceDriftSummary[]
+): ResourceDriftSummary[] {
+  return summaries.sort((left, right) =>
+    `${left.resourceKind}:${left.resourceKey}:${left.nodeId}`.localeCompare(
+      `${right.resourceKind}:${right.resourceKey}:${right.nodeId}`
+    )
+  );
+}
+
+async function buildResourceDriftSummaries(
+  client: PoolClient,
+  payloadKey: Buffer | null
+): Promise<ResourceDriftSummary[]> {
+  const { jobs, missingCredentialCount } = await buildReconciliationCandidates(
+    client,
+    payloadKey,
+    `drift-${Date.now()}`
+  );
+  const appCredentialGaps = await listAppContainerCredentialGaps(client);
+  const summaries: ResourceDriftSummary[] = [];
+
+  for (const job of jobs) {
+    summaries.push(createResourceDriftSummary(job, await getLatestResourceJob(client, job)));
+  }
+
+  for (const gap of appCredentialGaps) {
+    summaries.push({
+      resourceKind: "site",
+      resourceKey: gap.resourceKey,
+      nodeId: gap.nodeId,
+      driftStatus: "missing_secret",
+      dispatchRecommended: false
+    });
+  }
+
+  if (missingCredentialCount > 0) {
+    const missingDatabases = await client.query<{ slug: string; primary_node_id: string }>(
+      `SELECT apps.slug, databases.primary_node_id
+       FROM shp_databases databases
+       INNER JOIN shp_apps apps
+         ON apps.app_id = databases.app_id
+       LEFT JOIN shp_database_credentials credentials
+         ON credentials.database_id = databases.database_id
+       WHERE credentials.database_id IS NULL
+       ORDER BY apps.slug ASC`
+    );
+
+    for (const row of missingDatabases.rows) {
+      summaries.push({
+        resourceKind: "database",
+        resourceKey: `database:${row.slug}`,
+        nodeId: row.primary_node_id,
+        driftStatus: "missing_secret",
+        dispatchRecommended: false
+      });
+    }
+  }
+
+  return sortResourceDriftSummaries(summaries);
+}
+
 interface ControlPlaneOperationsContext {
   pool: Pool;
   jobPayloadKey: Buffer | null;
@@ -1346,6 +1415,31 @@ export function createControlPlaneOperationsMethods(
   context: ControlPlaneOperationsContext
 ): ControlPlaneOperationsMethods {
   const { pool, jobPayloadKey } = context;
+  let resourceDriftCache: ResourceDriftCacheEntry | undefined;
+
+  const loadResourceDriftSummaries = (): Promise<ResourceDriftSummary[]> => {
+    const now = Date.now();
+
+    if (resourceDriftCache && resourceDriftCache.expiresAtMs > now) {
+      return resourceDriftCache.promise;
+    }
+
+    const promise = withTransaction(pool, async (client) =>
+      buildResourceDriftSummaries(client, jobPayloadKey)
+    );
+    resourceDriftCache = {
+      expiresAtMs: now + resourceDriftCacheTtlMs,
+      promise
+    };
+
+    promise.catch(() => {
+      if (resourceDriftCache?.promise === promise) {
+        resourceDriftCache = undefined;
+      }
+    });
+
+    return promise;
+  };
 
   return {
     async dispatchZoneSync(zoneName, presentedToken) {
@@ -1987,7 +2081,7 @@ export function createControlPlaneOperationsMethods(
     },
 
     async getOperationsOverview(presentedToken) {
-      return withTransaction(pool, async (client) => {
+      const counts = await withTransaction(pool, async (client) => {
         if (presentedToken) {
           await requireAuthorizedUser(client, presentedToken, [
             "platform_admin",
@@ -1995,145 +2089,53 @@ export function createControlPlaneOperationsMethods(
           ]);
         }
 
-        const drift = await (async () => {
-          const { jobs, missingCredentialCount } = await buildReconciliationCandidates(
-            client,
-            jobPayloadKey,
-            `drift-${Date.now()}`
-          );
-          const appCredentialGaps = await listAppContainerCredentialGaps(client);
-          const summaries: ResourceDriftSummary[] = [];
-
-          for (const job of jobs) {
-            summaries.push(createResourceDriftSummary(job, await getLatestResourceJob(client, job)));
-          }
-
-          for (const gap of appCredentialGaps) {
-            summaries.push({
-              resourceKind: "site",
-              resourceKey: gap.resourceKey,
-              nodeId: gap.nodeId,
-              driftStatus: "missing_secret",
-              dispatchRecommended: false
-            });
-          }
-
-          if (missingCredentialCount > 0) {
-            const missingDatabases = await client.query<{ slug: string }>(
-              `SELECT apps.slug
-               FROM shp_databases databases
-               INNER JOIN shp_apps apps
-                 ON apps.app_id = databases.app_id
-               LEFT JOIN shp_database_credentials credentials
-                 ON credentials.database_id = databases.database_id
-               WHERE credentials.database_id IS NULL
-               ORDER BY apps.slug ASC`
-            );
-
-            for (const row of missingDatabases.rows) {
-              summaries.push({
-                resourceKind: "database",
-                resourceKey: `database:${row.slug}`,
-                nodeId: "unknown",
-                driftStatus: "missing_secret",
-                dispatchRecommended: false
-              });
-            }
-          }
-
-          return summaries;
-        })();
-        const [
-          nodeCountResult,
-          pendingJobCountResult,
-          failedJobCountResult,
-          backupPolicyCountResult,
-          latestReconciliation
-        ] = await Promise.all([
-          client.query<{ count: string }>(`SELECT COUNT(*) AS count FROM shp_nodes`),
-          client.query<{ count: string }>(
-            `SELECT COUNT(*) AS count
-             FROM control_plane_jobs
-             WHERE completed_at IS NULL`
-          ),
-          client.query<{ count: string }>(
-            `SELECT COUNT(*) AS count
-             FROM control_plane_job_results
-             WHERE status = 'failed'`
-          ),
-          client.query<{ count: string }>(`SELECT COUNT(*) AS count FROM shp_backup_policies`),
-          getLatestReconciliationRun(client)
-        ]);
+        const countResult = await client.query<{
+          node_count: string;
+          pending_job_count: string;
+          failed_job_count: string;
+          backup_policy_count: string;
+        }>(
+          `SELECT
+             (SELECT COUNT(*) FROM shp_nodes) AS node_count,
+             (SELECT COUNT(*) FROM control_plane_jobs WHERE completed_at IS NULL)
+               AS pending_job_count,
+             (SELECT COUNT(*) FROM control_plane_job_results WHERE status = 'failed')
+               AS failed_job_count,
+             (SELECT COUNT(*) FROM shp_backup_policies) AS backup_policy_count`
+        );
+        const latestReconciliation = await getLatestReconciliationRun(client);
+        const row = countResult.rows[0];
 
         return {
-          generatedAt: new Date().toISOString(),
-          nodeCount: Number(nodeCountResult.rows[0]?.count ?? 0),
-          pendingJobCount: Number(pendingJobCountResult.rows[0]?.count ?? 0),
-          failedJobCount: Number(failedJobCountResult.rows[0]?.count ?? 0),
-          backupPolicyCount: Number(backupPolicyCountResult.rows[0]?.count ?? 0),
-          driftedResourceCount: drift.filter((item) => item.driftStatus !== "in_sync").length,
+          nodeCount: Number(row?.node_count ?? 0),
+          pendingJobCount: Number(row?.pending_job_count ?? 0),
+          failedJobCount: Number(row?.failed_job_count ?? 0),
+          backupPolicyCount: Number(row?.backup_policy_count ?? 0),
           latestReconciliation: latestReconciliation ?? undefined
         };
       });
+      const drift = await loadResourceDriftSummaries();
+
+      return {
+        generatedAt: new Date().toISOString(),
+        nodeCount: counts.nodeCount,
+        pendingJobCount: counts.pendingJobCount,
+        failedJobCount: counts.failedJobCount,
+        backupPolicyCount: counts.backupPolicyCount,
+        driftedResourceCount: drift.filter((item) => item.driftStatus !== "in_sync").length,
+        latestReconciliation: counts.latestReconciliation
+      };
     },
 
     async getResourceDrift(presentedToken) {
-      return withTransaction(pool, async (client) => {
+      await withTransaction(pool, async (client) => {
         await requireAuthorizedUser(client, presentedToken, [
           "platform_admin",
           "platform_operator"
         ]);
-        const { jobs, missingCredentialCount } = await buildReconciliationCandidates(
-          client,
-          jobPayloadKey,
-          `drift-${Date.now()}`
-        );
-        const appCredentialGaps = await listAppContainerCredentialGaps(client);
-        const summaries: ResourceDriftSummary[] = [];
-
-        for (const job of jobs) {
-          summaries.push(createResourceDriftSummary(job, await getLatestResourceJob(client, job)));
-        }
-
-        for (const gap of appCredentialGaps) {
-          summaries.push({
-            resourceKind: "site",
-            resourceKey: gap.resourceKey,
-            nodeId: gap.nodeId,
-            driftStatus: "missing_secret",
-            dispatchRecommended: false
-          });
-        }
-
-        if (missingCredentialCount > 0) {
-          const missingDatabases = await client.query<{ slug: string; primary_node_id: string }>(
-            `SELECT apps.slug, databases.primary_node_id
-             FROM shp_databases databases
-             INNER JOIN shp_apps apps
-               ON apps.app_id = databases.app_id
-             LEFT JOIN shp_database_credentials credentials
-               ON credentials.database_id = databases.database_id
-             WHERE credentials.database_id IS NULL
-             ORDER BY apps.slug ASC`
-          );
-
-          for (const row of missingDatabases.rows) {
-            summaries.push({
-              resourceKind: "database",
-              resourceKey: `database:${row.slug}`,
-              nodeId: row.primary_node_id,
-              driftStatus: "missing_secret",
-              dispatchRecommended: false
-            });
-          }
-        }
-
-        return summaries.sort((left, right) =>
-          `${left.resourceKind}:${left.resourceKey}:${left.nodeId}`.localeCompare(
-            `${right.resourceKind}:${right.resourceKey}:${right.nodeId}`
-          )
-        );
       });
+
+      return loadResourceDriftSummaries();
     },
 
     async getNodeHealth(presentedToken) {

@@ -27,6 +27,11 @@ for work frequently, but full runtime snapshots refresh on
 When a poll arrives without a runtime snapshot, the control plane preserves the
 last reported snapshot instead of clearing operational view data.
 
+The control plane also caches resource-drift summaries for 60 seconds. Overview
+and the Drift workspace both depend on the same reconciliation projection, so
+sharing that short-lived result avoids recalculating desired-state drift twice
+during one dashboard bootstrap while keeping operator-facing counts fresh.
+
 ## Overview and Reconciliation
 
 Overview is the lightweight landing workspace. It keeps platform status in a
