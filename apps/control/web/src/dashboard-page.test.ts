@@ -108,6 +108,16 @@ test("overview keeps status focused and reconciliation lives in its own workspac
   assert.match(overviewHtml, /id="section-overview"/);
   assert.match(overviewHtml, /overview-status-card/);
   assert.match(overviewHtml, /overview-signal-card/);
+  assert.ok(
+    overviewHtml.indexOf("overview-status-card") < overviewHtml.indexOf("overview-signal-card")
+  );
+  assert.doesNotMatch(
+    overviewHtml.slice(
+      overviewHtml.indexOf("overview-status-card"),
+      overviewHtml.indexOf("overview-signal-card")
+    ),
+    /Operational signals/
+  );
   assert.doesNotMatch(overviewHtml, />Run reconciliation</);
   assert.doesNotMatch(overviewHtml, /Catalog import\/export/);
 

@@ -565,15 +565,17 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
           <h3>${escapeHtml(copy.overviewStatusTitle)}</h3>
           <div class="overview-status-content">
             ${renderStats(data.overview, copy, locale)}
-            <div class="overview-signal-card">
-              <h4>${escapeHtml(copy.operationalSignalsTitle)}</h4>
-              ${renderSignalStrip([
-                { label: copy.healthyNodes, value: String(healthyNodeCount), tone: healthyNodeCount > 0 ? "success" : "muted" },
-                { label: copy.staleNodes, value: String(staleNodeCount), tone: staleNodeCount > 0 ? "danger" : "success" },
-                { label: copy.driftMissingSecrets, value: String(driftMissingSecretCount), tone: driftMissingSecretCount > 0 ? "danger" : "success" },
-                { label: copy.failedBackups, value: String(backupFailedCount), tone: backupFailedCount > 0 ? "danger" : "success" }
-              ])}
-            </div>
+          </div>
+        </article>
+        <article class="overview-metric-panel overview-signal-card">
+          <h3>${escapeHtml(copy.operationalSignalsTitle)}</h3>
+          <div class="overview-signal-content">
+            ${renderSignalStrip([
+              { label: copy.healthyNodes, value: String(healthyNodeCount), tone: healthyNodeCount > 0 ? "success" : "muted" },
+              { label: copy.staleNodes, value: String(staleNodeCount), tone: staleNodeCount > 0 ? "danger" : "success" },
+              { label: copy.driftMissingSecrets, value: String(driftMissingSecretCount), tone: driftMissingSecretCount > 0 ? "danger" : "success" },
+              { label: copy.failedBackups, value: String(backupFailedCount), tone: backupFailedCount > 0 ? "danger" : "success" }
+            ])}
           </div>
         </article>
       </div>

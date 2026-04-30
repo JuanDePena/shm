@@ -1077,19 +1077,10 @@ export function renderBaseStyleBlock(): string {
         margin: -0.18rem 0 0;
       }
 
-      .overview-signal-card {
+      .overview-signal-content {
         display: grid;
         gap: 0.58rem;
-        padding: 0.72rem;
-        border: 1px solid rgba(13, 32, 56, 0.1);
-        border-radius: var(--radius-card);
-        background: rgba(255, 255, 255, 0.78);
-      }
-
-      .overview-signal-card h4 {
-        margin: 0;
-        color: var(--ink);
-        font-size: var(--font-size-heading-sm);
+        padding: 0.78rem;
       }
 
       .overview-metric-grid {
