@@ -2,26 +2,44 @@
 
 Updated on `2026-04-30`.
 
-This runbook tracks the sequential migration plan for the remaining domains currently discovered on
-`root@vps-old.pyrosa.com.do`.
+This runbook tracks the migration plan and closure status for domains discovered on
+`root@vps-old.pyrosa.com.do`, plus the earlier `adudoc.com` and `gomezrosado.com.do`
+pilot migrations that established the current SimpleHostMan pattern.
 
-Target domains:
+## Consolidated Status
 
-- `bitfay.org`
-- `kynasoft.com`
-- `ppdpr.us`
-- `sipoel.com`
-- `zcrmt.com`
-- `tatokka.com`
-- `solucionesmercantilnr.com` (out of active scope: expired, not renewing)
-- `pyrosa.net` (out of active scope: expired, not renewing)
+| Domain | Web/app posture | Mail posture | Database posture | Current status |
+| --- | --- | --- | --- | --- |
+| `adudoc.com` | migrated custom PHP app on `app-adudoc` | SimpleHostMan mail live | PostgreSQL migrated to `app_adudoc` | closed |
+| `gomezrosado.com.do` | migrated static runtime on `app-gomezrosado` | SimpleHostMan mail live | none | closed |
+| `ppdpr.us` | migrated static runtime on `app-ppdpr` | SimpleHostMan mail live | none | closed |
+| `bitfay.org` | migrated static runtime on `app-bitfay` | SimpleHostMan mail live | none | closed |
+| `kynasoft.com` | migrated blank static runtime on `app-kynasoft` | SimpleHostMan mail live | none | closed |
+| `sipoel.com` | migrated static runtime on `app-sipoel` | SimpleHostMan mail live | none | closed |
+| `tatokka.com` | migrated app runtime on `app-tatokka` | SimpleHostMan mail live | MySQL source converted to PostgreSQL `app_tatokka` | closed |
+| `zcrmt.com` | migrated WordPress runtime on `app-zcrmt` | Zoho preserved | WordPress kept on MariaDB `app_zcrmt_wp` | closed |
+| `merlelaw.com` | migrated blank static runtime on `app-merlelaw` | SimpleHostMan mail live | none | closed |
+| `engilum.com` | external web targets preserved | Zoho preserved | none | DNS-only staged |
+| `pyrosa.com.do` | multi-app estate inspected; `pyrosa-wp` first, `sync`/`helpers` deferred | Microsoft 365, no legacy mail migration planned | WordPress/MariaDB first; PostgreSQL only where source/app fits | plan ready |
+| `solucionesmercantilnr.com` | not migrated | retired | none | out of scope: expired, not renewing |
+| `pyrosa.net` | not migrated | retired | none | out of scope: expired, not renewing |
+
+Credential files kept under `src/docs/MIGRATIONS`:
+
+- [`adudoc-mail-credentials.md`](/opt/simplehostman/src/docs/MIGRATIONS/adudoc-mail-credentials.md)
+- [`gomezrosado-mail-credentials.md`](/opt/simplehostman/src/docs/MIGRATIONS/gomezrosado-mail-credentials.md)
+- [`merlelaw-mail-credentials.md`](/opt/simplehostman/src/docs/MIGRATIONS/merlelaw-mail-credentials.md)
+- [`vps-old-temporary-mail-credentials.md`](/opt/simplehostman/src/docs/MIGRATIONS/vps-old-temporary-mail-credentials.md)
 
 Related references:
 
 - [`/opt/simplehostman/src/docs/MAIL_MIGRATION.md`](/opt/simplehostman/src/docs/MAIL_MIGRATION.md)
 - [`/opt/simplehostman/src/docs/MAIL.md`](/opt/simplehostman/src/docs/MAIL.md)
 - [`/opt/simplehostman/src/docs/DNS.md`](/opt/simplehostman/src/docs/DNS.md)
+- [`/opt/simplehostman/src/docs/MIGRATIONS/adudoc-runtime-migration.md`](/opt/simplehostman/src/docs/MIGRATIONS/adudoc-runtime-migration.md)
+- [`/opt/simplehostman/src/docs/MIGRATIONS/adudoc-mail-migration.md`](/opt/simplehostman/src/docs/MIGRATIONS/adudoc-mail-migration.md)
 - [`/opt/simplehostman/src/docs/MIGRATIONS/gomezrosado-runtime-migration.md`](/opt/simplehostman/src/docs/MIGRATIONS/gomezrosado-runtime-migration.md)
+- [`/opt/simplehostman/src/docs/MIGRATIONS/pyrosa-runtime-migration.md`](/opt/simplehostman/src/docs/MIGRATIONS/pyrosa-runtime-migration.md)
 
 ## Execution model
 
@@ -56,6 +74,8 @@ Legacy host:
 | `sipoel.com` | `wmsipoel` | small static HTML | 1 | `23M` | none | public `A` and `MX` still point to legacy apex |
 | `zcrmt.com` | `wmzcrmt` | WordPress | 2 | `45M` | MySQL `wmzcrmt_wp_main` | public web points to legacy; MX points to Zoho |
 | `tatokka.com` | `wmtatokka` | small static HTML | 1 | `172K` | MySQL `wmtatokka_dev_2025a` | public `A` and `MX` still point to legacy apex |
+| `merlelaw.com` | `wmmerlelaw` | blank static HTML | 4 | `2.1M` | none | public `A` and `MX` still pointed to legacy apex before cutover |
+| `engilum.com` | `wmengilum` | empty docroot | 4 local legacy mailboxes | `608K` | none | public web points to external A records; MX points to Zoho |
 | `solucionesmercantilnr.com` | `wmsolucionesmnr` | small static HTML | 5 | `27M` | none | expired; not renewing; migration retired |
 | `pyrosa.net` | `wmpyrosanet` | small static HTML | 0 | `0` | none | expired; not renewing; migration retired |
 
@@ -98,6 +118,25 @@ Legacy host:
 
 - `webmaster@tatokka.com`: `172K`, `1` message
 - legacy catch-all: `*: wmtatokka`
+
+### merlelaw.com
+
+- `it@merlelaw.com`: `1.2M`, `71` files
+- `lind@merlelaw.com`: `212K`, `23` files
+- `secretaria@merlelaw.com`: `212K`, `23` files
+- `zoho@merlelaw.com`: `512K`, `38` files
+- legacy catch-all: `*: wmmerlelaw`
+
+### engilum.com
+
+Local cPanel mailboxes were discovered but intentionally not migrated because public mail is hosted
+by Zoho and the target posture preserves Zoho.
+
+- `accounting@engilum.com`: `152K`, `22` files
+- `contact@engilum.com`: `152K`, `22` files
+- `sales@engilum.com`: `152K`, `22` files
+- `zoho@engilum.com`: `152K`, `22` files
+- legacy catch-all: `*: wmengilum`
 
 ### solucionesmercantilnr.com
 
@@ -423,10 +462,255 @@ Copied mailbox counts:
 
 All copied mailbox trees were also replicated to the secondary node.
 
-## Immediate next action
+## Current Next Action
 
-Proceed with `ppdpr.us` phase 3:
+The migration batch through `merlelaw.com` is closed. The remaining active `vps-old` follow-up is
+`pyrosa.com.do`, which is now documented as a multi-app migration in
+[`pyrosa-runtime-migration.md`](/opt/simplehostman/src/docs/MIGRATIONS/pyrosa-runtime-migration.md).
+Public mail is on Microsoft 365, so legacy cPanel mail should not be migrated.
 
-- set or generate a temporary credential for `it@ppdpr.us`
-- validate IMAPS, SMTP submission, Roundcube, and local inbound delivery
-- run or verify a backup for `mail-ppdpr-daily`
+### 2026-04-30: ppdpr.us web runtime cutover
+
+The staged `ppdpr.us` static web content was promoted into SimpleHostMan app desired state.
+
+Applied state:
+
+- app slug `ppdpr`
+- backend port `10401`
+- runtime image `registry.example.com/ppdpr-app:stable`
+- storage root `/srv/containers/apps/ppdpr`
+- no database resource, because discovery found no source database
+- `app-ppdpr.service` active on both nodes
+- `ppdpr.us` and `www.ppdpr.us` now point at `51.222.204.86`
+- `http://ppdpr.us/` redirects to HTTPS
+- Let's Encrypt certificate `ppdpr.us` issued for `ppdpr.us` and `www.ppdpr.us`
+- HTTPS vhost and certificate material replicated to the secondary node
+
+Validation:
+
+- backend `127.0.0.1:10401` returns `200 OK` on both nodes
+- public `https://ppdpr.us/` returns `200 OK` with the migrated static placeholder content
+
+### 2026-04-30: phase 2 static web runtime cutover
+
+The simple static sites from wave 2 were copied from `vps-old`, promoted into SimpleHostMan app
+desired state, and cut over at DNS.
+
+Applied apps:
+
+| Domain | App slug | Source | Backend | Runtime image | Notes |
+| --- | --- | --- | ---: | --- | --- |
+| `bitfay.org` | `bitfay` | `/home/wmbitfay/public_html/` | `10501` | `registry.example.com/bitfay-app:stable` | source had `3` files |
+| `kynasoft.com` | `kynasoft` | `/home/wmkynasoft/public_html/` | `10601` | `registry.example.com/kynasoft-app:stable` | source document root was empty; a minimal blank `index.html` was added to avoid publishing a directory `403` |
+| `sipoel.com` | `sipoel` | `/home/wmsipoel/public_html/` | `10701` | `registry.example.com/sipoel-app:stable` | source had `2` files |
+
+Database outcome:
+
+- no database resource was created for any phase 2 domain
+- discovery found no source database for `bitfay.org`, `kynasoft.com`, or `sipoel.com`
+
+Reconciliation outcome:
+
+- `app-bitfay.service` active on `primary` and `secondary`
+- `app-kynasoft.service` active on `primary` and `secondary`
+- `app-sipoel.service` active on `primary` and `secondary`
+- backend health checks returned `200 OK` on both nodes for all three apps
+- Apache vhosts were installed on both nodes for all three apps
+
+DNS cutover:
+
+- `bitfay.org A -> 51.222.204.86`
+- `www.bitfay.org A -> 51.222.204.86`
+- `kynasoft.com A -> 51.222.204.86`
+- `www.kynasoft.com A -> 51.222.204.86`
+- `sipoel.com A -> 51.222.204.86`
+- `www.sipoel.com A -> 51.222.204.86`
+- latest targeted zone sync applied on both nodes for `bitfay.org`, `kynasoft.com`, and `sipoel.com`
+
+TLS:
+
+- Let's Encrypt certificates were issued for each apex plus `www`
+- all three certificates expire on `2026-07-29`
+- certificate material and HTTPS vhosts were replicated to the secondary node
+
+Validation:
+
+- `https://bitfay.org/` and `https://www.bitfay.org/` return `200 OK`
+- `https://kynasoft.com/` and `https://www.kynasoft.com/` return `200 OK`
+- `https://sipoel.com/` and `https://www.sipoel.com/` return `200 OK`
+
+### 2026-04-30: phase 3 tatokka.com PostgreSQL web runtime cutover
+
+`tatokka.com` was copied from `vps-old`, converted from the legacy MySQL app configuration to
+PostgreSQL, and cut over at DNS.
+
+Applied app:
+
+- app slug `tatokka`
+- source `/home/wmtatokka/public_html/`
+- backend port `10801`
+- runtime image `registry.example.com/tatokka-app:stable`
+- storage root `/srv/containers/apps/tatokka`
+- `app-tatokka.service` active on `primary` and `secondary`
+- Apache vhost installed on both nodes
+
+Database outcome:
+
+- source database `wmtatokka_dev_2025a`
+- target PostgreSQL database `app_tatokka`
+- target PostgreSQL role `app_tatokka`
+- imported `7` users and `15` sessions
+- `profiles` was empty in the source and remains empty after migration
+- app config now reads database settings from container environment variables
+- legacy MySQL DSNs were replaced with PostgreSQL DSNs
+- the login session insert was updated from MariaDB `DATE_ADD` syntax to PostgreSQL interval syntax
+
+DNS cutover:
+
+- `tatokka.com A -> 51.222.204.86`
+- `www.tatokka.com A -> 51.222.204.86`
+- latest targeted `tatokka.com` zone sync applied on both nodes
+
+TLS:
+
+- Let's Encrypt certificate `tatokka.com` issued for `tatokka.com` and `www.tatokka.com`
+- certificate expires on `2026-07-29`
+- certificate material and HTTPS vhost were replicated to the secondary node
+
+Validation:
+
+- backend `127.0.0.1:10801` returns `200 OK` on both nodes
+- `https://tatokka.com/` and `https://www.tatokka.com/` return `200 OK`
+- `https://tatokka.com/dev/?page=login` returns `200 OK`
+- secondary local HTTPS validation with `--resolve` returns `200 OK` for apex and `www`
+
+### 2026-04-30: phase 4 zcrmt.com WordPress runtime cutover
+
+`zcrmt.com` was copied from `vps-old`, promoted into SimpleHostMan app desired state, and cut over
+for web traffic while preserving the existing Zoho mail posture.
+
+Applied app:
+
+- app slug `zcrmt`
+- source `/home/wmzcrmt/public_html/`
+- backend port `10901`
+- runtime image `registry.example.com/zcrmt-app:stable`
+- storage root `/srv/containers/apps/zcrmt`
+- `app-zcrmt.service` active on `primary` and `secondary`
+- Apache vhost installed on both nodes
+
+Database outcome:
+
+- source database `wmzcrmt_wp_main`
+- target MariaDB database `app_zcrmt_wp`
+- target MariaDB user `app_zcrmt_wp`
+- imported `18` WordPress tables
+- imported WordPress row checks: `207` options and `94` posts
+- WordPress was kept on MariaDB because stock WordPress does not support PostgreSQL natively
+- `wp-config.php` now reads database settings from container environment variables
+- `wp-config.php` now honors `X-Forwarded-Proto: https` so HTTPS proxying does not cause a redirect loop
+
+DNS cutover:
+
+- `zcrmt.com A -> 51.222.204.86`
+- `www.zcrmt.com CNAME -> zcrmt.com.`
+- Zoho MX records preserved:
+  - `MX 10 mx.zoho.com.`
+  - `MX 20 mx2.zoho.com.`
+  - `MX 50 mx3.zoho.com.`
+- Zoho SPF, verification TXT, and `zmail._domainkey` DKIM records preserved
+- latest targeted `zcrmt.com` zone sync applied on both nodes
+
+TLS:
+
+- Let's Encrypt certificate `zcrmt.com` issued for `zcrmt.com` and `www.zcrmt.com`
+- certificate expires on `2026-07-29`
+- certificate material and HTTPS vhost were replicated to the secondary node
+
+Validation:
+
+- backend `127.0.0.1:10901` returns `200 OK` on both nodes
+- `https://zcrmt.com/` returns `200 OK`
+- `https://www.zcrmt.com/` returns a WordPress canonical redirect to `https://zcrmt.com/`
+- `https://zcrmt.com/wp-login.php` returns `200 OK`
+- secondary local HTTPS validation with `--resolve` returns `200 OK` for apex and canonical redirect for `www`
+- database migration classified as `completed`, desired/inventory match is `yes`, drift is clear
+
+### 2026-04-30: follow-up merlelaw.com runtime and mail cutover
+
+`merlelaw.com` was copied from `vps-old`, promoted into SimpleHostMan app desired state, and cut over
+for web and local mail delivery.
+
+Applied app:
+
+- app slug `merlelaw`
+- source `/home/wmmerlelaw/public_html/`
+- backend port `11001`
+- runtime image `registry.example.com/merlelaw-app:stable`
+- storage root `/srv/containers/apps/merlelaw`
+- `app-merlelaw.service` active on `primary` and `secondary`
+- source web content is the legacy blank static site
+
+Mail outcome:
+
+- managed mail domain `merlelaw.com`
+- mail host `mail.merlelaw.com`
+- DKIM selector `mail`
+- migrated Maildir mailboxes: `it`, `lind`, `secretaria`, and `zoho`
+- migrated Maildir counts match the source: `71`, `23`, `23`, and `38` files respectively
+- a post-cutover non-destructive Maildir delta sync was run after the MX update
+- generated mailbox credentials are stored root-only at `src/docs/MIGRATIONS/merlelaw-mail-credentials.md`
+- aliases `abuse`, `postmaster`, and `webmaster` route to `it@merlelaw.com`
+- mailbox quotas are set to `5 GiB`
+- catch-all delivery from the cPanel source was not preserved
+
+DNS cutover:
+
+- `merlelaw.com A -> 51.222.204.86`
+- `www.merlelaw.com A -> 51.222.204.86`
+- `mail.merlelaw.com A -> 51.222.204.86`
+- `webmail.merlelaw.com A -> 51.222.204.86`
+- `mta-sts.merlelaw.com A -> 51.222.204.86`
+- strict SPF, DMARC, TLS-RPT, MTA-STS, and `mail._domainkey` DKIM records published
+- latest targeted `merlelaw.com` zone sync applied on both nodes
+- legacy `vps-old` authoritative zone was updated to the same cutover records
+
+TLS:
+
+- Let's Encrypt certificate `merlelaw.com` issued for `merlelaw.com` and `www.merlelaw.com`
+- certificate expires on `2026-07-29`
+- certificate material and HTTPS vhost were replicated to the secondary node
+
+Validation:
+
+- backend `127.0.0.1:11001` returns `200 OK` on both nodes
+- `https://merlelaw.com/` and `https://www.merlelaw.com/` return `200 OK`
+- `http://merlelaw.com/` redirects to HTTPS
+- Dovecot resolves `it@merlelaw.com` on both nodes with the expected Maildir and quota
+- public DNS resolves apex, `www`, `mail`, `webmail`, and `mta-sts` to `51.222.204.86`
+
+### 2026-04-30: follow-up engilum.com DNS staging
+
+`engilum.com` was added to SimpleHostMan as a DNS-only tenant/zone while preserving the active
+external website targets and Zoho mail posture. No SimpleHostMan app or local mail domain was
+created because the legacy web root is empty and public web traffic already points to external
+services.
+
+Preserved DNS posture:
+
+- `engilum.com A -> 82.25.83.155`
+- `engilum.com A -> 34.174.124.238`
+- `www.engilum.com CNAME -> engilum.com.`
+- Zoho MX records:
+  - `MX 10 mx.zoho.com.`
+  - `MX 20 mx2.zoho.com.`
+  - `MX 50 mx3.zoho.com.`
+- Zoho SPF, verification TXT, and `zmail._domainkey` DKIM records preserved
+- existing DMARC, Apple verification, ownercheck, and `engilum.engilum.com` records preserved
+- latest targeted `engilum.com` zone sync applied on both nodes
+
+Validation:
+
+- SimpleHostMan desired state contains tenant `engilum` and zone `engilum.com`
+- both PowerDNS nodes list the preserved external A records and Zoho MX/TXT records
+- no local SimpleHostMan mailboxes were created for `engilum.com`
