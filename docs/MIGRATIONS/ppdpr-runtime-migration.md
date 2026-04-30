@@ -171,9 +171,47 @@ After the registrar-side nameserver update in ResellerClub, public resolvers rep
 The `@` and `www` records intentionally continue pointing at `vps-old` until the static web runtime
 is closed in SimpleHostMan.
 
+## Web runtime cutover
+
+Applied on `2026-04-30`.
+
+Desired-state app added:
+
+- app slug: `ppdpr`
+- tenant: `ppdpr`
+- canonical domain: `ppdpr.us`
+- alias: `www.ppdpr.us`
+- backend port: `10401`
+- runtime image: `registry.example.com/ppdpr-app:stable`
+- storage root: `/srv/containers/apps/ppdpr`
+- database: none discovered, so no database resource was created
+
+Reconciliation outcome:
+
+- `app-ppdpr.service` active on `primary`
+- `app-ppdpr.service` active on `secondary`
+- backend `127.0.0.1:10401` returns `200 OK` on both nodes
+- Apache vhost for `ppdpr.us` installed on both nodes
+- staged file ownership was normalized to `root:root` so Apache inside the container can read `.htaccess`
+
+DNS cutover:
+
+- `ppdpr.us A -> 51.222.204.86`
+- `www.ppdpr.us A -> 51.222.204.86`
+- latest `zone:ppdpr.us` sync applied on `primary`
+- latest `zone:ppdpr.us` sync applied on `secondary`
+
+TLS:
+
+- Let's Encrypt certificate `ppdpr.us` issued for `ppdpr.us` and `www.ppdpr.us`
+- certificate expires on `2026-07-29`
+- certificate material and the HTTPS vhost were replicated to `secondary`
+- `http://ppdpr.us/` redirects to HTTPS
+- `https://ppdpr.us/` returns `200 OK` with the migrated static placeholder content
+
 ## Remaining steps
 
-Phase 3:
+Mail validation:
 
 - validate IMAPS login
 - validate SMTP submission
@@ -181,9 +219,7 @@ Phase 3:
 - validate local inbound delivery for `it`, `postmaster`, `abuse`, and `webmaster`
 - confirm backup run evidence
 
-Phase 4:
+Closure:
 
-- lower legacy TTLs if still needed
-- run final mailbox delta
-- cut `mail.ppdpr.us` and `MX` to the new platform
-- cut web records only after the static web target is staged
+- run final mailbox delta only if logs show late mail still landing on `vps-old`
+- confirm public HTTPS from at least one external resolver/client after caches settle
