@@ -24,6 +24,7 @@ export const navigationCopyByLocale = {
     navCertificates: "TLS",
     navStorage: "Storage",
     navMounts: "Mounts",
+    navKernel: "Kernel",
     navNetwork: "Network",
     navProcesses: "Processes",
     navContainers: "Containers",
@@ -78,6 +79,8 @@ export const navigationCopyByLocale = {
       "Filesystem, inode and important-path usage reported by managed nodes.",
     mountsWorkspaceDescription:
       "Mounted filesystems and fstab persistence posture reported by managed nodes.",
+    kernelWorkspaceDescription:
+      "Kernel release, selected sysctl parameters and loaded modules reported by managed nodes.",
     networkWorkspaceDescription:
       "Interfaces, routes and listening sockets reported by managed nodes.",
     processesWorkspaceDescription:
@@ -119,6 +122,7 @@ export const navigationCopyByLocale = {
     navCertificates: "TLS",
     navStorage: "Storage",
     navMounts: "Mounts",
+    navKernel: "Kernel",
     navNetwork: "Red",
     navProcesses: "Procesos",
     navContainers: "Containers",
@@ -178,6 +182,8 @@ export const navigationCopyByLocale = {
       "Uso de filesystems, inodes y rutas importantes reportado por los nodos gestionados.",
     mountsWorkspaceDescription:
       "Filesystems montados y postura de persistencia en fstab reportados por los nodos gestionados.",
+    kernelWorkspaceDescription:
+      "Release de kernel, parámetros sysctl seleccionados y módulos cargados reportados por los nodos gestionados.",
     networkWorkspaceDescription:
       "Interfaces, rutas y sockets en escucha reportados por los nodos gestionados.",
     processesWorkspaceDescription:

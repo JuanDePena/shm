@@ -235,6 +235,24 @@ The view is read-only. Mount, unmount and fstab edit operations should be
 implemented as audited jobs with strong confirmation because they can affect
 running services and boot behavior.
 
+## Kernel
+
+The Kernel view reports kernel release and selected runtime parameters per
+managed node. The agent collects `uname -r`, `uname -v`, `uname -m`, selected
+`sysctl -n` values and a bounded `lsmod` module inventory.
+
+The control UI shows:
+
+- per-node kernel inventory with release, architecture and key sysctl posture
+- counters for nodes reporting kernel data, IPv4 forwarding exposure and loaded
+  modules
+- selected-node detail with kernel build metadata, tracked sysctl values and
+  loaded module usage
+
+This view is read-only. Kernel parameter edits, module changes and bootloader
+changes should be modeled as audited maintenance jobs with rollback notes before
+they are exposed as actions.
+
 ## Network
 
 The Network view reports node-local interface, route, and listener posture. The

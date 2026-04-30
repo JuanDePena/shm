@@ -33,6 +33,7 @@ import { renderLogsWorkspace } from "./dashboard-logs.js";
 import { renderCertificatesWorkspace } from "./dashboard-certificates.js";
 import { renderStorageWorkspace } from "./dashboard-storage.js";
 import { renderMountsWorkspace } from "./dashboard-mounts.js";
+import { renderKernelWorkspace } from "./dashboard-kernel.js";
 import { renderNetworkWorkspace } from "./dashboard-network.js";
 import { renderProcessesWorkspace } from "./dashboard-processes.js";
 import { renderContainersWorkspace } from "./dashboard-containers.js";
@@ -692,6 +693,17 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
         });
       case "mounts":
         return renderMountsWorkspace({
+          copy,
+          data,
+          locale,
+          focus,
+          formatDate,
+          renderFocusLink: renderFocusLinkWithPill,
+          renderPill,
+          renderSignalStrip
+        });
+      case "kernel":
+        return renderKernelWorkspace({
           copy,
           data,
           locale,

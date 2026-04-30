@@ -577,6 +577,60 @@ test("runtime workspaces select one row and render only that row detail", () => 
       }
     },
     {
+      name: "kernel",
+      view: "kernel",
+      focus: "mail-a",
+      marker: "Selected node kernel",
+      selectedText: "6.12.0-selected.el10.x86_64",
+      otherText: "6.12.0-other.el10.x86_64",
+      arrange: (data) => {
+        data.nodeHealth[0] = {
+          ...data.nodeHealth[0]!,
+          kernel: {
+            release: "6.12.0-selected.el10.x86_64",
+            version: "selected build",
+            architecture: "x86_64",
+            parameters: [
+              { key: "net.ipv4.ip_forward", value: "0" },
+              { key: "net.ipv4.tcp_syncookies", value: "1" },
+              { key: "vm.swappiness", value: "10" },
+              { key: "kernel.randomize_va_space", value: "2" }
+            ],
+            modules: [
+              {
+                name: "selected_module",
+                sizeBytes: 4096,
+                usedBy: ["simplehost"]
+              }
+            ],
+            checkedAt: "2026-04-29T00:00:00.000Z"
+          }
+        };
+        data.nodeHealth[1] = {
+          ...data.nodeHealth[0]!,
+          nodeId: "mail-b",
+          hostname: "mail-b.example.com",
+          kernel: {
+            release: "6.12.0-other.el10.x86_64",
+            version: "other build",
+            architecture: "x86_64",
+            parameters: [
+              { key: "net.ipv4.ip_forward", value: "1" },
+              { key: "net.ipv4.tcp_syncookies", value: "1" }
+            ],
+            modules: [
+              {
+                name: "other_module",
+                sizeBytes: 8192,
+                usedBy: []
+              }
+            ],
+            checkedAt: "2026-04-29T00:00:00.000Z"
+          }
+        };
+      }
+    },
+    {
       name: "network",
       view: "network",
       focus: "mail-a:tcp:0.0.0.0:8080:selected-listener",

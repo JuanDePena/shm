@@ -687,6 +687,26 @@ export interface MountsSnapshot {
   checkedAt: string;
 }
 
+export interface KernelParameterSnapshot {
+  key: string;
+  value?: string;
+}
+
+export interface KernelModuleSnapshot {
+  name: string;
+  sizeBytes?: number;
+  usedBy: string[];
+}
+
+export interface KernelSnapshot {
+  release?: string;
+  version?: string;
+  architecture?: string;
+  parameters: KernelParameterSnapshot[];
+  modules: KernelModuleSnapshot[];
+  checkedAt: string;
+}
+
 export interface NetworkInterfaceAddressSnapshot {
   family: string;
   address: string;
@@ -835,6 +855,7 @@ export interface AgentNodeRuntimeSnapshot {
   tls?: TlsCertificatesSnapshot;
   storage?: StorageSnapshot;
   mounts?: MountsSnapshot;
+  kernel?: KernelSnapshot;
   network?: NetworkSnapshot;
   processes?: SystemProcessesSnapshot;
   containers?: ContainerRuntimeSnapshot;

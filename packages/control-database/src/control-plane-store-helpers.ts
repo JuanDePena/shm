@@ -33,6 +33,9 @@ import type {
   InventoryZoneSummary,
   JobHistoryEntry,
   JournalLogEntrySnapshot,
+  KernelModuleSnapshot,
+  KernelParameterSnapshot,
+  KernelSnapshot,
   LocalAccountSnapshot,
   LocalGroupSnapshot,
   MailDeliveryFailureSnapshot,
@@ -1117,6 +1120,68 @@ function normalizeMountsSnapshot(value: unknown): MountsSnapshot | undefined {
   };
 }
 
+function normalizeKernelParameterSnapshot(
+  value: unknown
+): KernelParameterSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (typeof record.key !== "string") {
+    return undefined;
+  }
+
+  return {
+    key: record.key,
+    value: typeof record.value === "string" ? record.value : undefined
+  };
+}
+
+function normalizeKernelModuleSnapshot(value: unknown): KernelModuleSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (typeof record.name !== "string") {
+    return undefined;
+  }
+
+  return {
+    name: record.name,
+    sizeBytes: typeof record.sizeBytes === "number" ? Number(record.sizeBytes) : undefined,
+    usedBy: normalizeStringArray(record.usedBy)
+  };
+}
+
+function normalizeKernelSnapshot(value: unknown): KernelSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return {
+    release: typeof record.release === "string" ? record.release : undefined,
+    version: typeof record.version === "string" ? record.version : undefined,
+    architecture: typeof record.architecture === "string" ? record.architecture : undefined,
+    parameters: Array.isArray(record.parameters)
+      ? record.parameters
+          .map(normalizeKernelParameterSnapshot)
+          .filter((entry): entry is KernelParameterSnapshot => Boolean(entry))
+      : [],
+    modules: Array.isArray(record.modules)
+      ? record.modules
+          .map(normalizeKernelModuleSnapshot)
+          .filter((entry): entry is KernelModuleSnapshot => Boolean(entry))
+      : [],
+    checkedAt: typeof record.checkedAt === "string" ? record.checkedAt : new Date(0).toISOString()
+  };
+}
+
 function normalizeNetworkInterfaceAddressSnapshot(
   value: unknown
 ): NetworkInterfaceAddressSnapshot | undefined {
@@ -2083,6 +2148,7 @@ export function toNodeHealthSnapshot(row: NodeHealthRow): NodeHealthSnapshot {
       (runtimeSnapshot as Record<string, unknown>).storage
     ),
     mounts: normalizeMountsSnapshot((runtimeSnapshot as Record<string, unknown>).mounts),
+    kernel: normalizeKernelSnapshot((runtimeSnapshot as Record<string, unknown>).kernel),
     network: normalizeNetworkSnapshot(
       (runtimeSnapshot as Record<string, unknown>).network
     ),

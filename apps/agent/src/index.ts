@@ -40,6 +40,8 @@ import {
   type SshEffectiveConfigSnapshot,
   type FilesystemUsageSnapshot,
   type JournalLogEntrySnapshot,
+  type KernelModuleSnapshot,
+  type KernelParameterSnapshot,
   type StoragePathUsageSnapshot,
   type ServiceUnitSnapshot,
   type SystemTimerSnapshot,
@@ -1849,6 +1851,17 @@ const ignoredMountTypes = new Set([
   "tracefs"
 ]);
 const ignoredMountPrefixes = ["/dev", "/proc", "/run", "/sys"];
+const trackedKernelParameters = [
+  "net.ipv4.ip_forward",
+  "net.ipv6.conf.all.forwarding",
+  "net.ipv4.conf.all.rp_filter",
+  "net.ipv4.tcp_syncookies",
+  "net.ipv4.tcp_tw_reuse",
+  "vm.swappiness",
+  "fs.file-max",
+  "kernel.panic",
+  "kernel.randomize_va_space"
+] as const;
 
 function decodeFstabToken(value: string): string {
   return value
@@ -2003,6 +2016,58 @@ async function inspectMounts(): Promise<AgentNodeRuntimeSnapshot["mounts"]> {
 
   return {
     entries: mergeMountEntries(parseFindmntOutput(findmntOutput), parseFstab(fstabContent)),
+    checkedAt
+  };
+}
+
+async function inspectKernelParameter(key: string): Promise<KernelParameterSnapshot> {
+  const value = await commandOutput("sysctl", ["-n", key]);
+
+  return {
+    key,
+    value
+  };
+}
+
+function parseKernelModules(output: string | undefined): KernelModuleSnapshot[] {
+  return (output ?? "")
+    .split(/\r?\n/g)
+    .slice(1)
+    .map((line): KernelModuleSnapshot | undefined => {
+      const parts = line.trim().split(/\s+/g);
+      const name = parts[0];
+
+      if (!name) {
+        return undefined;
+      }
+
+      return {
+        name,
+        sizeBytes: parseOptionalNumber(parts[1]),
+        usedBy: uniqueOrderedStrings((parts[3] ?? "").split(",").filter((entry) => entry !== "-"))
+      };
+    })
+    .filter((entry): entry is KernelModuleSnapshot => Boolean(entry))
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .slice(0, 150);
+}
+
+async function inspectKernel(): Promise<AgentNodeRuntimeSnapshot["kernel"]> {
+  const checkedAt = new Date().toISOString();
+  const [release, version, architecture, modulesOutput, parameters] = await Promise.all([
+    commandOutput("uname", ["-r"]),
+    commandOutput("uname", ["-v"]),
+    commandOutput("uname", ["-m"]),
+    commandOutput("lsmod", []),
+    Promise.all(trackedKernelParameters.map((key) => inspectKernelParameter(key)))
+  ]);
+
+  return {
+    release,
+    version,
+    architecture,
+    parameters,
+    modules: parseKernelModules(modulesOutput),
     checkedAt
   };
 }
@@ -3691,6 +3756,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     tls,
     storage,
     mounts,
+    kernel,
     network,
     processes,
     containers,
@@ -3716,6 +3782,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     inspectTlsCertificates(),
     inspectStorage(),
     inspectMounts(),
+    inspectKernel(),
     inspectNetwork(),
     inspectProcesses(),
     inspectContainers(),
@@ -3743,6 +3810,7 @@ async function collectRuntimeSnapshot(): Promise<AgentNodeRuntimeSnapshot> {
     tls,
     storage,
     mounts,
+    kernel,
     network,
     processes,
     containers,
