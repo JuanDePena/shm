@@ -20,7 +20,7 @@ pilot migrations that established the current SimpleHostMan pattern.
 | `zcrmt.com` | migrated WordPress runtime on `app-zcrmt` | Zoho preserved | WordPress kept on MariaDB `app_zcrmt_wp` | closed |
 | `merlelaw.com` | migrated blank static runtime on `app-merlelaw` | SimpleHostMan mail live | none | closed |
 | `engilum.com` | external web targets preserved | Zoho preserved | none | DNS-only staged |
-| `pyrosa.com.do` | multi-app estate inspected; `pyrosa-wp` first, `sync`/`helpers` deferred | Microsoft 365, no legacy mail migration planned | WordPress/MariaDB first; PostgreSQL only where source/app fits | plan ready |
+| `pyrosa.com.do` | `pyrosa-wp` runtime active; `sync`/`helpers`/`repos` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress migrated to MariaDB `app_pyrosa_wp`; later apps separate | phase 1 propagation |
 | `solucionesmercantilnr.com` | not migrated | retired | none | out of scope: expired, not renewing |
 | `pyrosa.net` | not migrated | retired | none | out of scope: expired, not renewing |
 
@@ -468,6 +468,51 @@ The migration batch through `merlelaw.com` is closed. The remaining active `vps-
 `pyrosa.com.do`, which is now documented as a multi-app migration in
 [`pyrosa-runtime-migration.md`](/opt/simplehostman/src/docs/MIGRATIONS/pyrosa-runtime-migration.md).
 Public mail is on Microsoft 365, so legacy cPanel mail should not be migrated.
+
+### 2026-04-30: pyrosa.com.do WordPress phase 1
+
+The WordPress apex for `pyrosa.com.do` was copied from `vps-old`, imported into MariaDB, and started
+as `app-pyrosa-wp` on both SimpleHostMan nodes.
+
+Applied app:
+
+- app slug `pyrosa-wp`
+- source `/home/wmpyrosa/public_html/`, excluding `_sites/`
+- backend port `10101`
+- runtime image tag `registry.example.com/pyrosa-wordpress:stable`
+- storage root `/srv/containers/apps/pyrosa-wp`
+- `app-pyrosa-wp.service` active on `primary` and `secondary`
+
+Database outcome:
+
+- source database `wmpyrosa_2024`
+- target MariaDB database `app_pyrosa_wp`
+- target MariaDB user `app_pyrosa_wp`
+- imported `55` WordPress tables
+- imported row checks: `807` `wppy_options` rows and `695` `wppy_posts` rows
+- WordPress was kept on MariaDB because stock WordPress does not support PostgreSQL natively
+
+DNS and TLS outcome:
+
+- SimpleHostMan PowerDNS serves `pyrosa.com.do A -> 51.222.204.86`
+- SimpleHostMan PowerDNS serves `www.pyrosa.com.do A -> 51.222.204.86`
+- `sync.pyrosa.com.do`, `helpers.pyrosa.com.do`, and `repos.pyrosa.com.do` remain pointed at
+  `51.161.11.249`
+- Microsoft 365 MX/SPF/DKIM/Autodiscover/DMARC records are preserved
+- existing Let's Encrypt wildcard certificate from `vps-old` installed temporarily on both nodes
+
+Validation:
+
+- `https://pyrosa.com.do/` returns `200 OK` with title `PYROSA` on both nodes using `--resolve`
+- `https://pyrosa.com.do/wp-login.php` returns `200 OK` on both nodes using `--resolve`
+- public checks from `1.1.1.1` and `8.8.8.8` returned the new apex/`www` A records, the old
+  `sync` A record, and the Microsoft 365 MX record
+
+Remaining propagation item:
+
+- as of `2026-04-30 22:51 UTC`, the `.do` parent still returned the old nameserver delegation
+  (`vps-1926167b.vps.ovh.ca` and `sdns2.ovh.ca`) even though the registrar change to
+  `vps-16535090.vps.ovh.ca` and `vps-3dbbfb0b.vps.ovh.ca` had been submitted
 
 ### 2026-04-30: ppdpr.us web runtime cutover
 

@@ -25,7 +25,7 @@ SimpleHostMan mail domain should be created for `pyrosa.com.do`.
 
 | App | Hostnames | Backend | Database | Status |
 | --- | --- | ---: | --- | --- |
-| `pyrosa-wp` | `pyrosa.com.do`, `www.pyrosa.com.do` | `10101` | MariaDB `app_pyrosa_wp` | desired only; not active |
+| `pyrosa-wp` | `pyrosa.com.do`, `www.pyrosa.com.do` | `10101` | MariaDB `app_pyrosa_wp` | phase 1 runtime active on primary and secondary |
 | `pyrosa-sync` | `sync.pyrosa.com.do` | `10102` | MariaDB `app_pyrosa_sync`, pending PostgreSQL | desired only; do not migrate now |
 
 The target node public IP for migrated web hostnames is `51.222.204.86`.
@@ -209,3 +209,130 @@ Suggested block workflow:
 4. Update the runbook with outcomes, timestamps, and rollback notes.
 5. Commit only that block's files.
 6. Push immediately after the block is green.
+
+## Phase 1 Execution Record
+
+Started on `2026-04-30` and scoped only to the WordPress apex:
+
+- `pyrosa.com.do`
+- `www.pyrosa.com.do`
+
+The following hostnames were intentionally kept on `vps-old`:
+
+- `sync.pyrosa.com.do`
+- `helpers.pyrosa.com.do`
+- `repos.pyrosa.com.do`
+- `api.pyrosa.com.do`
+- `demoportal.pyrosa.com.do`
+- `demoerp.pyrosa.com.do`
+- `demosync.pyrosa.com.do`
+- `code.pyrosa.com.do`
+- `pgadmin.pyrosa.com.do`
+- `ldap.pyrosa.com.do`
+
+### Runtime
+
+Applied runtime state:
+
+- app slug `pyrosa-wp`
+- source path copied from `root@51.161.11.249:/home/wmpyrosa/public_html/`
+- `_sites/` excluded from the copy because subdomains are separate apps
+- copied file count: `24,607`
+- copied regular file count: `21,031`
+- copied payload size: about `598M`
+- backend port `10101`
+- runtime image tag `registry.example.com/pyrosa-wordpress:stable`
+- storage root `/srv/containers/apps/pyrosa-wp`
+- `app-pyrosa-wp.service` active on `primary`
+- `app-pyrosa-wp.service` active on `secondary`
+
+`wp-config.php` was changed on disk so DB settings are read from the container environment and
+WordPress honors `X-Forwarded-Proto: https`.
+
+### Database
+
+Applied database state:
+
+- source database `wmpyrosa_2024`
+- target database `app_pyrosa_wp`
+- target database user `app_pyrosa_wp`
+- engine kept on MariaDB
+- imported table count: `55`
+- imported `wppy_options` rows: `807`
+- imported `wppy_posts` rows: `695`
+
+The WordPress table prefix remains `wppy_`.
+
+### TLS
+
+The existing Let's Encrypt wildcard certificate from `vps-old` was installed temporarily under
+`/etc/ssl/simplehostman/pyrosa.com.do/` on both nodes so HTTPS serves the correct virtual host before
+new certificate issuance is attempted from SimpleHostMan.
+
+Certificate summary:
+
+- subject `CN=*.pyrosa.com.do`
+- issuer `Let's Encrypt R13`
+- valid from `2026-04-24`
+- valid until `2026-07-23`
+
+### DNS
+
+SimpleHostMan PowerDNS now serves the `pyrosa.com.do` zone with:
+
+- `pyrosa.com.do A -> 51.222.204.86`
+- `www.pyrosa.com.do A -> 51.222.204.86`
+- `sync.pyrosa.com.do A -> 51.161.11.249`
+- `helpers.pyrosa.com.do A -> 51.161.11.249`
+- `repos.pyrosa.com.do A -> 51.161.11.249`
+- Microsoft 365 `MX`, SPF, Autodiscover, selector DKIM CNAMEs, and DMARC preserved
+
+The same PowerDNS answers were confirmed on:
+
+- `51.222.204.86`
+- `51.222.206.196`
+
+The legacy cPanel zone file on `vps-old` was also updated for apex and `www`, but `named.service`
+on `vps-old` was not active because an unrelated missing `bonanza.com.do` zone blocks BIND startup.
+The intended authoritative path is therefore the registrar delegation to the SimpleHostMan
+nameservers.
+
+As of `2026-04-30 22:51 UTC`, the `.do` parent servers still returned the old delegation:
+
+- `vps-1926167b.vps.ovh.ca`
+- `sdns2.ovh.ca`
+
+The registrar change to the new nameservers had been submitted by the operator and was still pending
+at the parent:
+
+- `vps-16535090.vps.ovh.ca`
+- `vps-3dbbfb0b.vps.ovh.ca`
+
+### Validation
+
+Backend and vhost validation:
+
+- `http://127.0.0.1:10101/` redirects to HTTPS on both nodes
+- `https://pyrosa.com.do/` with `--resolve` to `51.222.204.86` returns `200 OK` and title `PYROSA`
+- `https://pyrosa.com.do/` with `--resolve` to `51.222.206.196` returns `200 OK` and title `PYROSA`
+- `https://pyrosa.com.do/wp-login.php` returns `200 OK` on both nodes through HTTPS
+- `https://www.pyrosa.com.do/` redirects to `https://pyrosa.com.do/`
+
+Public resolver spot checks after runtime cutover:
+
+- `1.1.1.1` returned `pyrosa.com.do A -> 51.222.204.86`
+- `1.1.1.1` returned `www.pyrosa.com.do A -> 51.222.204.86`
+- `1.1.1.1` returned `sync.pyrosa.com.do A -> 51.161.11.249`
+- `1.1.1.1` returned Microsoft 365 MX for `pyrosa.com.do`
+- `8.8.8.8` returned `pyrosa.com.do A -> 51.222.204.86`
+- `8.8.8.8` returned `www.pyrosa.com.do A -> 51.222.204.86`
+- `8.8.8.8` returned `sync.pyrosa.com.do A -> 51.161.11.249`
+- `8.8.8.8` returned Microsoft 365 MX for `pyrosa.com.do`
+
+### Follow-Up
+
+- Re-check the `.do` parent delegation until it returns only the two SimpleHostMan nameservers.
+- Issue a native SimpleHostMan/Let's Encrypt certificate for `pyrosa.com.do` and `www.pyrosa.com.do`
+  after delegation has fully moved.
+- Run a final WordPress file delta sync if there is evidence that uploads changed on `vps-old`
+  during propagation.
