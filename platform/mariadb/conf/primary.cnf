@@ -10,6 +10,9 @@ gtid_strict_mode=ON
 
 innodb_flush_log_at_trx_commit=1
 sync_binlog=1
+innodb_buffer_pool_size=1G
+tmp_table_size=64M
+max_heap_table_size=64M
 
 slow_query_log=ON
 long_query_time=1

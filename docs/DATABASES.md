@@ -65,6 +65,43 @@ The MariaDB slow-log values are persisted in
 [`/opt/simplehostman/src/platform/mariadb/conf/primary.cnf`](/opt/simplehostman/src/platform/mariadb/conf/primary.cnf)
 and applied live on the primary container.
 
+## Tuning Status On 2026-05-01
+
+Phase 3 of the post-migration operational plan applied conservative memory
+sizing while keeping durability and per-query memory conservative.
+
+PostgreSQL `postgresql@apps` on both nodes:
+
+- `shared_buffers = 512MB`
+- `effective_cache_size = 8GB`
+- `maintenance_work_mem = 256MB`
+- `work_mem = 4MB`
+
+PostgreSQL `postgresql@control` on both nodes:
+
+- `shared_buffers = 2GB`
+- `effective_cache_size = 16GB`
+- `maintenance_work_mem = 512MB`
+- `work_mem = 8MB`
+
+MariaDB primary:
+
+- `innodb_buffer_pool_size = 1G`
+- `tmp_table_size = 64M`
+- `max_heap_table_size = 64M`
+- `innodb_flush_log_at_trx_commit = 1`
+- `sync_binlog = 1`
+- `slow_query_log = ON`
+- `performance_schema = OFF`
+
+The MariaDB tuning values are persisted in
+[`/opt/simplehostman/src/platform/mariadb/conf/primary.cnf`](/opt/simplehostman/src/platform/mariadb/conf/primary.cnf).
+The PostgreSQL tuning values are captured in the source-controlled baseline
+configs for `postgresql@apps` and `postgresql@control`.
+`innodb_buffer_pool_size` required a controlled `mariadb-primary` restart; the
+PostgreSQL `apps` cluster required a restart because `shared_buffers` is a
+postmaster setting.
+
 ## Version policy
 
 Major-version execution planning now lives in:

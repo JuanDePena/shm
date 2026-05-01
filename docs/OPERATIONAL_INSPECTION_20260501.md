@@ -447,7 +447,8 @@ Rollback:
 Completion evidence:
 
 - PostgreSQL settings were applied on both `primary` and `secondary` with
-  `ALTER SYSTEM`.
+  `ALTER SYSTEM`; source-controlled PostgreSQL baseline configs were also
+  updated so future rebuilds keep the same conservative sizing.
 - `postgresql@control` now has:
   - `shared_preload_libraries = pg_stat_statements`
   - `track_io_timing = on`
@@ -487,6 +488,8 @@ Completion evidence:
 
 ### Phase 3: Conservative Database Tuning
 
+Status: completed on `2026-05-01`.
+
 Goal: use available memory more effectively while staying safely below system
 capacity.
 
@@ -523,6 +526,50 @@ Rollback:
 - restore previous config files
 - restart the affected engine
 - re-run app smoke checks
+
+Completion evidence:
+
+- PostgreSQL settings were applied on both `primary` and `secondary` with
+  `ALTER SYSTEM`.
+- `postgresql@apps` now reports on both nodes:
+  - `shared_buffers = 512MB`
+  - `effective_cache_size = 8GB`
+  - `maintenance_work_mem = 256MB`
+  - `work_mem = 4MB`
+  - no pending restart
+- `postgresql@control` now reports on both nodes:
+  - `shared_buffers = 2GB`
+  - `effective_cache_size = 16GB`
+  - `maintenance_work_mem = 512MB`
+  - `work_mem = 8MB`
+  - no pending restart
+- `postgresql@apps` was restarted on the standby first and then on the primary
+  because `shared_buffers` is a postmaster setting. `postgresql@control` only
+  required a reload for `effective_cache_size`.
+- Streaming replication remained healthy for both PostgreSQL clusters with
+  primary-side replay lag reported as `0` bytes.
+- MariaDB tuning was persisted in `/srv/containers/mariadb/conf/primary.cnf`
+  and source-controlled `platform/mariadb/conf/primary.cnf`.
+- `tmp_table_size` and `max_heap_table_size` accepted live changes to `64M`.
+  `innodb_buffer_pool_size` required a controlled `mariadb-primary` restart and
+  now reports `1073741824` bytes.
+- MariaDB durability settings remain unchanged:
+  - `innodb_flush_log_at_trx_commit = 1`
+  - `sync_binlog = 1`
+- `performance_schema` remains `OFF`; the slow query log and PostgreSQL
+  `pg_stat_statements` provide the current low-risk evidence surface.
+- Primary and secondary HTTPS smoke checks returned `200 OK` for:
+  - `https://pyrosa.com.do/`
+  - `https://pyrosa.com.do/wp-login.php`
+  - `https://demoportal.pyrosa.com.do/login`
+  - `https://sync.pyrosa.com.do/dis/public/login`
+  - `https://demosync.pyrosa.com.do/dis/public/login`
+  - `https://zcrmt.com/`
+- `app-pyrosa-sync`, `app-pyrosa-demosync`, and `app-pyrosa-newsync` worker
+  families remained active after the MariaDB restart.
+- `systemctl --failed` reported no failed units after tuning.
+- Memory validation after tuning showed about `28 GiB` available, no swap, and
+  `vmstat` reported `0%` IO wait during the post-change sample.
 
 ### Phase 4: Data Growth And Retention Controls
 
