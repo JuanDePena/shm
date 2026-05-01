@@ -1562,3 +1562,44 @@ Rollback, if a hidden dependency appears:
 - run `whmapi1 configureservice service=imap enabled=1 monitored=1` on `vps-old`
 - run `whmapi1 configureservice service=pop enabled=1 monitored=1` on `vps-old`
 - run `systemctl enable --now exim dovecot` on `vps-old`
+
+## vps-old Legacy Service Drain
+
+Completed on `2026-05-01` after OpenLDAP was moved into SimpleHostMan and the user confirmed that
+`merlelaw.com` would be transferred separately while second-level `www.*` aliases may expire.
+
+Operational state on `vps-old`:
+
+- `code-server.service` is inactive and disabled.
+- `pgadmin4.service` is inactive and disabled.
+- `pdns.service` is inactive and disabled; `vps-old` no longer answers authoritative DNS on TCP/UDP
+  `53`.
+- `mysqld.service`, `postgresql-18.service`, and `redis.service` are inactive and disabled.
+- cPanel runtime services are inactive and disabled: `cpanel`, `cpanel_php_fpm`, `cpanellogd`,
+  `cpdavd`, `cphulkd`, `dnsadmin`, `queueprocd`, `tailwatchd`, `ea-php84-php-fpm`, `sw-engine`,
+  `spamd`, `wp-toolkit-background-tasks`, and `wp-toolkit-scheduled-tasks`.
+- `crond.service` and `atd.service` are inactive and disabled on `vps-old` to prevent stale legacy
+  publishing or cPanel jobs from running during the cancellation window.
+- the remaining listeners on `vps-old` are only SSH and base system RPC administration sockets.
+
+Post-drain validation:
+
+- no listeners remain on old production ports `25`, `53`, `80`, `110`, `143`, `389`, `443`, `465`,
+  `587`, `636`, `993`, `995`, `3306`, `5432`, `6379`, or `8080`
+- querying `@51.161.11.249` for `pyrosa.com.do` and `merlelaw.com` returns connection refused,
+  confirming old PowerDNS is down
+- SimpleHostMan primary and secondary PowerDNS still answer all primary Pyrosa hostnames with
+  `A -> 51.222.204.86`
+- public resolvers `1.1.1.1` and `8.8.8.8` answer migrated Pyrosa hostnames at
+  `51.222.204.86`; short-lived recursive caches that still remember the old delegation may fail
+  until they expire
+- forced HTTPS checks for Pyrosa apex, demoportal, repos, demoerp, demosync, LDAP, pgAdmin, code,
+  sync, and helpers returned `200 OK` on both SimpleHostMan nodes
+- the primary Apache service was found failed during the first smoke pass and was restarted; after
+  restart it stayed active and returned `200 OK` for forced HTTPS checks
+
+Rollback, if an unexpected dependency is reported before cancellation:
+
+- re-enable only the affected service on `vps-old` with `systemctl enable --now <unit>`
+- if authoritative DNS must be temporarily restored, start `pdns.service` and verify the relevant
+  zone serial before relying on it

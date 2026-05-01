@@ -1444,3 +1444,43 @@ Rollback for the mail drain test:
 - `whmapi1 configureservice service=imap enabled=1 monitored=1`
 - `whmapi1 configureservice service=pop enabled=1 monitored=1`
 - `systemctl enable --now exim dovecot`
+
+### 2026-05-01: vps-old legacy service drain
+
+After OpenLDAP was imported into SimpleHostMan, the remaining legacy runtime services on `vps-old`
+were stopped and disabled. `merlelaw.com` is expected to be transferred separately, and the
+second-level `www.*` Pyrosa aliases are intentionally allowed to expire instead of being preserved.
+
+Stopped and disabled services:
+
+- `code-server.service`
+- `pgadmin4.service`
+- `pdns.service`
+- `mysqld.service`
+- `postgresql-18.service`
+- `redis.service`
+- cPanel runtime services: `cpanel`, `cpanel_php_fpm`, `cpanellogd`, `cpdavd`, `cphulkd`,
+  `dnsadmin`, `queueprocd`, `tailwatchd`, `ea-php84-php-fpm`, `sw-engine`, `spamd`,
+  `wp-toolkit-background-tasks`, and `wp-toolkit-scheduled-tasks`
+- stale scheduler surfaces on `vps-old`: `crond.service` and `atd.service`
+
+Validation:
+
+- `vps-old` has no listeners on TCP `25`, `53`, `80`, `110`, `143`, `389`, `443`, `465`, `587`,
+  `636`, `993`, `995`, `3306`, `5432`, `6379`, or `8080`
+- the only remaining listeners on `vps-old` are SSH and base RPC administration sockets
+- direct DNS queries to `@51.161.11.249` now fail with connection refused
+- SimpleHostMan primary and secondary PowerDNS still answer the migrated Pyrosa primary hostnames
+  with `A -> 51.222.204.86`
+- public `1.1.1.1` and `8.8.8.8` resolvers answer migrated Pyrosa hostnames at `51.222.204.86`;
+  recursive caches that still remember the old delegation may fail until they expire
+- forced HTTPS checks for Pyrosa apex, demoportal, repos, demoerp, demosync, LDAP, pgAdmin, code,
+  sync, and helpers returned `200 OK` on both SimpleHostMan nodes
+- primary Apache was restarted during validation after a transient failed state; subsequent forced
+  HTTPS checks returned `200 OK`
+
+Rollback:
+
+- re-enable only the affected service on `vps-old` with `systemctl enable --now <unit>`
+- if old authoritative DNS must be restored during the transfer window, start `pdns.service` and
+  verify the relevant zone serial before relying on it
