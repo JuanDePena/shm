@@ -33,13 +33,14 @@ Live desired state currently includes:
 | `pyrosa-demosync` | `demosync.pyrosa.com.do`, `www.demosync.pyrosa.com.do` | `10107` | MariaDB `app_pyrosa_demosync`, `app_pyrosa_demosync_qbo` | phase 6 DIS/QBO demo runtime active on primary and secondary; `www` alias cut over in phase 8 |
 | `pyrosa-erp` | `erp.pyrosa.com.do`, `www.erp.pyrosa.com.do` | `10108` | none | phase 7 empty placeholder runtime active on primary and secondary; `www` alias cut over in phase 8 |
 | `pyrosa-portal` | `portal.pyrosa.com.do`, `www.portal.pyrosa.com.do` | `10109` | none | phase 7 empty placeholder runtime active on primary and secondary; `www` alias cut over in phase 8 |
+| `pyrosa-ldap` | `ldap.pyrosa.com.do` | `10110` | none | phase 9 LDAP Account Manager UI active on primary and secondary; OpenLDAP remains on `vps-old` |
 | `pyrosa-sync` | `sync.pyrosa.com.do` | `10102` | MariaDB `app_pyrosa_sync`, pending PostgreSQL | desired only; do not migrate now |
 
 `pyrosa-wp`, `pyrosa-demoportal`, and `pyrosa-sync` are also present in
 `bootstrap/apps.bootstrap.yaml`. `pyrosa-repos`, `pyrosa-demoerp`, `pyrosa-api`, and
-`pyrosa-demosync`, `pyrosa-erp`, and `pyrosa-portal` are represented only in live desired state
+`pyrosa-demosync`, `pyrosa-erp`, `pyrosa-portal`, and `pyrosa-ldap` are represented only in live desired state
 until the bootstrap inventory is refreshed. `pyrosa-repos`, `pyrosa-api`, `pyrosa-erp`, and
-`pyrosa-portal` intentionally have no database resource.
+`pyrosa-portal`, and `pyrosa-ldap` intentionally have no database resource.
 
 The target node public IP for migrated web hostnames is `51.222.204.86`.
 
@@ -57,7 +58,7 @@ Legacy public IP: `51.161.11.249`.
 | `demosync.pyrosa.com.do` | `_sites/demosync.pyrosa.com.do` | `88M` source; `255M` staged after local Tabler asset copy | DIS/QBO demo app | MySQL `wmpyrosa_disdemo` and shared `wmpyrosa_qbo` | migrated in phase 6 as `pyrosa-demosync`, kept on MariaDB |
 | `erp.pyrosa.com.do` | `_sites/erp.pyrosa.com.do` | empty | placeholder | none observed | migrated in phase 7 as an empty `pyrosa-erp` placeholder, preserving `403` |
 | `helpers.pyrosa.com.do` | `_sites/helpers.pyrosa.com.do` | `6.6G` | helper tools; Apache proxy path to `localhost:3333` configured | PostgreSQL `do_fiscal_reports`; active cron jobs | do not migrate now |
-| `ldap.pyrosa.com.do` | `_sites/ldap.pyrosa.com.do` | `91M` | LDAP Account Manager style UI | OpenLDAP on `389`/`636` | keep on `vps-old` unless planning directory migration |
+| `ldap.pyrosa.com.do` | `_sites/ldap.pyrosa.com.do` | `91M` | LDAP Account Manager 9.3 UI | OpenLDAP on `389`/`636` | migrated in phase 9 as `pyrosa-ldap`; UI connects back to `vps-old` over LDAPS |
 | `pgadmin.pyrosa.com.do` | proxy, not document root content | empty docroot | pgAdmin4 on `127.0.0.1:5050` | PostgreSQL admin surface | keep on `vps-old` with PostgreSQL until DB estate is moved |
 | `portal.pyrosa.com.do` | `_sites/portal.pyrosa.com.do` | empty | placeholder | none observed | migrated in phase 7 as an empty `pyrosa-portal` placeholder, preserving `403` |
 | `repos.pyrosa.com.do` | `_sites/repos.pyrosa.com.do` | `574M` | SLES/Yum RPM repository | `sbotools` repo metadata and signed package metadata | migrated in phase 3 as `pyrosa-repos` |
@@ -1028,3 +1029,60 @@ DNS validation at `2026-05-01 03:31 UTC`:
 - The local resolver still had a stale `www.portal` answer during final validation; the stale old-host
   response also served a valid HTTPS `403 Forbidden`, and authoritative DNS already returned the
   target.
+
+## Phase 9 Execution Record
+
+Completed on `2026-05-01` and scoped to `ldap.pyrosa.com.do`.
+
+This phase moved only the LDAP Account Manager web UI into SimpleHostMan. The OpenLDAP daemon and
+directory data remain on `vps-old` for now, and the new container reaches that service through
+LDAPS. `sync.pyrosa.com.do`, `helpers.pyrosa.com.do`, `code.pyrosa.com.do`, and
+`pgadmin.pyrosa.com.do` remain intentionally on `vps-old`.
+
+### Runtime
+
+Applied runtime state:
+
+- app slug `pyrosa-ldap`
+- source path copied from `root@51.161.11.249:/home/wmpyrosa/public_html/_sites/ldap.pyrosa.com.do/`
+- copied payload size: about `91M`, excluding legacy session files and old PHP `error_log` files
+- backend port `10110`
+- runtime image tag `registry.example.com/pyrosa-ldap:stable`
+- storage root `/srv/containers/apps/pyrosa-ldap`
+- `app-pyrosa-ldap.service` active on `primary`
+- `app-pyrosa-ldap.service` active on `secondary`
+
+The PHP/Apache runtime now includes the LAM-required `ldap`, `gettext`, and `gmp` extensions. The
+LAM profile in the migrated copy was adjusted from local LDAP to `ldaps://ldap.pyrosa.com.do:636`,
+and the container unit pins that hostname to `51.161.11.249` internally so the public DNS cutover
+does not make the UI connect to itself.
+
+### DNS And TLS
+
+SimpleHostMan PowerDNS now serves:
+
+- `ldap.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+
+The legacy DNS zone on `vps-old` was also updated so cached old delegations answer the same target
+A record with TTL `300`. The existing `*.pyrosa.com.do` wildcard certificate covers
+`ldap.pyrosa.com.do`, so no new certificate lineage was required.
+
+### Validation
+
+Runtime and target validation:
+
+- the `pyrosa-ldap` image exposes `ldap`, `gettext`, and `gmp` PHP extensions
+- LDAPS connectivity from the container to the old OpenLDAP service returned successfully
+- `https://ldap.pyrosa.com.do/` with `--resolve` to `primary` returns a redirect to `/lam/`
+- `https://ldap.pyrosa.com.do/lam/templates/login.php` with `--resolve` to `primary` returns `200 OK`
+- `https://ldap.pyrosa.com.do/lam/templates/login.php` with `--resolve` to `secondary` returns `200 OK`
+- protected LAM paths such as `/lam/config/`, `/lam/lib/`, `/lam/sess/`, and `/lam/tmp/` return
+  `403 Forbidden`
+
+DNS validation at `2026-05-01 03:56 UTC`:
+
+- authoritative `51.222.204.86` returned `ldap.pyrosa.com.do` pointing to `51.222.204.86`
+- authoritative `51.222.206.196` returned `ldap.pyrosa.com.do` pointing to `51.222.204.86`
+- legacy authoritative `51.161.11.249` returned `ldap.pyrosa.com.do` pointing to `51.222.204.86`
+- `1.1.1.1` and `8.8.8.8` returned `ldap.pyrosa.com.do` pointing to `51.222.204.86`
+- `sync.pyrosa.com.do` and `helpers.pyrosa.com.do` remained on `51.161.11.249`

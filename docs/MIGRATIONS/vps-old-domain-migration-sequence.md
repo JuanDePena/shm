@@ -20,7 +20,7 @@ pilot migrations that established the current SimpleHostMan pattern.
 | `zcrmt.com` | migrated WordPress runtime on `app-zcrmt` | Zoho preserved | WordPress kept on MariaDB `app_zcrmt_wp` | closed |
 | `merlelaw.com` | migrated blank static runtime on `app-merlelaw` | SimpleHostMan mail live | none | closed |
 | `engilum.com` | external web targets preserved | Zoho preserved | none | DNS-only staged |
-| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, `pyrosa-repos`, `pyrosa-demoerp`, `pyrosa-api`, `pyrosa-demosync`, `pyrosa-erp`, and `pyrosa-portal` runtimes active; second-level `www` aliases active; `sync`/`helpers` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress, demoportal, and demosync migrated to MariaDB; demoerp migrated to PostgreSQL; `repos`, `api`, `erp`, and `portal` have no local database | phase 8 complete |
+| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, `pyrosa-repos`, `pyrosa-demoerp`, `pyrosa-api`, `pyrosa-demosync`, `pyrosa-erp`, `pyrosa-portal`, and `pyrosa-ldap` runtimes active; second-level `www` aliases active; `sync`/`helpers` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress, demoportal, and demosync migrated to MariaDB; demoerp migrated to PostgreSQL; `repos`, `api`, `erp`, `portal`, and `ldap` have no local database | phase 9 complete |
 | `solucionesmercantilnr.com` | not migrated | retired | none | out of scope: expired, not renewing |
 | `pyrosa.net` | not migrated | retired | none | out of scope: expired, not renewing |
 
@@ -1107,3 +1107,44 @@ Validation:
 - SimpleHostMan desired state contains tenant `engilum` and zone `engilum.com`
 - both PowerDNS nodes list the preserved external A records and Zoho MX/TXT records
 - no local SimpleHostMan mailboxes were created for `engilum.com`
+
+### 2026-05-01: pyrosa.com.do LDAP Account Manager UI cutover
+
+`ldap.pyrosa.com.do` was copied from `vps-old`, promoted into SimpleHostMan app desired state, and
+cut over for the web UI only. The OpenLDAP daemon and directory data remain on `vps-old`; the new
+LAM container connects back to that service over LDAPS.
+
+Applied app:
+
+- app slug `pyrosa-ldap`
+- source `/home/wmpyrosa/public_html/_sites/ldap.pyrosa.com.do/`
+- backend port `10110`
+- runtime image `registry.example.com/pyrosa-ldap:stable`
+- storage root `/srv/containers/apps/pyrosa-ldap`
+- `app-pyrosa-ldap.service` active on `primary` and `secondary`
+- no local database resource
+
+Runtime notes:
+
+- legacy LAM session files and PHP `error_log` files were not copied
+- the PHP/Apache runtime now includes `ldap`, `gettext`, and `gmp`
+- the container pins `ldap.pyrosa.com.do` to `51.161.11.249` internally for LDAPS while public DNS
+  points the web UI to SimpleHostMan
+
+DNS and TLS:
+
+- `ldap.pyrosa.com.do A -> 51.222.204.86`
+- `sync.pyrosa.com.do`, `helpers.pyrosa.com.do`, `code.pyrosa.com.do`, and `pgadmin.pyrosa.com.do`
+  remain on `51.161.11.249`
+- the legacy `vps-old` authoritative zone was updated to the same `ldap.pyrosa.com.do` cutover record
+- the existing `*.pyrosa.com.do` wildcard certificate covers the hostname on both SimpleHostMan nodes
+
+Validation:
+
+- `https://ldap.pyrosa.com.do/lam/templates/login.php` returns `200 OK` on both SimpleHostMan nodes
+  with target `--resolve`
+- LAM protected paths including `/lam/config/`, `/lam/lib/`, `/lam/sess/`, and `/lam/tmp/` return
+  `403 Forbidden`
+- LDAPS connectivity from the running container to the old OpenLDAP service passed
+- authoritative PowerDNS on `primary`, `secondary`, and `vps-old` returns
+  `ldap.pyrosa.com.do -> 51.222.204.86`
