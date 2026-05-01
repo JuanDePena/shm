@@ -118,16 +118,19 @@ Suggested block layout for the current inventory:
 - `10200-10299` for `gomezrosado`
 - `10300-10399` for `adudoc`
 
-Within each block:
+Within the Pyrosa block:
 
-- `xx01` for the primary public application
-- `xx02` for a second public application under the same customer or zone
-- higher numbers reserved for future related applications
+- `10101-10109` for public and core web apps
+- `10120-10129` for DIS/sync operational apps
+- `10140-10149` for infrastructure-style web apps
+- `10160-10169` for helpers and helper sidecars
 
 Examples:
 
 - `pyrosa-wp`: `10101`
-- `pyrosa-sync`: `10102`
+- `pyrosa-sync`: `10121`
+- `pyrosa-repos`: `10141`
+- `pyrosa-helpers`: `10161`
 - `gomezrosado`: `10201`
 - `adudoc`: `10301`
 
@@ -227,7 +230,7 @@ Illustrative mapping for the current domains:
   - zone: `pyrosa.com.do`
   - canonical domain: `sync.pyrosa.com.do`
   - aliases: none
-  - backend port: `10102`
+  - backend port: `10121`
   - engine: MariaDB
   - workload: legacy PHP portal
   - future target: PostgreSQL after migration

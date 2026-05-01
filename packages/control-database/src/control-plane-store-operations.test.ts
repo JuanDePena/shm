@@ -311,7 +311,7 @@ test("buildAppContainerPlans preserves pgAdmin data and config mounts", async ()
       rows: [
         {
           slug: "pyrosa-pgadmin",
-          backend_port: 10111,
+          backend_port: 10143,
           runtime_image: "registry.example.com/pyrosa-pgadmin:stable",
           storage_root: "/srv/containers/apps/pyrosa-pgadmin",
           primary_node_id: "primary",
@@ -361,7 +361,7 @@ test("buildProxyPayload uses the managed Pyrosa wildcard certificate", async () 
         {
           app_id: "app-pyrosa-ldap",
           slug: "pyrosa-ldap",
-          backend_port: 10110,
+          backend_port: 10142,
           runtime_image: "registry.example.com/pyrosa-ldap:stable",
           primary_node_id: "primary",
           standby_node_id: "secondary",
@@ -395,7 +395,7 @@ test("buildProxyPayload preserves the Pyrosa helpers DFR route", async () => {
         {
           app_id: "app-pyrosa-helpers",
           slug: "pyrosa-helpers",
-          backend_port: 10112,
+          backend_port: 10161,
           runtime_image: "registry.example.com/pyrosa-helpers:stable",
           primary_node_id: "primary",
           standby_node_id: "secondary",
@@ -414,7 +414,7 @@ test("buildProxyPayload preserves the Pyrosa helpers DFR route", async () => {
   assert.deepEqual(result.plans[0]?.payload.extraProxyRoutes, [
     {
       pathPrefix: "/dfr/",
-      targetUrl: "http://127.0.0.1:10113/",
+      targetUrl: "http://127.0.0.1:10162/",
       websocket: true,
       noCanon: true,
       timeoutSeconds: 120
@@ -462,7 +462,7 @@ test("buildDesiredStateSpecFromInventory supports apps without databases", () =>
         zone: "pyrosa.com.do",
         canonical_domain: "repos.pyrosa.com.do",
         aliases: [],
-        backend_port: 10104,
+        backend_port: 10141,
         runtime_image: "registry.example.com/pyrosa-repos:stable",
         storage_root: "/srv/containers/apps/pyrosa-repos",
         mode: "active-passive"
@@ -516,7 +516,7 @@ test("buildDesiredStateSpecFromInventory supports multiple managed databases per
         zone: "pyrosa.com.do",
         canonical_domain: "sync.pyrosa.com.do",
         aliases: [],
-        backend_port: 10102,
+        backend_port: 10121,
         runtime_image: "registry.example.com/pyrosa-sync:stable",
         databases: [
           {

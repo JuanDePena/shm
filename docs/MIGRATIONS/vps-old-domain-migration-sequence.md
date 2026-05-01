@@ -1322,9 +1322,9 @@ Applied app:
 
 - app slug `pyrosa-helpers`
 - source `/home/wmpyrosa/public_html/_sites/helpers.pyrosa.com.do/`
-- PHP/static helper backend port `10112`
-- DFR FastAPI backend port `10113`
-- QR render microservice backend port `10114`
+- PHP/static helper backend port `10161`
+- DFR FastAPI backend port `10162`
+- QR render microservice backend port `10163`
 - runtime image `registry.example.com/pyrosa-helpers:stable`
 - DFR image `registry.example.com/pyrosa-helpers-dfr:stable`
 - QR render image `registry.example.com/pyrosa-helpers-qrcode:stable`
@@ -1506,7 +1506,7 @@ Changes:
 - `proxy.render` emits the managed Pyrosa wildcard certificate paths instead of assuming a
   hostname-specific Let's Encrypt lineage for every Pyrosa subdomain
 - `proxy.render` supports app-specific extra proxy routes; `pyrosa-helpers` preserves `/dfr/` on
-  backend `10113` with websocket upgrade handling while the main helper app remains on `10112`
+  backend `10162` with websocket upgrade handling while the main helper app remains on `10161`
 - bootstrap inventory parsing supports apps without managed databases
 - `bootstrap/apps.bootstrap.yaml` now includes all Pyrosa app resources currently represented in
   live desired state

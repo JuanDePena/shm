@@ -1021,7 +1021,7 @@ function resolveAppExtraProxyRoutes(
     return [
       {
         pathPrefix: "/dfr/",
-        targetUrl: "http://127.0.0.1:10113/",
+        targetUrl: "http://127.0.0.1:10162/",
         websocket: true,
         noCanon: true,
         timeoutSeconds: 120

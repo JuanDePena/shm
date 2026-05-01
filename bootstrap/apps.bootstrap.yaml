@@ -64,7 +64,7 @@ apps:
     zone: pyrosa.com.do
     canonical_domain: sync.pyrosa.com.do
     aliases: []
-    backend_port: 10102
+    backend_port: 10121
     runtime_image: registry.example.com/pyrosa-sync:stable
     databases:
       - id: database-pyrosa-sync
@@ -90,7 +90,7 @@ apps:
     zone: pyrosa.com.do
     canonical_domain: repos.pyrosa.com.do
     aliases: []
-    backend_port: 10104
+    backend_port: 10141
     runtime_image: registry.example.com/pyrosa-repos:stable
     storage_root: /srv/containers/apps/pyrosa-repos
     mode: active-passive
@@ -124,7 +124,7 @@ apps:
     zone: pyrosa.com.do
     canonical_domain: demosync.pyrosa.com.do
     aliases: []
-    backend_port: 10107
+    backend_port: 10122
     runtime_image: registry.example.com/pyrosa-demosync:stable
     databases:
       - id: database-pyrosa-demosync
@@ -149,7 +149,7 @@ apps:
     zone: pyrosa.com.do
     canonical_domain: erp.pyrosa.com.do
     aliases: []
-    backend_port: 10108
+    backend_port: 10104
     runtime_image: registry.example.com/pyrosa-placeholder:stable
     storage_root: /srv/containers/apps/pyrosa-erp
     mode: active-passive
@@ -159,7 +159,7 @@ apps:
     zone: pyrosa.com.do
     canonical_domain: portal.pyrosa.com.do
     aliases: []
-    backend_port: 10109
+    backend_port: 10102
     runtime_image: registry.example.com/pyrosa-placeholder:stable
     storage_root: /srv/containers/apps/pyrosa-portal
     mode: active-passive
@@ -169,7 +169,7 @@ apps:
     zone: pyrosa.com.do
     canonical_domain: ldap.pyrosa.com.do
     aliases: []
-    backend_port: 10110
+    backend_port: 10142
     runtime_image: registry.example.com/pyrosa-ldap:stable
     storage_root: /srv/containers/apps/pyrosa-ldap
     mode: active-passive
@@ -179,7 +179,7 @@ apps:
     zone: pyrosa.com.do
     canonical_domain: pgadmin.pyrosa.com.do
     aliases: []
-    backend_port: 10111
+    backend_port: 10143
     runtime_image: registry.example.com/pyrosa-pgadmin:stable
     storage_root: /srv/containers/apps/pyrosa-pgadmin
     mode: active-passive
@@ -189,7 +189,7 @@ apps:
     zone: pyrosa.com.do
     canonical_domain: helpers.pyrosa.com.do
     aliases: []
-    backend_port: 10112
+    backend_port: 10161
     runtime_image: registry.example.com/pyrosa-helpers:stable
     databases:
       - id: database-pyrosa-helpers-dfr

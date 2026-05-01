@@ -28,17 +28,18 @@ Live desired state currently includes:
 | App | Hostnames | Backend | Database | Status |
 | --- | --- | ---: | --- | --- |
 | `pyrosa-wp` | `pyrosa.com.do`, `www.pyrosa.com.do` | `10101` | MariaDB `app_pyrosa_wp` | phase 1 runtime active on primary and secondary |
+| `pyrosa-portal` | `portal.pyrosa.com.do`, `www.portal.pyrosa.com.do` | `10102` | none | phase 7 empty placeholder runtime active on primary and secondary; `www` alias cut over in phase 8 |
 | `pyrosa-demoportal` | `demoportal.pyrosa.com.do` | `10103` | MariaDB `app_pyrosa_demoportal` | phase 2 runtime active on primary and secondary |
-| `pyrosa-repos` | `repos.pyrosa.com.do` | `10104` | none | phase 3 RPM repository runtime active on primary and secondary |
+| `pyrosa-erp` | `erp.pyrosa.com.do`, `www.erp.pyrosa.com.do` | `10104` | none | phase 7 empty placeholder runtime active on primary and secondary; `www` alias cut over in phase 8 |
 | `pyrosa-demoerp` | `demoerp.pyrosa.com.do` | `10105` | PostgreSQL `app_pyrosa_demoerp` | phase 4 Dolibarr runtime active on primary and secondary |
 | `pyrosa-api` | `api.pyrosa.com.do`, `www.api.pyrosa.com.do` | `10106` | none | phase 5 PHP API runtime active on primary and secondary; `www` alias cut over in phase 8 |
-| `pyrosa-demosync` | `demosync.pyrosa.com.do`, `www.demosync.pyrosa.com.do` | `10107` | MariaDB `app_pyrosa_demosync`, `app_pyrosa_demosync_qbo` | phase 6 DIS/QBO demo runtime active on primary and secondary; `www` alias cut over in phase 8 |
-| `pyrosa-erp` | `erp.pyrosa.com.do`, `www.erp.pyrosa.com.do` | `10108` | none | phase 7 empty placeholder runtime active on primary and secondary; `www` alias cut over in phase 8 |
-| `pyrosa-portal` | `portal.pyrosa.com.do`, `www.portal.pyrosa.com.do` | `10109` | none | phase 7 empty placeholder runtime active on primary and secondary; `www` alias cut over in phase 8 |
-| `pyrosa-ldap` | `ldap.pyrosa.com.do` | `10110` | none | phase 9 LDAP Account Manager UI active on primary and secondary; OpenLDAP migrated to SimpleHostMan and disabled on `vps-old` |
-| `pyrosa-pgadmin` | `pgadmin.pyrosa.com.do` | `10111` | pgAdmin SQLite config store | phase 10 pgAdmin 4 runtime active on primary and secondary |
-| `pyrosa-sync` | `sync.pyrosa.com.do` | `10102` | MariaDB `app_pyrosa_sync`, `app_pyrosa_sync_qbo`; PostgreSQL conversion deferred | phase 13 DIS/QBO production runtime active; workers active on primary only |
-| `pyrosa-helpers` | `helpers.pyrosa.com.do` | `10112`; DFR `10113`; QR render `10114` | PostgreSQL `app_pyrosa_helpers_dfr` imported for preservation; DFR runtime remains JSON-store backed | phase 14 helper runtime active on primary and secondary |
+| `pyrosa-sync` | `sync.pyrosa.com.do` | `10121` | MariaDB `app_pyrosa_sync`, `app_pyrosa_sync_qbo`; PostgreSQL conversion deferred | phase 13 DIS/QBO production runtime active; workers active on primary only |
+| `pyrosa-demosync` | `demosync.pyrosa.com.do`, `www.demosync.pyrosa.com.do` | `10122` | MariaDB `app_pyrosa_demosync`, `app_pyrosa_demosync_qbo` | phase 6 DIS/QBO demo runtime active on primary and secondary; `www` alias cut over in phase 8 |
+| `pyrosa-newsync` | internal/manual runtime | `10123` | mirrors production sync runtime shape | manual sidecar active on primary only |
+| `pyrosa-repos` | `repos.pyrosa.com.do` | `10141` | none | phase 3 RPM repository runtime active on primary and secondary |
+| `pyrosa-ldap` | `ldap.pyrosa.com.do` | `10142` | none | phase 9 LDAP Account Manager UI active on primary and secondary; OpenLDAP migrated to SimpleHostMan and disabled on `vps-old` |
+| `pyrosa-pgadmin` | `pgadmin.pyrosa.com.do` | `10143` | pgAdmin SQLite config store | phase 10 pgAdmin 4 runtime active on primary and secondary |
+| `pyrosa-helpers` | `helpers.pyrosa.com.do` | `10161`; DFR `10162`; QR render `10163` | PostgreSQL `app_pyrosa_helpers_dfr` imported for preservation; DFR runtime remains JSON-store backed | phase 14 helper runtime active on primary and secondary |
 
 All Pyrosa app resources in the live desired state are also represented in
 `bootstrap/apps.bootstrap.yaml`. `pyrosa-repos`, `pyrosa-api`, `pyrosa-erp`, `pyrosa-portal`,
@@ -1416,9 +1417,9 @@ Applied runtime state:
 
 - app slug `pyrosa-helpers`
 - source `/home/wmpyrosa/public_html/_sites/helpers.pyrosa.com.do/`
-- PHP/static helper backend port `10112`
-- DFR FastAPI backend port `10113`
-- QR render microservice backend port `10114`
+- PHP/static helper backend port `10161`
+- DFR FastAPI backend port `10162`
+- QR render microservice backend port `10163`
 - runtime image tag `registry.example.com/pyrosa-helpers:stable`
 - DFR image tag `registry.example.com/pyrosa-helpers-dfr:stable`
 - QR render image tag `registry.example.com/pyrosa-helpers-qrcode:stable`
@@ -1617,7 +1618,7 @@ Control-plane hardening:
 - `proxy.render` now passes explicit Pyrosa wildcard certificate paths instead of assuming a
   hostname-specific Let's Encrypt lineage exists for every subdomain
 - `proxy.render` now supports app-specific extra proxy routes; `pyrosa-helpers` uses this to preserve
-  `/dfr/` on backend `10113` with websocket upgrade handling while the main app remains on `10112`
+  `/dfr/` on backend `10162` with websocket upgrade handling while the main app remains on `10161`
 - bootstrap inventory parsing now supports apps without managed databases, which covers `repos`,
   `api`, `erp`, `portal`, `ldap`, and `pgadmin`
 - `bootstrap/apps.bootstrap.yaml` now includes the full Pyrosa app set represented by live desired
@@ -1685,3 +1686,39 @@ Validation:
   DFR health, LDAP/LAM, pgAdmin, and code-server returned `200 OK` on both SimpleHostMan nodes
 - `vps-old` still has no listeners on old production ports `25`, `53`, `80`, `110`, `143`, `389`,
   `443`, `465`, `587`, `636`, `993`, `995`, `3306`, `5432`, `6379`, or `8080`
+
+## Pyrosa Port Renumbering
+
+Completed on `2026-05-01` to make the Pyrosa runtime map easier to scan and leave clear ranges for
+related app families.
+
+Applied map:
+
+- public/core web apps: `pyrosa-wp` `10101`, `pyrosa-portal` `10102`, `pyrosa-demoportal` `10103`,
+  `pyrosa-erp` `10104`, `pyrosa-demoerp` `10105`, `pyrosa-api` `10106`
+- DIS/sync apps: `pyrosa-sync` `10121`, `pyrosa-demosync` `10122`, manual primary-only
+  `pyrosa-newsync` `10123`
+- infrastructure-style apps: `pyrosa-repos` `10141`, `pyrosa-ldap` `10142`,
+  `pyrosa-pgadmin` `10143`
+- helpers: `pyrosa-helpers` `10161`, DFR sidecar `10162`, QR renderer `10163`
+
+Execution notes:
+
+- `bootstrap/apps.bootstrap.yaml` and the live `control_plane_apps` catalog were updated for all
+  managed Pyrosa apps
+- `pyrosa-newsync` remains a manual primary-only runtime and was updated in its local Quadlet,
+  Apache vhost, and `/etc/simplehost/inventory.apps.yaml`
+- manual `www.api`, `www.demosync`, `www.erp`, and `www.portal` vhosts now point to the renumbered
+  backends on both SimpleHostMan nodes
+- Apache syntax passed and `httpd` was reloaded on `primary` and `secondary`
+- a fresh control-plane reconciliation run completed with `0` generated jobs and `0` pending jobs
+
+Validation:
+
+- active container ports on `primary` and `secondary` match the applied map; `pyrosa-newsync` exists
+  only on `primary`
+- forced HTTPS checks through `primary` and `secondary` reached Pyrosa apex, portal/demoportal,
+  ERP/demoERP, API, sync/demosync, repos, LDAP, pgAdmin, helpers, and the manual `www.*` vhosts
+  without `502` or `503` responses
+- the temporary failed `sync` and `demosync` worker unit states caused by controlled container
+  restarts were reset; all worker units are active again on `primary`
