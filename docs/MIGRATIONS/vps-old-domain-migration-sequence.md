@@ -20,7 +20,7 @@ pilot migrations that established the current SimpleHostMan pattern.
 | `zcrmt.com` | migrated WordPress runtime on `app-zcrmt` | Zoho preserved | WordPress kept on MariaDB `app_zcrmt_wp` | closed |
 | `merlelaw.com` | migrated blank static runtime on `app-merlelaw` | SimpleHostMan mail live | none | closed |
 | `engilum.com` | external web targets preserved | Zoho preserved | none | DNS-only staged |
-| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, `pyrosa-repos`, `pyrosa-demoerp`, and `pyrosa-api` runtimes active; `sync`/`helpers` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress and demoportal migrated to MariaDB; demoerp migrated to PostgreSQL; `repos` and `api` have no local database | phase 5 complete |
+| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, `pyrosa-repos`, `pyrosa-demoerp`, `pyrosa-api`, and `pyrosa-demosync` runtimes active; `sync`/`helpers` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress, demoportal, and demosync migrated to MariaDB; demoerp migrated to PostgreSQL; `repos` and `api` have no local database | phase 6 complete |
 | `solucionesmercantilnr.com` | not migrated | retired | none | out of scope: expired, not renewing |
 | `pyrosa.net` | not migrated | retired | none | out of scope: expired, not renewing |
 
@@ -713,6 +713,68 @@ Validation:
   the new `api` A record
 - public checks from `1.1.1.1` and `8.8.8.8` returned the new `api` A record
 - public `www.api.pyrosa.com.do` remained on `51.161.11.249`
+
+### 2026-05-01: pyrosa.com.do demosync phase 6
+
+`demosync.pyrosa.com.do` was copied from `vps-old`, imported into MariaDB, and started as
+`app-pyrosa-demosync` on both SimpleHostMan nodes.
+
+Applied app:
+
+- app slug `pyrosa-demosync`
+- source `/home/wmpyrosa/public_html/_sites/demosync.pyrosa.com.do/`
+- copied source excludes legacy `error_log` and `dis/.git`
+- copied file count after target smoke checks `5,528`, staged size about `255M`
+- backend port `10107`
+- runtime image tag `registry.example.com/pyrosa-demosync:stable`
+- storage root `/srv/containers/apps/pyrosa-demosync`
+- `app-pyrosa-demosync.service` active on `primary` and `secondary`
+
+Runtime/security outcome:
+
+- no cron or active process for the demo DIS tree was found on `vps-old`, so no worker service was
+  started
+- legacy symlinks from `demosync` into the production `sync` Tabler asset tree were replaced with
+  real copied assets on the target, keeping `demosync` self-contained
+- copied PHP configs now read database settings from the container environment instead of hardcoded
+  cPanel socket credentials
+- runtime secrets stayed local-only in `/etc/containers/systemd/env/app-pyrosa-demosync.env`
+- direct HTTP access to `dis/inc/config.php`, `qbo/includes/config.php`, `dis/etc/`, `dis/storage/`,
+  `dis/tmp/`, dotfiles, logs, `.ini`, `.sql`, backup files, `composer.*`, and `package*.json` is
+  denied by the container image Apache policy and existing `.htaccess` files
+- the Apache `AllowOverride All` and deny policy are baked into the `pyrosa-demosync` image so
+  generic container reconciliation does not rely on an external vhost mount for basic routing
+
+Database outcome:
+
+- `wmpyrosa_disdemo` imported into MariaDB `app_pyrosa_demosync`
+- `wmpyrosa_qbo` copied into MariaDB `app_pyrosa_demosync_qbo` for the demo runtime
+- production `sync.pyrosa.com.do` database `wmpyrosa_dis` remains on `vps-old`
+- production use of `wmpyrosa_qbo` remains on `vps-old`
+
+DNS and TLS outcome:
+
+- SimpleHostMan PowerDNS serves `demosync.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- `www.demosync.pyrosa.com.do` remains on `51.161.11.249` because the target wildcard certificate
+  does not cover that two-label hostname
+- the legacy DNS zone on `vps-old` also serves `demosync.pyrosa.com.do A -> 51.222.204.86` with TTL
+  `300` for resolvers that still have old nameserver delegation cached
+- `sync.pyrosa.com.do` and `helpers.pyrosa.com.do` remain pointed at `51.161.11.249`
+
+Validation:
+
+- `https://demosync.pyrosa.com.do/dis/public/login` returns `200 OK` on both nodes using
+  `--resolve`
+- `https://demosync.pyrosa.com.do/qbo/oauth2/` returns `200 OK` with the expected missing-parameter
+  response on both nodes
+- copied config paths return `403 Forbidden` on both nodes
+- Tabler CSS asset checks return `200 OK` on both nodes
+- stale-cache checks against legacy `51.161.11.249` return `200 OK` for login and QBO OAuth pages
+  and `403 Forbidden` for copied config paths
+- authoritative checks from `51.222.204.86`, `51.222.206.196`, and legacy `51.161.11.249` returned
+  the new `demosync` A record
+- public checks from `1.1.1.1` and `8.8.8.8` returned the new `demosync` A record
+- public `www.demosync.pyrosa.com.do` remained on `51.161.11.249`
 
 ### 2026-04-30: ppdpr.us web runtime cutover
 

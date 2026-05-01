@@ -30,12 +30,13 @@ Live desired state currently includes:
 | `pyrosa-repos` | `repos.pyrosa.com.do` | `10104` | none | phase 3 RPM repository runtime active on primary and secondary |
 | `pyrosa-demoerp` | `demoerp.pyrosa.com.do` | `10105` | PostgreSQL `app_pyrosa_demoerp` | phase 4 Dolibarr runtime active on primary and secondary |
 | `pyrosa-api` | `api.pyrosa.com.do` | `10106` | none | phase 5 PHP API runtime active on primary and secondary |
+| `pyrosa-demosync` | `demosync.pyrosa.com.do` | `10107` | MariaDB `app_pyrosa_demosync`, `app_pyrosa_demosync_qbo` | phase 6 DIS/QBO demo runtime active on primary and secondary |
 | `pyrosa-sync` | `sync.pyrosa.com.do` | `10102` | MariaDB `app_pyrosa_sync`, pending PostgreSQL | desired only; do not migrate now |
 
 `pyrosa-wp`, `pyrosa-demoportal`, and `pyrosa-sync` are also present in
-`bootstrap/apps.bootstrap.yaml`. `pyrosa-repos`, `pyrosa-demoerp`, and `pyrosa-api` are represented
-only in live desired state until the bootstrap inventory is refreshed. `pyrosa-repos` and
-`pyrosa-api` intentionally have no database resource.
+`bootstrap/apps.bootstrap.yaml`. `pyrosa-repos`, `pyrosa-demoerp`, `pyrosa-api`, and
+`pyrosa-demosync` are represented only in live desired state until the bootstrap inventory is
+refreshed. `pyrosa-repos` and `pyrosa-api` intentionally have no database resource.
 
 The target node public IP for migrated web hostnames is `51.222.204.86`.
 
@@ -50,7 +51,7 @@ Legacy public IP: `51.161.11.249`.
 | `code.pyrosa.com.do` | proxy, not document root content | empty docroot | `code-server` on `0.0.0.0:8080` | service account/runtime on old host | keep on `vps-old` unless intentionally rebuilding developer tooling |
 | `demoerp.pyrosa.com.do` | `_sites/demoerp.pyrosa.com.do/htdocs` | `267M` htdocs; about `2.0G` tree | Dolibarr-style PHP app | PostgreSQL `dolibarr_demoerp` on PostgreSQL 18 | migrated in phase 4 as `pyrosa-demoerp`, kept on PostgreSQL |
 | `demoportal.pyrosa.com.do` | `_sites/demoportal.pyrosa.com.do` | `194M` source; `79M` staged without `node_modules`/logs | Laravel 12 app | MySQL `wmpyrosa_synct`, Redis/local mail settings observed in legacy env | migrated in phase 2 as `pyrosa-demoportal`, kept on MariaDB |
-| `demosync.pyrosa.com.do` | `_sites/demosync.pyrosa.com.do` | `88M` | DIS/QBO demo app | MySQL `wmpyrosa_disdemo` and shared `wmpyrosa_qbo` | defer with the sync family unless explicitly approved |
+| `demosync.pyrosa.com.do` | `_sites/demosync.pyrosa.com.do` | `88M` source; `255M` staged after local Tabler asset copy | DIS/QBO demo app | MySQL `wmpyrosa_disdemo` and shared `wmpyrosa_qbo` | migrated in phase 6 as `pyrosa-demosync`, kept on MariaDB |
 | `erp.pyrosa.com.do` | `_sites/erp.pyrosa.com.do` | empty | placeholder | none observed | leave DNS on old or create placeholder app later |
 | `helpers.pyrosa.com.do` | `_sites/helpers.pyrosa.com.do` | `6.6G` | helper tools; Apache proxy path to `localhost:3333` configured | PostgreSQL `do_fiscal_reports`; active cron jobs | do not migrate now |
 | `ldap.pyrosa.com.do` | `_sites/ldap.pyrosa.com.do` | `91M` | LDAP Account Manager style UI | OpenLDAP on `389`/`636` | keep on `vps-old` unless planning directory migration |
@@ -66,10 +67,10 @@ MySQL:
 | Database | Approx size | Observed consumers |
 | --- | ---: | --- |
 | `wmpyrosa_dis` | `3.8G` | `sync.pyrosa.com.do` |
-| `wmpyrosa_disdemo` | `57M` | `demosync.pyrosa.com.do` |
+| `wmpyrosa_disdemo` | `57M` | migrated to MariaDB `app_pyrosa_demosync` for `demosync.pyrosa.com.do` |
 | `wmpyrosa_2024` | `29M` | WordPress apex |
 | `wmpyrosa_synct` | `0.5M` | `demoportal.pyrosa.com.do` |
-| `wmpyrosa_qbo` | `0.2M` | `sync` and `demosync` QBO pieces |
+| `wmpyrosa_qbo` | `0.2M` | production `sync`; copied to MariaDB `app_pyrosa_demosync_qbo` for `demosync` |
 
 PostgreSQL 18:
 
@@ -168,7 +169,8 @@ Defer until after period close:
 
 - `sync.pyrosa.com.do` and its production DIS/QBO database/worker set.
 - `helpers.pyrosa.com.do` and `do_fiscal_reports`.
-- `demosync.pyrosa.com.do` if it shares operational assumptions with the sync stack.
+- Production workers for the sync family. `demosync.pyrosa.com.do` was later migrated in phase 6
+  after validation showed no active cron or worker process on `vps-old`.
 
 Defer until separately approved:
 
@@ -746,3 +748,124 @@ DNS validation at `2026-05-01 02:22 UTC`:
 - `8.8.8.8` returned `api.pyrosa.com.do A -> 51.222.204.86`
 - `1.1.1.1` returned `api.pyrosa.com.do A -> 51.222.204.86`
 - public `www.api.pyrosa.com.do` remained on `51.161.11.249`
+
+## Phase 6 Execution Record
+
+Completed on `2026-05-01` and scoped only to:
+
+- `demosync.pyrosa.com.do`
+
+The following hostnames remain intentionally on `vps-old`:
+
+- `sync.pyrosa.com.do`
+- `helpers.pyrosa.com.do`
+- `code.pyrosa.com.do`
+- `pgadmin.pyrosa.com.do`
+- `ldap.pyrosa.com.do`
+- `erp.pyrosa.com.do`
+- `portal.pyrosa.com.do`
+- `www.api.pyrosa.com.do`
+- `www.demosync.pyrosa.com.do`
+
+### Runtime
+
+Applied runtime state:
+
+- app slug `pyrosa-demosync`
+- source path copied from
+  `root@51.161.11.249:/home/wmpyrosa/public_html/_sites/demosync.pyrosa.com.do/`
+- copied source excludes legacy `error_log` and `dis/.git`
+- copied file count after target smoke checks: `5,528`
+- copied payload size: about `255M`
+- backend port `10107`
+- runtime image tag `registry.example.com/pyrosa-demosync:stable`
+- storage root `/srv/containers/apps/pyrosa-demosync`
+- `app-pyrosa-demosync.service` active on `primary`
+- `app-pyrosa-demosync.service` active on `secondary`
+
+The app is a PHP DIS/QBO demo runtime. No cron or active process for the demo tree was found on
+`vps-old`, so no worker service was started on SimpleHostMan.
+
+The legacy source used symlinks from `demosync` into the production `sync` tree for Tabler UI assets:
+
+- `assets/tabler`
+- `assets/tabler-preview`
+
+Those symlinks were replaced on the target with real copied assets from the old `sync` tree so the
+`demosync` container is self-contained and does not depend on the deferred production `sync` runtime.
+
+The PHP config files copied from cPanel were adjusted on the target to read database connection
+values from the container environment instead of hardcoded local socket credentials. Runtime secrets
+remain local-only in `/etc/containers/systemd/env/app-pyrosa-demosync.env` and were not committed.
+
+Direct HTTP access to copied config and private runtime paths is denied by the container image Apache
+policy plus existing `.htaccess` files:
+
+- `dis/inc/config.php`
+- `qbo/includes/config.php`
+- `dis/etc/`
+- `dis/storage/`
+- `dis/tmp/`
+- dotfiles, logs, `.ini`, `.sql`, backup files, `composer.*`, and `package*.json`
+
+The `pyrosa-demosync` image carries the Apache `AllowOverride All` and deny policy directly so future
+generic container reconciliation does not depend on an external vhost mount for basic routing and
+config protection.
+
+### Databases
+
+Imported MariaDB snapshots:
+
+- `wmpyrosa_disdemo` -> `app_pyrosa_demosync`
+- `wmpyrosa_qbo` -> `app_pyrosa_demosync_qbo`
+
+Post-import validation:
+
+- `app_pyrosa_demosync`: `31` tables, about `11.92M` allocated on target
+- `app_pyrosa_demosync_qbo`: `2` tables, about `0.16M` allocated on target
+- DIS app database smoke check returned `62` `dis_params` rows from both app nodes
+- QBO database smoke check returned `1` client row from both app nodes
+
+The production `sync.pyrosa.com.do` database `wmpyrosa_dis` and production use of `wmpyrosa_qbo`
+remain on `vps-old`.
+
+### DNS And TLS
+
+SimpleHostMan PowerDNS now serves:
+
+- `demosync.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- `www.demosync.pyrosa.com.do A -> 51.161.11.249`
+- `sync.pyrosa.com.do A -> 51.161.11.249`
+- `helpers.pyrosa.com.do A -> 51.161.11.249`
+
+`www.demosync.pyrosa.com.do` was intentionally left on `vps-old` because the current target
+certificate is `*.pyrosa.com.do`; that wildcard covers `demosync.pyrosa.com.do` but not the
+two-label `www.demosync.pyrosa.com.do` name.
+
+The legacy DNS zone on `vps-old` was also updated so cached old delegations answer
+`demosync.pyrosa.com.do A -> 51.222.204.86` with TTL `300`.
+
+### Validation
+
+Backend and vhost validation:
+
+- `https://demosync.pyrosa.com.do/dis/public/login` with `--resolve` to `51.222.204.86` returns
+  `200 OK`.
+- `https://demosync.pyrosa.com.do/dis/public/login` with `--resolve` to `51.222.206.196` returns
+  `200 OK`.
+- `https://demosync.pyrosa.com.do/qbo/oauth2/` returns `200 OK` with the expected missing-parameter
+  response on both nodes.
+- `https://demosync.pyrosa.com.do/dis/inc/config.php` returns `403 Forbidden` on both nodes.
+- `https://demosync.pyrosa.com.do/qbo/includes/config.php` returns `403 Forbidden` on both nodes.
+- `https://demosync.pyrosa.com.do/assets/tabler/css/tabler.min.css` returns `200 OK` on both nodes.
+- stale-cache checks against legacy `51.161.11.249` return `200 OK` for the login and QBO OAuth
+  missing-parameter pages, and `403 Forbidden` for copied config paths.
+
+DNS validation at `2026-05-01 02:48 UTC`:
+
+- authoritative `51.222.204.86` returned `demosync.pyrosa.com.do A -> 51.222.204.86`
+- authoritative `51.222.206.196` returned `demosync.pyrosa.com.do A -> 51.222.204.86`
+- legacy authoritative `51.161.11.249` returned `demosync.pyrosa.com.do A -> 51.222.204.86`
+- `8.8.8.8` returned `demosync.pyrosa.com.do A -> 51.222.204.86`
+- `1.1.1.1` returned `demosync.pyrosa.com.do A -> 51.222.204.86`
+- public `www.demosync.pyrosa.com.do` remained on `51.161.11.249`
