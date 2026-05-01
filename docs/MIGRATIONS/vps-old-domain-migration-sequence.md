@@ -20,7 +20,7 @@ pilot migrations that established the current SimpleHostMan pattern.
 | `zcrmt.com` | migrated WordPress runtime on `app-zcrmt` | Zoho preserved | WordPress kept on MariaDB `app_zcrmt_wp` | closed |
 | `merlelaw.com` | migrated blank static runtime on `app-merlelaw` | SimpleHostMan mail live | none | closed |
 | `engilum.com` | external web targets preserved | Zoho preserved | none | DNS-only staged |
-| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, `pyrosa-repos`, `pyrosa-demoerp`, `pyrosa-api`, and `pyrosa-demosync` runtimes active; `sync`/`helpers` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress, demoportal, and demosync migrated to MariaDB; demoerp migrated to PostgreSQL; `repos` and `api` have no local database | phase 6 complete |
+| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, `pyrosa-repos`, `pyrosa-demoerp`, `pyrosa-api`, `pyrosa-demosync`, `pyrosa-erp`, and `pyrosa-portal` runtimes active; `sync`/`helpers` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress, demoportal, and demosync migrated to MariaDB; demoerp migrated to PostgreSQL; `repos`, `api`, `erp`, and `portal` have no local database | phase 7 complete |
 | `solucionesmercantilnr.com` | not migrated | retired | none | out of scope: expired, not renewing |
 | `pyrosa.net` | not migrated | retired | none | out of scope: expired, not renewing |
 
@@ -775,6 +775,45 @@ Validation:
   the new `demosync` A record
 - public checks from `1.1.1.1` and `8.8.8.8` returned the new `demosync` A record
 - public `www.demosync.pyrosa.com.do` remained on `51.161.11.249`
+
+### 2026-05-01: pyrosa.com.do placeholder phase 7
+
+The empty placeholder hostnames `erp.pyrosa.com.do` and `portal.pyrosa.com.do` were promoted into
+SimpleHostMan app desired state.
+
+Applied apps:
+
+- app slug `pyrosa-erp`, backend port `10108`
+- app slug `pyrosa-portal`, backend port `10109`
+- runtime image tag `registry.example.com/pyrosa-placeholder:stable`
+- storage roots `/srv/containers/apps/pyrosa-erp` and `/srv/containers/apps/pyrosa-portal`
+- no database resources
+- both services active on `primary` and `secondary`
+
+Runtime/security outcome:
+
+- source docroots on `vps-old` were empty, with only `cgi-bin/` and ACME challenge directories
+- target roots are intentionally blank and preserve the legacy `403 Forbidden` response for `/`
+- dotfile checks such as `/.env` return `403 Forbidden`
+
+DNS and TLS outcome:
+
+- SimpleHostMan PowerDNS serves `erp.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- SimpleHostMan PowerDNS serves `portal.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- `www.erp.pyrosa.com.do` and `www.portal.pyrosa.com.do` remain on `51.161.11.249` because the
+  target wildcard certificate does not cover those two-label hostnames
+- the legacy DNS zone on `vps-old` also serves the new `erp` and `portal` A records for resolvers
+  that still have old nameserver delegation cached
+
+Validation:
+
+- `https://erp.pyrosa.com.do/` returns `403 Forbidden` on both nodes using `--resolve`
+- `https://portal.pyrosa.com.do/` returns `403 Forbidden` on both nodes using `--resolve`
+- stale-cache checks against legacy `51.161.11.249` return the same `403 Forbidden` response
+- authoritative checks from `51.222.204.86`, `51.222.206.196`, and legacy `51.161.11.249` returned
+  the new `erp` and `portal` A records
+- public checks from `1.1.1.1` and `8.8.8.8` returned the new `erp` and `portal` A records
+- public `www.erp.pyrosa.com.do` and `www.portal.pyrosa.com.do` remained on `51.161.11.249`
 
 ### 2026-04-30: ppdpr.us web runtime cutover
 

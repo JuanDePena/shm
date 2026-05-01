@@ -31,12 +31,15 @@ Live desired state currently includes:
 | `pyrosa-demoerp` | `demoerp.pyrosa.com.do` | `10105` | PostgreSQL `app_pyrosa_demoerp` | phase 4 Dolibarr runtime active on primary and secondary |
 | `pyrosa-api` | `api.pyrosa.com.do` | `10106` | none | phase 5 PHP API runtime active on primary and secondary |
 | `pyrosa-demosync` | `demosync.pyrosa.com.do` | `10107` | MariaDB `app_pyrosa_demosync`, `app_pyrosa_demosync_qbo` | phase 6 DIS/QBO demo runtime active on primary and secondary |
+| `pyrosa-erp` | `erp.pyrosa.com.do` | `10108` | none | phase 7 empty placeholder runtime active on primary and secondary |
+| `pyrosa-portal` | `portal.pyrosa.com.do` | `10109` | none | phase 7 empty placeholder runtime active on primary and secondary |
 | `pyrosa-sync` | `sync.pyrosa.com.do` | `10102` | MariaDB `app_pyrosa_sync`, pending PostgreSQL | desired only; do not migrate now |
 
 `pyrosa-wp`, `pyrosa-demoportal`, and `pyrosa-sync` are also present in
 `bootstrap/apps.bootstrap.yaml`. `pyrosa-repos`, `pyrosa-demoerp`, `pyrosa-api`, and
-`pyrosa-demosync` are represented only in live desired state until the bootstrap inventory is
-refreshed. `pyrosa-repos` and `pyrosa-api` intentionally have no database resource.
+`pyrosa-demosync`, `pyrosa-erp`, and `pyrosa-portal` are represented only in live desired state
+until the bootstrap inventory is refreshed. `pyrosa-repos`, `pyrosa-api`, `pyrosa-erp`, and
+`pyrosa-portal` intentionally have no database resource.
 
 The target node public IP for migrated web hostnames is `51.222.204.86`.
 
@@ -52,11 +55,11 @@ Legacy public IP: `51.161.11.249`.
 | `demoerp.pyrosa.com.do` | `_sites/demoerp.pyrosa.com.do/htdocs` | `267M` htdocs; about `2.0G` tree | Dolibarr-style PHP app | PostgreSQL `dolibarr_demoerp` on PostgreSQL 18 | migrated in phase 4 as `pyrosa-demoerp`, kept on PostgreSQL |
 | `demoportal.pyrosa.com.do` | `_sites/demoportal.pyrosa.com.do` | `194M` source; `79M` staged without `node_modules`/logs | Laravel 12 app | MySQL `wmpyrosa_synct`, Redis/local mail settings observed in legacy env | migrated in phase 2 as `pyrosa-demoportal`, kept on MariaDB |
 | `demosync.pyrosa.com.do` | `_sites/demosync.pyrosa.com.do` | `88M` source; `255M` staged after local Tabler asset copy | DIS/QBO demo app | MySQL `wmpyrosa_disdemo` and shared `wmpyrosa_qbo` | migrated in phase 6 as `pyrosa-demosync`, kept on MariaDB |
-| `erp.pyrosa.com.do` | `_sites/erp.pyrosa.com.do` | empty | placeholder | none observed | leave DNS on old or create placeholder app later |
+| `erp.pyrosa.com.do` | `_sites/erp.pyrosa.com.do` | empty | placeholder | none observed | migrated in phase 7 as an empty `pyrosa-erp` placeholder, preserving `403` |
 | `helpers.pyrosa.com.do` | `_sites/helpers.pyrosa.com.do` | `6.6G` | helper tools; Apache proxy path to `localhost:3333` configured | PostgreSQL `do_fiscal_reports`; active cron jobs | do not migrate now |
 | `ldap.pyrosa.com.do` | `_sites/ldap.pyrosa.com.do` | `91M` | LDAP Account Manager style UI | OpenLDAP on `389`/`636` | keep on `vps-old` unless planning directory migration |
 | `pgadmin.pyrosa.com.do` | proxy, not document root content | empty docroot | pgAdmin4 on `127.0.0.1:5050` | PostgreSQL admin surface | keep on `vps-old` with PostgreSQL until DB estate is moved |
-| `portal.pyrosa.com.do` | `_sites/portal.pyrosa.com.do` | empty | placeholder | none observed | leave DNS on old or create placeholder app later |
+| `portal.pyrosa.com.do` | `_sites/portal.pyrosa.com.do` | empty | placeholder | none observed | migrated in phase 7 as an empty `pyrosa-portal` placeholder, preserving `403` |
 | `repos.pyrosa.com.do` | `_sites/repos.pyrosa.com.do` | `574M` | SLES/Yum RPM repository | `sbotools` repo metadata and signed package metadata | migrated in phase 3 as `pyrosa-repos` |
 | `sync.pyrosa.com.do` | `_sites/sync.pyrosa.com.do` | `4.1G` | DIS/QBO production app and active PHP workers | MySQL `wmpyrosa_dis` about `3.8G`, `wmpyrosa_qbo`, Redis | do not migrate now |
 
@@ -180,9 +183,7 @@ Defer until separately approved:
 
 ## Open Checks Before Execution
 
-- Decide whether placeholders `erp.pyrosa.com.do` and `portal.pyrosa.com.do` should become blank
-  SimpleHostMan apps or remain old-host DNS records.
-- Capture a fresh final DB dump timestamp immediately before each cutover.
+- Capture a fresh final DB dump timestamp immediately before each cutover that includes a database.
 
 ## Commit And Push Blocks
 
@@ -869,3 +870,84 @@ DNS validation at `2026-05-01 02:48 UTC`:
 - `8.8.8.8` returned `demosync.pyrosa.com.do A -> 51.222.204.86`
 - `1.1.1.1` returned `demosync.pyrosa.com.do A -> 51.222.204.86`
 - public `www.demosync.pyrosa.com.do` remained on `51.161.11.249`
+
+## Phase 7 Execution Record
+
+Completed on `2026-05-01` and scoped only to the empty placeholder hostnames:
+
+- `erp.pyrosa.com.do`
+- `portal.pyrosa.com.do`
+
+The following hostnames remain intentionally on `vps-old`:
+
+- `sync.pyrosa.com.do`
+- `helpers.pyrosa.com.do`
+- `code.pyrosa.com.do`
+- `pgadmin.pyrosa.com.do`
+- `ldap.pyrosa.com.do`
+- `www.api.pyrosa.com.do`
+- `www.demosync.pyrosa.com.do`
+- `www.erp.pyrosa.com.do`
+- `www.portal.pyrosa.com.do`
+
+### Runtime
+
+Applied runtime state:
+
+- app slug `pyrosa-erp`
+- app slug `pyrosa-portal`
+- source paths on `vps-old` were empty docroots with only `cgi-bin/` and ACME challenge directories
+- copied payload size: empty placeholder roots
+- backend ports `10108` and `10109`
+- runtime image tag `registry.example.com/pyrosa-placeholder:stable`
+- storage roots `/srv/containers/apps/pyrosa-erp` and `/srv/containers/apps/pyrosa-portal`
+- `app-pyrosa-erp.service` active on `primary`
+- `app-pyrosa-erp.service` active on `secondary`
+- `app-pyrosa-portal.service` active on `primary`
+- `app-pyrosa-portal.service` active on `secondary`
+
+These are intentionally blank apps with no database resource. The migrated behavior preserves the
+legacy `403 Forbidden` response for `/` because the source docroots had no index content and
+directory listing was not available.
+
+### DNS And TLS
+
+SimpleHostMan PowerDNS now serves:
+
+- `erp.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- `portal.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- `www.erp.pyrosa.com.do A -> 51.161.11.249`
+- `www.portal.pyrosa.com.do A -> 51.161.11.249`
+- `sync.pyrosa.com.do A -> 51.161.11.249`
+- `helpers.pyrosa.com.do A -> 51.161.11.249`
+
+`www.erp.pyrosa.com.do` and `www.portal.pyrosa.com.do` were intentionally left on `vps-old` because
+the current target certificate is `*.pyrosa.com.do`; that wildcard covers `erp.pyrosa.com.do` and
+`portal.pyrosa.com.do` but not the two-label `www.*` names.
+
+The legacy DNS zone on `vps-old` was also updated so cached old delegations answer:
+
+- `erp.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- `portal.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+
+### Validation
+
+Backend and vhost validation:
+
+- `https://erp.pyrosa.com.do/` with `--resolve` to `51.222.204.86` returns `403 Forbidden`.
+- `https://erp.pyrosa.com.do/` with `--resolve` to `51.222.206.196` returns `403 Forbidden`.
+- `https://portal.pyrosa.com.do/` with `--resolve` to `51.222.204.86` returns `403 Forbidden`.
+- `https://portal.pyrosa.com.do/` with `--resolve` to `51.222.206.196` returns `403 Forbidden`.
+- `https://erp.pyrosa.com.do/.env` returns `403 Forbidden`.
+- `https://portal.pyrosa.com.do/.env` returns `403 Forbidden`.
+- stale-cache checks against legacy `51.161.11.249` return the same `403 Forbidden` response for
+  both placeholder roots.
+
+DNS validation at `2026-05-01 03:21 UTC`:
+
+- authoritative `51.222.204.86` returned both placeholder A records pointing to `51.222.204.86`
+- authoritative `51.222.206.196` returned both placeholder A records pointing to `51.222.204.86`
+- legacy authoritative `51.161.11.249` returned both placeholder A records pointing to `51.222.204.86`
+- `8.8.8.8` returned both placeholder A records pointing to `51.222.204.86`
+- `1.1.1.1` returned both placeholder A records pointing to `51.222.204.86`
+- public `www.erp.pyrosa.com.do` and `www.portal.pyrosa.com.do` remained on `51.161.11.249`
