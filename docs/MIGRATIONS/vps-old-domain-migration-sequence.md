@@ -20,7 +20,7 @@ pilot migrations that established the current SimpleHostMan pattern.
 | `zcrmt.com` | migrated WordPress runtime on `app-zcrmt` | Zoho preserved | WordPress kept on MariaDB `app_zcrmt_wp` | closed |
 | `merlelaw.com` | migrated blank static runtime on `app-merlelaw` | SimpleHostMan mail live | none | closed |
 | `engilum.com` | external web targets preserved | Zoho preserved | none | DNS-only staged |
-| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, and `pyrosa-repos` runtimes active; `sync`/`helpers` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress and demoportal migrated to MariaDB; `repos` has no database | phase 3 complete |
+| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, `pyrosa-repos`, and `pyrosa-demoerp` runtimes active; `sync`/`helpers` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress and demoportal migrated to MariaDB; demoerp migrated to PostgreSQL; `repos` has no database | phase 4 complete |
 | `solucionesmercantilnr.com` | not migrated | retired | none | out of scope: expired, not renewing |
 | `pyrosa.net` | not migrated | retired | none | out of scope: expired, not renewing |
 
@@ -604,6 +604,54 @@ Validation:
 - authoritative checks from `51.222.204.86` and `51.222.206.196` returned the new `repos` A record
 - at `2026-05-01 01:39 UTC`, `8.8.8.8` returned the new record while `1.1.1.1` still had the old
   answer cached
+
+### 2026-05-01: pyrosa.com.do demoerp phase 4
+
+`demoerp.pyrosa.com.do` was copied from `vps-old`, imported into PostgreSQL, and started as
+`app-pyrosa-demoerp` on both SimpleHostMan nodes.
+
+Applied app:
+
+- app slug `pyrosa-demoerp`
+- source `/home/wmpyrosa/public_html/_sites/demoerp.pyrosa.com.do/`
+- copied `htdocs` file count `14,596`
+- copied `documents` file count `40`
+- staged size about `267M` for `htdocs` and `1.9M` for `documents`
+- backend port `10105`
+- runtime image tag `registry.example.com/pyrosa-demoerp:stable`
+- storage root `/srv/containers/apps/pyrosa-demoerp`
+- `app-pyrosa-demoerp.service` active on `primary` and `secondary`
+
+Database outcome:
+
+- source PostgreSQL database `dolibarr_demoerp`
+- target PostgreSQL database `app_pyrosa_demoerp`
+- target PostgreSQL user `app_pyrosa_demoerp`
+- imported `336` public tables
+- target database size about `28M`
+- Dolibarr `conf.php` now reads database settings from container environment variables
+
+Runtime and database access outcome:
+
+- `documents` is mounted at `/var/www/documents` and denied from direct HTTP access
+- PostgreSQL `pg_hba.conf` now allows SCRAM-authenticated app container traffic from
+  `10.88.0.0/16` on both nodes
+- PostgreSQL connectivity from `app-pyrosa-demoerp` passed on both nodes
+
+DNS and TLS outcome:
+
+- SimpleHostMan PowerDNS serves `demoerp.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- `www.demoerp.pyrosa.com.do` remains on `51.161.11.249` because the target wildcard certificate
+  does not cover that two-label hostname
+- `sync.pyrosa.com.do` and `helpers.pyrosa.com.do` remain pointed at `51.161.11.249`
+
+Validation:
+
+- `https://demoerp.pyrosa.com.do/` returns `200 OK` on both nodes using `--resolve`
+- public `https://demoerp.pyrosa.com.do/` returns `200 OK` and the Dolibarr `23.0.0-beta` login
+  page
+- authoritative checks from `51.222.204.86` and `51.222.206.196` returned the new `demoerp` A record
+- public checks from `1.1.1.1` and `8.8.8.8` returned the new `demoerp` A record
 
 ### 2026-04-30: ppdpr.us web runtime cutover
 

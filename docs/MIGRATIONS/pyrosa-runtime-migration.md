@@ -28,12 +28,13 @@ Live desired state currently includes:
 | `pyrosa-wp` | `pyrosa.com.do`, `www.pyrosa.com.do` | `10101` | MariaDB `app_pyrosa_wp` | phase 1 runtime active on primary and secondary |
 | `pyrosa-demoportal` | `demoportal.pyrosa.com.do` | `10103` | MariaDB `app_pyrosa_demoportal` | phase 2 runtime active on primary and secondary |
 | `pyrosa-repos` | `repos.pyrosa.com.do` | `10104` | none | phase 3 RPM repository runtime active on primary and secondary |
+| `pyrosa-demoerp` | `demoerp.pyrosa.com.do` | `10105` | PostgreSQL `app_pyrosa_demoerp` | phase 4 Dolibarr runtime active on primary and secondary |
 | `pyrosa-sync` | `sync.pyrosa.com.do` | `10102` | MariaDB `app_pyrosa_sync`, pending PostgreSQL | desired only; do not migrate now |
 
 `pyrosa-wp`, `pyrosa-demoportal`, and `pyrosa-sync` are also present in
-`bootstrap/apps.bootstrap.yaml`. `pyrosa-repos` is represented only in live desired state because
-the current bootstrap YAML schema still requires a database block for each app, while this static
-package repository intentionally has no database.
+`bootstrap/apps.bootstrap.yaml`. `pyrosa-repos` and `pyrosa-demoerp` are represented only in live
+desired state until the bootstrap inventory is refreshed. `pyrosa-repos` intentionally has no
+database resource.
 
 The target node public IP for migrated web hostnames is `51.222.204.86`.
 
@@ -46,7 +47,7 @@ Legacy public IP: `51.161.11.249`.
 | `pyrosa.com.do` / `www` | `/home/wmpyrosa/public_html` | WordPress root about `556M`; full account tree includes `_sites` | WordPress `6.9.4`, PHP 8.4 | MySQL `wmpyrosa_2024`, about `29M` | migrate first as `pyrosa-wp`; keep WordPress on MariaDB |
 | `api.pyrosa.com.do` | `_sites/api.pyrosa.com.do` | `346M` | PHP plus Node helper tree | external MongoDB URI and external HANA/SAP endpoint | migrate only after external connectivity and secret handling review |
 | `code.pyrosa.com.do` | proxy, not document root content | empty docroot | `code-server` on `0.0.0.0:8080` | service account/runtime on old host | keep on `vps-old` unless intentionally rebuilding developer tooling |
-| `demoerp.pyrosa.com.do` | `_sites/demoerp.pyrosa.com.do/htdocs` | `267M` htdocs; about `2.0G` tree | Dolibarr-style PHP app | PostgreSQL `dolibarr_demoerp` on PostgreSQL 18 | migrate after a dedicated PostgreSQL dump/restore test |
+| `demoerp.pyrosa.com.do` | `_sites/demoerp.pyrosa.com.do/htdocs` | `267M` htdocs; about `2.0G` tree | Dolibarr-style PHP app | PostgreSQL `dolibarr_demoerp` on PostgreSQL 18 | migrated in phase 4 as `pyrosa-demoerp`, kept on PostgreSQL |
 | `demoportal.pyrosa.com.do` | `_sites/demoportal.pyrosa.com.do` | `194M` source; `79M` staged without `node_modules`/logs | Laravel 12 app | MySQL `wmpyrosa_synct`, Redis/local mail settings observed in legacy env | migrated in phase 2 as `pyrosa-demoportal`, kept on MariaDB |
 | `demosync.pyrosa.com.do` | `_sites/demosync.pyrosa.com.do` | `88M` | DIS/QBO demo app | MySQL `wmpyrosa_disdemo` and shared `wmpyrosa_qbo` | defer with the sync family unless explicitly approved |
 | `erp.pyrosa.com.do` | `_sites/erp.pyrosa.com.do` | empty | placeholder | none observed | leave DNS on old or create placeholder app later |
@@ -73,7 +74,7 @@ PostgreSQL 18:
 
 | Database | Observed consumer |
 | --- | --- |
-| `dolibarr_demoerp` | `demoerp.pyrosa.com.do` |
+| `dolibarr_demoerp` | migrated to PostgreSQL `app_pyrosa_demoerp` for `demoerp.pyrosa.com.do` |
 | `do_fiscal_reports` | helper tooling |
 | `adudoc_db` / `add_xp8hnrqxr3` | legacy Adudoc leftovers |
 
@@ -178,7 +179,8 @@ Defer until separately approved:
 
 - Confirm whether `repos.pyrosa.com.do` is only read by SLES clients or also written by a publishing
   pipeline on `vps-old`.
-- Confirm the next hostname after WordPress: recommended `demoportal`, then `api`, then `demoerp`.
+- Confirm the next hostname after `demoerp`: recommended `api` only after external service and
+  secret handling review.
 - Decide whether placeholders `erp.pyrosa.com.do` and `portal.pyrosa.com.do` should become blank
   SimpleHostMan apps or remain old-host DNS records.
 - Capture a fresh final DB dump timestamp immediately before each cutover.
@@ -461,7 +463,6 @@ The following hostnames remain intentionally on `vps-old`:
 - `sync.pyrosa.com.do`
 - `helpers.pyrosa.com.do`
 - `api.pyrosa.com.do`
-- `demoerp.pyrosa.com.do`
 - `demosync.pyrosa.com.do`
 - `code.pyrosa.com.do`
 - `pgadmin.pyrosa.com.do`
@@ -551,3 +552,85 @@ DNS validation at `2026-05-01 01:39 UTC`:
 
 Public HTTP checks may therefore hit either old or new runtime until recursive resolver caches
 expire. Both runtimes served the same `sbotools.repo` content during the cutover window.
+
+## Phase 4 Execution Record
+
+Completed on `2026-05-01` and scoped only to:
+
+- `demoerp.pyrosa.com.do`
+
+The following hostnames remain intentionally on `vps-old`:
+
+- `sync.pyrosa.com.do`
+- `helpers.pyrosa.com.do`
+- `api.pyrosa.com.do`
+- `demosync.pyrosa.com.do`
+- `code.pyrosa.com.do`
+- `pgadmin.pyrosa.com.do`
+- `ldap.pyrosa.com.do`
+
+### Runtime
+
+Applied runtime state:
+
+- app slug `pyrosa-demoerp`
+- source path copied from
+  `root@51.161.11.249:/home/wmpyrosa/public_html/_sites/demoerp.pyrosa.com.do/`
+- copied `htdocs` file count: `14,596`
+- copied `documents` file count: `40`
+- staged payload size: about `267M` for `htdocs` and `1.9M` for `documents`
+- backend port `10105`
+- runtime image tag `registry.example.com/pyrosa-demoerp:stable`
+- storage root `/srv/containers/apps/pyrosa-demoerp`
+- `app-pyrosa-demoerp.service` active on `primary`
+- `app-pyrosa-demoerp.service` active on `secondary`
+
+The Dolibarr `conf.php` now reads runtime URL and PostgreSQL settings from the container
+environment. The target Apache vhost maps `/var/www/html/htdocs` as the document root and keeps
+`/var/www/documents` denied from direct HTTP access.
+
+### Database
+
+Applied database state:
+
+- source database `dolibarr_demoerp`
+- source PostgreSQL version `18.3`
+- target database `app_pyrosa_demoerp`
+- target database user `app_pyrosa_demoerp`
+- target engine `postgresql`
+- imported `336` public tables
+- target database size after restore: about `28M`
+
+The target PostgreSQL cluster now allows SCRAM-authenticated connections from the Podman application
+network `10.88.0.0/16` on both nodes. This was required because web containers run on the Podman
+default network while the app database listener is reached through the node-local gateway address.
+
+### DNS And TLS
+
+SimpleHostMan PowerDNS now serves:
+
+- `demoerp.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- `www.demoerp.pyrosa.com.do A -> 51.161.11.249`
+- `sync.pyrosa.com.do A -> 51.161.11.249`
+- `helpers.pyrosa.com.do A -> 51.161.11.249`
+
+`www.demoerp.pyrosa.com.do` was intentionally left on `vps-old` because the current target
+certificate is `*.pyrosa.com.do`; that wildcard covers `demoerp.pyrosa.com.do` but not the
+two-label `www.demoerp.pyrosa.com.do` name.
+
+### Validation
+
+Backend and vhost validation:
+
+- `https://demoerp.pyrosa.com.do/` with `--resolve` to `51.222.204.86` returns `200 OK`.
+- `https://demoerp.pyrosa.com.do/` with `--resolve` to `51.222.206.196` returns `200 OK`.
+- public `https://demoerp.pyrosa.com.do/` returns `200 OK` and the Dolibarr `23.0.0-beta` login
+  page.
+- PostgreSQL connectivity from `app-pyrosa-demoerp` passed on both nodes.
+
+DNS validation at `2026-05-01 01:54 UTC`:
+
+- authoritative `51.222.204.86` returned `demoerp.pyrosa.com.do A -> 51.222.204.86`
+- authoritative `51.222.206.196` returned `demoerp.pyrosa.com.do A -> 51.222.204.86`
+- `8.8.8.8` returned `demoerp.pyrosa.com.do A -> 51.222.204.86`
+- `1.1.1.1` returned `demoerp.pyrosa.com.do A -> 51.222.204.86`
