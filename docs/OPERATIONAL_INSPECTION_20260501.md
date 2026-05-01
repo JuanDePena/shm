@@ -305,7 +305,16 @@ Documentation items consolidated into this plan:
 
 ### Phase 0: Baseline And Documentation
 
-Status: documented by this runbook.
+Status: completed on `2026-05-01`.
+
+Completion evidence:
+
+- inspection findings and recommendations preserved in this runbook
+- `TODO.md` points to this document as the only active operational plan
+- historical migration and hardening notes were normalized so they no longer
+  read as separate open TODO lists
+- documentation-only commit pushed to `origin/main`:
+  `e2a7b40 docs: consolidate operational follow-ups`
 
 Actions:
 
