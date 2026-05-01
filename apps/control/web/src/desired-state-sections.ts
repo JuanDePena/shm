@@ -198,8 +198,7 @@ export function buildDesiredStateLayoutSections<Copy extends DesiredStateSection
       { label: copy.databaseColEngine },
       { label: copy.databaseColDatabase, className: "mono" },
       { label: copy.databaseColUser, className: "mono" },
-      { label: copy.databaseColNodes, className: "mono" },
-      { label: copy.databaseColMigration }
+      { label: copy.databaseColNodes, className: "mono" }
     ],
     databaseTableRows,
     copy.noDatabases
@@ -430,8 +429,7 @@ export function buildDesiredStateLayoutSections<Copy extends DesiredStateSection
             { label: copy.databaseColEngine },
             { label: copy.databaseColDatabase, className: "mono" },
             { label: copy.databaseColUser, className: "mono" },
-            { label: copy.databaseColNodes, className: "mono" },
-            { label: copy.databaseColMigration }
+            { label: copy.databaseColNodes, className: "mono" }
           ],
           databaseTableRows,
           copy.noDatabases

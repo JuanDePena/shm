@@ -14,25 +14,6 @@ export function buildDesiredStateTableModel<Copy extends DesiredStateModelCopy>(
   }
 ): DesiredStateTableModel {
   const { copy, data, renderFocusLink, renderPill, selections } = args;
-  const renderDatabaseMigrationPill = (
-    database: (typeof data.desiredState.spec.databases)[number]
-  ): string => {
-    if (database.pendingMigrationTo) {
-      return renderPill(
-        `${copy.migrationPendingLabel}: ${database.engine} -> ${database.pendingMigrationTo}`,
-        "danger"
-      );
-    }
-
-    if (database.migrationCompletedFrom) {
-      return renderPill(
-        `${copy.migrationCompletedLabel}: ${database.migrationCompletedFrom} -> ${database.engine}`,
-        "success"
-      );
-    }
-
-    return renderPill(copy.none, "muted");
-  };
 
   const tenantTableRows = data.desiredState.spec.tenants.map((tenant) => ({
     selectionKey: tenant.slug,
@@ -166,8 +147,7 @@ export function buildDesiredStateTableModel<Copy extends DesiredStateModelCopy>(
         database.standbyNodeId
           ? `${database.primaryNodeId} -> ${database.standbyNodeId}`
           : database.primaryNodeId
-      )}</span>`,
-      renderDatabaseMigrationPill(database)
+      )}</span>`
     ],
     searchText: [
       database.appSlug,
