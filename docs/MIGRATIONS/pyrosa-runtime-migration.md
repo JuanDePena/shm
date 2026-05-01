@@ -1472,3 +1472,41 @@ DNS validation at `2026-05-01 05:48 UTC`:
 - authoritative `51.222.206.196` returned `helpers.pyrosa.com.do` pointing to `51.222.204.86`
 - legacy authoritative `51.161.11.249` returned `helpers.pyrosa.com.do` pointing to `51.222.204.86`
 - public DNS returned `helpers.pyrosa.com.do` pointing to `51.222.204.86`
+
+## vps-old Apache Shutdown Drill
+
+Completed on `2026-05-01` after the phase 14 helper cutover.
+
+Apache on `vps-old` was stopped and disabled to monitor whether any migrated Pyrosa web runtime
+still depended on the old cPanel host before the VPS cancellation window.
+
+Operational state:
+
+- WHM/cPanel no longer has `httpd` enabled or monitored.
+- `httpd.service` on `vps-old` is `inactive` and `disabled`.
+- `vps-old` no longer listens on TCP `80` or `443`.
+- OpenLDAP, PowerDNS, database services, and mail services were not stopped.
+
+The shutdown drill surfaced two issues that were corrected:
+
+- `repos.pyrosa.com.do` was still pointing to `51.161.11.249` in the legacy `vps-old` authoritative
+  zone. The legacy zone now answers `repos.pyrosa.com.do A -> 51.222.204.86` with TTL `300`.
+- the target pgAdmin Quadlet had been regenerated with generic PHP app mounts. It was restored to
+  the pgAdmin-specific data/config mounts and the node-local pgAdmin entrypoint variables were
+  restored with a node-local password file, without committing secrets.
+- generic `container.reconcile` should not be run for `pyrosa-pgadmin` until the control model
+  supports app-specific mounts for pgAdmin; if it is run, reapply the pgAdmin-specific Quadlet
+  layout immediately after.
+
+Post-shutdown validation:
+
+- all primary Pyrosa web runtimes that should be reachable returned from `51.222.204.86`
+- `api.pyrosa.com.do`, `erp.pyrosa.com.do`, and `portal.pyrosa.com.do` returned their expected target
+  `403` responses
+- forced requests to `51.161.11.249:443` failed to connect, confirming the old Apache drain path is
+  no longer serving traffic
+
+Rollback, if a hidden dependency appears:
+
+- run `whmapi1 configureservice service=httpd enabled=1 monitored=1` on `vps-old`
+- run `systemctl enable --now httpd` on `vps-old`

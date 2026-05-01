@@ -1352,3 +1352,50 @@ Validation:
   QR scanner, QR render, banking tasas, and signature tools
 - authoritative PowerDNS on `primary`, `secondary`, and `vps-old` returns
   `helpers.pyrosa.com.do -> 51.222.204.86`
+
+### 2026-05-01: vps-old Apache shutdown drill
+
+After the Pyrosa primary hostnames were cut over, Apache on `vps-old` was stopped for burn-in
+monitoring ahead of the VPS cancellation window.
+
+Operational changes:
+
+- WHM/cPanel service configuration was updated so `httpd` is disabled and no longer monitored.
+- `httpd.service` on `vps-old` is `inactive` and `disabled`.
+- `vps-old` no longer listens on TCP `80` or `443`.
+- Other legacy services were left untouched, including OpenLDAP, PowerDNS, database services, and
+  mail services.
+
+Follow-up fixes from the drill:
+
+- the legacy `vps-old` authoritative zone still had `repos.pyrosa.com.do A -> 51.161.11.249`; it was
+  corrected to `51.222.204.86` with TTL `300`, and the zone serial was advanced to `2026050119`
+- the target pgAdmin Quadlet was restored to the pgAdmin-specific layout, mounting
+  `/srv/containers/apps/pyrosa-pgadmin/data` at `/var/lib/pgadmin` and `config_local.py` at
+  `/pgadmin4/config_local.py`
+- pgAdmin default entrypoint email and password-file variables were restored in the node-local env
+  file; the password file remains node-local under the pgAdmin data directory and no secret was
+  committed
+- avoid running generic `container.reconcile` for `pyrosa-pgadmin` until the control model supports
+  app-specific mounts for pgAdmin; otherwise reapply the pgAdmin-specific Quadlet layout after the
+  reconcile
+
+Validation after shutdown:
+
+- `https://pyrosa.com.do/` returns `200 OK` from `51.222.204.86`
+- `https://demoportal.pyrosa.com.do/` returns `200 OK` from `51.222.204.86`
+- `https://repos.pyrosa.com.do/sbotools/sbotools.repo` returns `200 OK` from `51.222.204.86`
+- `https://demoerp.pyrosa.com.do/` returns `200 OK` from `51.222.204.86`
+- `https://demosync.pyrosa.com.do/` returns `200 OK` from `51.222.204.86`
+- `https://ldap.pyrosa.com.do/lam/templates/login.php` returns `200 OK` from `51.222.204.86`
+- `https://pgadmin.pyrosa.com.do/login` returns `200 OK` from `51.222.204.86`
+- `https://code.pyrosa.com.do/login` returns `200 OK` from `51.222.204.86`
+- `https://sync.pyrosa.com.do/dis/public/login` returns `200 OK` from `51.222.204.86`
+- `https://helpers.pyrosa.com.do/dfr/health` returns `200 OK` from `51.222.204.86`
+- `api.pyrosa.com.do`, `erp.pyrosa.com.do`, and `portal.pyrosa.com.do` return `403` from the target,
+  matching the expected protected/placeholder posture
+
+Rollback for the web drain test is intentionally simple:
+
+- `whmapi1 configureservice service=httpd enabled=1 monitored=1`
+- `systemctl enable --now httpd`
