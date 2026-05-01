@@ -644,6 +644,8 @@ DNS and TLS outcome:
 - `www.demoerp.pyrosa.com.do` remains on `51.161.11.249` because the target wildcard certificate
   does not cover that two-label hostname
 - `sync.pyrosa.com.do` and `helpers.pyrosa.com.do` remain pointed at `51.161.11.249`
+- the legacy DNS zone on `vps-old` also serves `demoerp.pyrosa.com.do A -> 51.222.204.86` with
+  TTL `300` for resolvers that still have old nameserver delegation cached
 
 Validation:
 
@@ -651,6 +653,7 @@ Validation:
 - public `https://demoerp.pyrosa.com.do/` returns `200 OK` and the Dolibarr `23.0.0-beta` login
   page
 - authoritative checks from `51.222.204.86` and `51.222.206.196` returned the new `demoerp` A record
+- legacy authoritative check from `51.161.11.249` returned the new `demoerp` A record
 - public checks from `1.1.1.1` and `8.8.8.8` returned the new `demoerp` A record
 
 ### 2026-04-30: ppdpr.us web runtime cutover

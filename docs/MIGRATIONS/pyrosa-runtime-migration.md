@@ -618,6 +618,9 @@ SimpleHostMan PowerDNS now serves:
 certificate is `*.pyrosa.com.do`; that wildcard covers `demoerp.pyrosa.com.do` but not the
 two-label `www.demoerp.pyrosa.com.do` name.
 
+The legacy DNS zone on `vps-old` was also updated so cached old delegations answer
+`demoerp.pyrosa.com.do A -> 51.222.204.86` with TTL `300`.
+
 ### Validation
 
 Backend and vhost validation:
@@ -632,5 +635,6 @@ DNS validation at `2026-05-01 01:54 UTC`:
 
 - authoritative `51.222.204.86` returned `demoerp.pyrosa.com.do A -> 51.222.204.86`
 - authoritative `51.222.206.196` returned `demoerp.pyrosa.com.do A -> 51.222.204.86`
+- legacy authoritative `51.161.11.249` returned `demoerp.pyrosa.com.do A -> 51.222.204.86`
 - `8.8.8.8` returned `demoerp.pyrosa.com.do A -> 51.222.204.86`
 - `1.1.1.1` returned `demoerp.pyrosa.com.do A -> 51.222.204.86`
