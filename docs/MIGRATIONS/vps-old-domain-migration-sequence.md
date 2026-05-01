@@ -20,7 +20,7 @@ pilot migrations that established the current SimpleHostMan pattern.
 | `zcrmt.com` | migrated WordPress runtime on `app-zcrmt` | Zoho preserved | WordPress kept on MariaDB `app_zcrmt_wp` | closed |
 | `merlelaw.com` | migrated blank static runtime on `app-merlelaw` | SimpleHostMan mail live | none | closed |
 | `engilum.com` | external web targets preserved | Zoho preserved | none | DNS-only staged |
-| `pyrosa.com.do` | `pyrosa-wp` and `pyrosa-demoportal` runtimes active; `sync`/`helpers`/`repos` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress and demoportal migrated to MariaDB; later apps separate | phase 2 complete |
+| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, and `pyrosa-repos` runtimes active; `sync`/`helpers` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress and demoportal migrated to MariaDB; `repos` has no database | phase 3 complete |
 | `solucionesmercantilnr.com` | not migrated | retired | none | out of scope: expired, not renewing |
 | `pyrosa.net` | not migrated | retired | none | out of scope: expired, not renewing |
 
@@ -561,6 +561,49 @@ Validation:
 - `https://demoportal.pyrosa.com.do/login` returns `200 OK` on both nodes using `--resolve`
 - public checks from `1.1.1.1` and `8.8.8.8` returned the new `demoportal` A record
 - `sync`, `helpers`, and `repos` still returned the old-host A record from public resolver checks
+
+### 2026-05-01: pyrosa.com.do repos phase 3
+
+`repos.pyrosa.com.do` was copied from `vps-old` and started as `app-pyrosa-repos` on both
+SimpleHostMan nodes. This is the SLES/Yum RPM repository for Proyecto Iohana packages.
+
+Applied app:
+
+- app slug `pyrosa-repos`
+- source `/home/wmpyrosa/public_html/_sites/repos.pyrosa.com.do/`
+- copied file count `208`, staged size about `574M`
+- backend port `10104`
+- runtime image tag `registry.example.com/pyrosa-repos:stable`
+- storage root `/srv/containers/apps/pyrosa-repos`
+- no database resource
+- `app-pyrosa-repos.service` active on `primary` and `secondary`
+
+Repository validation:
+
+- preserved `sbotools.repo`, `RPM-GPG-KEY-sbotools`, `repomd.xml`, `repomd.xml.asc`, and RPMs
+- checksums for the repo file, metadata, signature, and GPG key matched `vps-old` on both nodes
+- all `6` `repomd.xml` metadata entries passed SHA-256 verification on both nodes
+- a local `dnf makecache --refresh` check against the target backend completed successfully
+
+Publishing/DNS outcome:
+
+- stale root cron entries on `vps-old` still reference a missing `repos.pyrosa.com.do/dis/` tree
+- no active `sbotools` publishing workflow was found during inspection
+- latest observed `sbotools` RPM/metadata timestamp was `2026-04-10 16:03 UTC`
+- SimpleHostMan PowerDNS serves `repos.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- `www.repos.pyrosa.com.do` remains on `51.161.11.249` because the target wildcard certificate does
+  not cover that two-label hostname
+- `sync.pyrosa.com.do` and `helpers.pyrosa.com.do` remain pointed at `51.161.11.249`
+
+Validation:
+
+- `https://repos.pyrosa.com.do/` returns `200 OK` on both nodes using `--resolve`
+- `/sbotools/sbotools.repo` returns `200 OK`, `213` bytes, and `text/plain` on both nodes
+- `/sbotools/repodata/repomd.xml` returns `200 OK`, `3,089` bytes, and `application/xml` on both
+  nodes
+- authoritative checks from `51.222.204.86` and `51.222.206.196` returned the new `repos` A record
+- at `2026-05-01 01:39 UTC`, `8.8.8.8` returned the new record while `1.1.1.1` still had the old
+  answer cached
 
 ### 2026-04-30: ppdpr.us web runtime cutover
 

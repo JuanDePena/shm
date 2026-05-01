@@ -21,13 +21,19 @@ SimpleHostMan mail domain should be created for `pyrosa.com.do`.
 
 ## Current SimpleHostMan Desired State
 
-`bootstrap/apps.bootstrap.yaml` already defines:
+Live desired state currently includes:
 
 | App | Hostnames | Backend | Database | Status |
 | --- | --- | ---: | --- | --- |
 | `pyrosa-wp` | `pyrosa.com.do`, `www.pyrosa.com.do` | `10101` | MariaDB `app_pyrosa_wp` | phase 1 runtime active on primary and secondary |
 | `pyrosa-demoportal` | `demoportal.pyrosa.com.do` | `10103` | MariaDB `app_pyrosa_demoportal` | phase 2 runtime active on primary and secondary |
+| `pyrosa-repos` | `repos.pyrosa.com.do` | `10104` | none | phase 3 RPM repository runtime active on primary and secondary |
 | `pyrosa-sync` | `sync.pyrosa.com.do` | `10102` | MariaDB `app_pyrosa_sync`, pending PostgreSQL | desired only; do not migrate now |
+
+`pyrosa-wp`, `pyrosa-demoportal`, and `pyrosa-sync` are also present in
+`bootstrap/apps.bootstrap.yaml`. `pyrosa-repos` is represented only in live desired state because
+the current bootstrap YAML schema still requires a database block for each app, while this static
+package repository intentionally has no database.
 
 The target node public IP for migrated web hostnames is `51.222.204.86`.
 
@@ -48,7 +54,7 @@ Legacy public IP: `51.161.11.249`.
 | `ldap.pyrosa.com.do` | `_sites/ldap.pyrosa.com.do` | `91M` | LDAP Account Manager style UI | OpenLDAP on `389`/`636` | keep on `vps-old` unless planning directory migration |
 | `pgadmin.pyrosa.com.do` | proxy, not document root content | empty docroot | pgAdmin4 on `127.0.0.1:5050` | PostgreSQL admin surface | keep on `vps-old` with PostgreSQL until DB estate is moved |
 | `portal.pyrosa.com.do` | `_sites/portal.pyrosa.com.do` | empty | placeholder | none observed | leave DNS on old or create placeholder app later |
-| `repos.pyrosa.com.do` | `_sites/repos.pyrosa.com.do` | `574M` | SLES/Yum RPM repository | `sbotools` repo metadata and signed package metadata | migrate as a static package repo only with zypper/yum validation |
+| `repos.pyrosa.com.do` | `_sites/repos.pyrosa.com.do` | `574M` | SLES/Yum RPM repository | `sbotools` repo metadata and signed package metadata | migrated in phase 3 as `pyrosa-repos` |
 | `sync.pyrosa.com.do` | `_sites/sync.pyrosa.com.do` | `4.1G` | DIS/QBO production app and active PHP workers | MySQL `wmpyrosa_dis` about `3.8G`, `wmpyrosa_qbo`, Redis | do not migrate now |
 
 ## Database Inventory
@@ -443,3 +449,105 @@ Public resolver spot checks after cutover:
 
 Some recursive resolvers may still cache the old `demoportal.pyrosa.com.do` answer until the legacy
 TTL expires.
+
+## Phase 3 Execution Record
+
+Completed on `2026-05-01` and scoped only to:
+
+- `repos.pyrosa.com.do`
+
+The following hostnames remain intentionally on `vps-old`:
+
+- `sync.pyrosa.com.do`
+- `helpers.pyrosa.com.do`
+- `api.pyrosa.com.do`
+- `demoerp.pyrosa.com.do`
+- `demosync.pyrosa.com.do`
+- `code.pyrosa.com.do`
+- `pgadmin.pyrosa.com.do`
+- `ldap.pyrosa.com.do`
+
+### Runtime
+
+Applied runtime state:
+
+- app slug `pyrosa-repos`
+- source path copied from `root@51.161.11.249:/home/wmpyrosa/public_html/_sites/repos.pyrosa.com.do/`
+- copied file count: `208`
+- copied payload size: about `574M`
+- backend port `10104`
+- runtime image tag `registry.example.com/pyrosa-repos:stable`
+- storage root `/srv/containers/apps/pyrosa-repos`
+- `app-pyrosa-repos.service` active on `primary`
+- `app-pyrosa-repos.service` active on `secondary`
+
+The app is a static Apache container. The container vhost sets package-friendly MIME types for
+`.repo`, `.xml`, `.asc`, and `.rpm`, forces `RPM-GPG-KEY-sbotools` to `text/plain`, and preserves
+the legacy `Cache-Control: no-store` behavior.
+
+### Repository Contents
+
+Preserved package repository artifacts:
+
+- `/sbotools/sbotools.repo`
+- `/sbotools/RPM-GPG-KEY-sbotools`
+- `/sbotools/repodata/repomd.xml`
+- `/sbotools/repodata/repomd.xml.asc`
+- `/sbotools/x86_64/*.rpm`
+
+Checksum spot checks matched `vps-old`, `primary`, and `secondary`:
+
+- `sbotools.repo`: `736b61dd181490f5b9d27b2e32dd35de05cae234564399c885a14514149f0d11`
+- `repomd.xml`: `64f31bce198806e57930b042fa5bf3f95646c7fa1a3ac9b64ffde56d9eab2b63`
+- `repomd.xml.asc`: `bc61655cc595f6eff0ce19da415450ff5eba103dc76dcb39777a029cb33916eb`
+- `RPM-GPG-KEY-sbotools`: `290037dc151ad19d795720b1cd19d4c47064999b0e163a2fd23d8285f45a7a28`
+
+The `repomd.xml` metadata was parsed and all `6` referenced metadata files passed SHA-256
+verification on both nodes. A local `dnf makecache --refresh` check against
+`http://127.0.0.1:10104/sbotools` completed successfully on the target.
+
+### Publishing Check
+
+`vps-old` still has root cron entries for `/home/wmpyrosa/public_html/_sites/repos.pyrosa.com.do/dis/`,
+but that `dis/` directory no longer exists in the repository tree. No active `sbotools` publishing
+script was found during the inspection. The latest RPM and repo metadata timestamps observed in
+`sbotools` were `2026-04-10 16:03 UTC`.
+
+### DNS And TLS
+
+SimpleHostMan PowerDNS now serves:
+
+- `repos.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- `www.repos.pyrosa.com.do A -> 51.161.11.249`
+- `sync.pyrosa.com.do A -> 51.161.11.249`
+- `helpers.pyrosa.com.do A -> 51.161.11.249`
+
+`www.repos.pyrosa.com.do` was intentionally left on `vps-old` because the current target certificate
+is `*.pyrosa.com.do`; that wildcard covers `repos.pyrosa.com.do` but not the two-label
+`www.repos.pyrosa.com.do` name.
+
+The existing Pyrosa wildcard certificate under `/etc/ssl/simplehostman/pyrosa.com.do/` is used by
+the `repos.pyrosa.com.do` HTTPS vhost on both nodes.
+
+### Validation
+
+Backend and vhost validation:
+
+- `https://repos.pyrosa.com.do/` with `--resolve` to `51.222.204.86` returns `200 OK`.
+- `https://repos.pyrosa.com.do/` with `--resolve` to `51.222.206.196` returns `200 OK`.
+- `/sbotools/sbotools.repo` returns `200 OK`, `213` bytes, and `text/plain` on both nodes.
+- `/sbotools/repodata/repomd.xml` returns `200 OK`, `3,089` bytes, and `application/xml` on both
+  nodes.
+- `/sbotools/repodata/repomd.xml.asc` returns `200 OK` and `application/pgp-signature` on both
+  nodes.
+- `/sbotools/RPM-GPG-KEY-sbotools` returns `200 OK`, `1,761` bytes, and `text/plain` on both nodes.
+
+DNS validation at `2026-05-01 01:39 UTC`:
+
+- authoritative `51.222.204.86` returned `repos.pyrosa.com.do A -> 51.222.204.86`
+- authoritative `51.222.206.196` returned `repos.pyrosa.com.do A -> 51.222.204.86`
+- `8.8.8.8` returned `repos.pyrosa.com.do A -> 51.222.204.86`
+- `1.1.1.1` still returned the old `51.161.11.249` answer, consistent with legacy TTL caching
+
+Public HTTP checks may therefore hit either old or new runtime until recursive resolver caches
+expire. Both runtimes served the same `sbotools.repo` content during the cutover window.
