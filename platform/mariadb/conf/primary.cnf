@@ -11,5 +11,10 @@ gtid_strict_mode=ON
 innodb_flush_log_at_trx_commit=1
 sync_binlog=1
 
+slow_query_log=ON
+long_query_time=1
+log_output=FILE
+slow_query_log_file=mariadb-slow.log
+
 character-set-server=utf8mb4
 collation-server=utf8mb4_unicode_ci

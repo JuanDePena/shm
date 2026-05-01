@@ -27,6 +27,44 @@ Secondary node: `vps-16535090.vps.ovh.ca`
 - `SimpleHost Control` API and workers use `127.0.0.1:5433` locally on the active node.
 - `SimpleHost Agent` already executes real `postgres.reconcile` and `mariadb.reconcile` jobs against the live engines.
 
+## Observability Status On 2026-05-01
+
+Phase 2 of the post-migration operational plan enabled database observability
+without changing memory sizing yet.
+
+PostgreSQL `postgresql@control` on both nodes:
+
+- `shared_preload_libraries = 'pg_stat_statements'`
+- `track_io_timing = on`
+- `track_activity_query_size = 4096`
+- `log_temp_files = 65536`
+- `log_min_duration_statement = 1000`
+- `log_parameter_max_length = 0`
+- `pg_stat_statements` extension installed in `postgres` and `simplehost_control`
+
+PostgreSQL `postgresql@apps` on both nodes:
+
+- `shared_preload_libraries = 'pg_stat_statements'`
+- `track_io_timing = on`
+- `track_activity_query_size = 4096`
+- `log_parameter_max_length = 0`
+- `pg_stat_statements` extension installed in `postgres`, `app_adudoc`,
+  `app_pyrosa_demoerp`, `app_pyrosa_helpers_dfr`, `app_tatokka`, and
+  `roundcube_mail`
+
+MariaDB primary:
+
+- `slow_query_log = ON`
+- `long_query_time = 1`
+- `log_output = FILE`
+- `slow_query_log_file = mariadb-slow.log`
+- `performance_schema = OFF`; enabling it is deferred to a restart window
+
+The PostgreSQL values were applied with `ALTER SYSTEM` in each data directory.
+The MariaDB slow-log values are persisted in
+[`/opt/simplehostman/src/platform/mariadb/conf/primary.cnf`](/opt/simplehostman/src/platform/mariadb/conf/primary.cnf)
+and applied live on the primary container.
+
 ## Version policy
 
 Major-version execution planning now lives in:
@@ -309,6 +347,8 @@ MariaDB is not the default platform for new applications unless compatibility de
 Current known MariaDB-backed workloads on this platform:
 
 - `pyrosa-wp` for `pyrosa.com.do`
+- `pyrosa-demoportal` for `demoportal.pyrosa.com.do`
+- `pyrosa-demosync` for `demosync.pyrosa.com.do`
 - `pyrosa-sync` for `sync.pyrosa.com.do`
 
 Planned transition:

@@ -412,6 +412,8 @@ Completion evidence:
 
 ### Phase 2: Database Observability
 
+Status: completed on `2026-05-01`.
+
 Goal: collect real query and temporary-file evidence before deeper tuning.
 
 PostgreSQL actions:
@@ -441,6 +443,47 @@ Rollback:
 - disable query logging if log volume becomes excessive
 - remove `pg_stat_statements` from `shared_preload_libraries` and restart
   during a maintenance window if needed
+
+Completion evidence:
+
+- PostgreSQL settings were applied on both `primary` and `secondary` with
+  `ALTER SYSTEM`.
+- `postgresql@control` now has:
+  - `shared_preload_libraries = pg_stat_statements`
+  - `track_io_timing = on`
+  - `track_activity_query_size = 4096`
+  - `log_temp_files = 65536`
+  - `log_min_duration_statement = 1000`
+  - `log_parameter_max_length = 0`
+- `postgresql@apps` now has:
+  - `shared_preload_libraries = pg_stat_statements`
+  - `track_io_timing = on`
+  - `track_activity_query_size = 4096`
+  - `log_parameter_max_length = 0`
+- `pg_stat_statements` extension version `1.12` is available on the control
+  database and app database cluster.
+- PostgreSQL slow-query logging for `postgresql@control` writes to the service
+  journal through `stderr`; live control-plane queries over `1s` were observed.
+- Parameter logging was capped with `log_parameter_max_length = 0` so bind
+  values are not copied into the journal.
+- `postgresql@control.service`, `postgresql@apps.service`,
+  `simplehost-control.service`, and `simplehost-worker.service` were active
+  after the restart.
+- Streaming replication resumed for both PostgreSQL clusters with primary-side
+  replay lag reported as `0` bytes.
+- MariaDB slow query logging was enabled live and persisted in
+  `/srv/containers/mariadb/conf/primary.cnf` and source-controlled
+  `platform/mariadb/conf/primary.cnf`.
+- MariaDB global values now report:
+  - `slow_query_log = ON`
+  - `long_query_time = 1`
+  - `log_output = FILE`
+  - `slow_query_log_file = mariadb-slow.log`
+- A controlled `SELECT SLEEP(1.2)` wrote an entry to the MariaDB slow log.
+- `performance_schema` remains `OFF`; it is deferred because enabling it
+  requires a MariaDB container restart and should be grouped with the phase 3
+  tuning window if still needed.
+- `systemctl --failed` reported no failed units after the database restarts.
 
 ### Phase 3: Conservative Database Tuning
 
