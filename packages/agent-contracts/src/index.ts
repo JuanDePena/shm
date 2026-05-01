@@ -108,8 +108,19 @@ export interface ProxyRenderPayload {
   serverAliases?: string[];
   documentRoot?: string;
   proxyPassUrl?: string;
+  extraProxyRoutes?: ProxyRoutePayload[];
   proxyPreserveHost?: boolean;
   tls?: boolean;
+  tlsCertificateFile?: string;
+  tlsCertificateKeyFile?: string;
+}
+
+export interface ProxyRoutePayload {
+  pathPrefix: string;
+  targetUrl: string;
+  websocket?: boolean;
+  noCanon?: boolean;
+  timeoutSeconds?: number;
 }
 
 export interface DnsRecordPayload {
@@ -886,9 +897,28 @@ export function isProxyRenderPayload(value: unknown): value is ProxyRenderPayloa
     (payload.serverAliases === undefined ||
       (Array.isArray(payload.serverAliases) &&
         payload.serverAliases.every((item) => typeof item === "string"))) &&
+    (payload.extraProxyRoutes === undefined ||
+      (Array.isArray(payload.extraProxyRoutes) &&
+        payload.extraProxyRoutes.every(
+          (item) =>
+            item &&
+            typeof item === "object" &&
+            typeof (item as Record<string, unknown>).pathPrefix === "string" &&
+            typeof (item as Record<string, unknown>).targetUrl === "string" &&
+            ((item as Record<string, unknown>).websocket === undefined ||
+              typeof (item as Record<string, unknown>).websocket === "boolean") &&
+            ((item as Record<string, unknown>).noCanon === undefined ||
+              typeof (item as Record<string, unknown>).noCanon === "boolean") &&
+            ((item as Record<string, unknown>).timeoutSeconds === undefined ||
+              typeof (item as Record<string, unknown>).timeoutSeconds === "number")
+        ))) &&
     (payload.proxyPreserveHost === undefined ||
       typeof payload.proxyPreserveHost === "boolean") &&
-    (payload.tls === undefined || typeof payload.tls === "boolean")
+    (payload.tls === undefined || typeof payload.tls === "boolean") &&
+    (payload.tlsCertificateFile === undefined ||
+      typeof payload.tlsCertificateFile === "string") &&
+    (payload.tlsCertificateKeyFile === undefined ||
+      typeof payload.tlsCertificateKeyFile === "string")
   );
 }
 

@@ -1390,9 +1390,9 @@ Follow-up fixes from the drill:
 - pgAdmin default entrypoint email and password-file variables were restored in the node-local env
   file; the password file remains node-local under the pgAdmin data directory and no secret was
   committed
-- avoid running generic `container.reconcile` for `pyrosa-pgadmin` until the control model supports
-  app-specific mounts for pgAdmin; otherwise reapply the pgAdmin-specific Quadlet layout after the
-  reconcile
+- the control model now emits pgAdmin-specific mounts and password-file environment for
+  `pyrosa-pgadmin`, so future generic `container.reconcile` jobs preserve the restored Quadlet
+  layout
 
 Validation after shutdown:
 
@@ -1484,3 +1484,41 @@ Rollback:
 - re-enable only the affected service on `vps-old` with `systemctl enable --now <unit>`
 - if old authoritative DNS must be restored during the transfer window, start `pdns.service` and
   verify the relevant zone serial before relying on it
+
+### 2026-05-01: SimpleHostMan hardening and bootstrap refresh
+
+The post-drain hardening block updated SimpleHostMan so the live Pyrosa state can be regenerated
+more safely from code and bootstrap material.
+
+Changes:
+
+- `container.reconcile` detects pgAdmin runtimes and preserves the required pgAdmin mounts:
+  `/srv/containers/apps/pyrosa-pgadmin/data:/var/lib/pgadmin:Z` and
+  `/srv/containers/apps/pyrosa-pgadmin/config/config_local.py:/pgadmin4/config_local.py:Z`
+- pgAdmin reconcile payloads set `PGADMIN_DEFAULT_PASSWORD_FILE=/var/lib/pgadmin/.default-password`
+  while keeping the actual password file node-local and out of Git
+- `proxy.render` emits the managed Pyrosa wildcard certificate paths instead of assuming a
+  hostname-specific Let's Encrypt lineage for every Pyrosa subdomain
+- `proxy.render` supports app-specific extra proxy routes; `pyrosa-helpers` preserves `/dfr/` on
+  backend `10113` with websocket upgrade handling while the main helper app remains on `10112`
+- bootstrap inventory parsing supports apps without managed databases
+- `bootstrap/apps.bootstrap.yaml` now includes all Pyrosa app resources currently represented in
+  live desired state
+
+Validation:
+
+- `pnpm --filter @simplehost/control-database build`
+- `pnpm --filter @simplehost/control-database test`
+- `pnpm build:control-runtime`
+- `pnpm build:agent-runtime`
+- release `2604.28.18` redeployed for control, worker, and agents on both SimpleHostMan nodes
+- bootstrap inventory parses into a desired-state spec with `14` apps, `8` managed database entries,
+  and `12` Pyrosa apps
+- forced HTTPS checks for helpers DFR, helpers QR scanner, pgAdmin, LDAP/LAM, and Pyrosa apex return
+  `200 OK` on both SimpleHostMan nodes
+
+Remaining limitation:
+
+- the transitional bootstrap format still supports only one managed database per app, so the live
+  secondary QBO databases for `pyrosa-sync` and `pyrosa-demosync` remain in desired state but are
+  not represented in `apps.bootstrap.yaml`

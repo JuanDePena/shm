@@ -71,7 +71,115 @@ apps:
       name: app_pyrosa_sync
       user: app_pyrosa_sync
       pending_migration_to: postgresql
+      migration_completed_from: cpanel-mysql
+      migration_completed_at: "2026-05-01T05:15:53Z"
     storage_root: /srv/containers/apps/pyrosa-sync
+    mode: active-passive
+
+  - slug: pyrosa-repos
+    client: pyrosa
+    zone: pyrosa.com.do
+    canonical_domain: repos.pyrosa.com.do
+    aliases: []
+    backend_port: 10104
+    runtime_image: registry.example.com/pyrosa-repos:stable
+    storage_root: /srv/containers/apps/pyrosa-repos
+    mode: active-passive
+
+  - slug: pyrosa-demoerp
+    client: pyrosa
+    zone: pyrosa.com.do
+    canonical_domain: demoerp.pyrosa.com.do
+    aliases: []
+    backend_port: 10105
+    runtime_image: registry.example.com/pyrosa-demoerp:stable
+    database:
+      engine: postgresql
+      name: app_pyrosa_demoerp
+      user: app_pyrosa_demoerp
+    storage_root: /srv/containers/apps/pyrosa-demoerp
+    mode: active-passive
+
+  - slug: pyrosa-api
+    client: pyrosa
+    zone: pyrosa.com.do
+    canonical_domain: api.pyrosa.com.do
+    aliases: []
+    backend_port: 10106
+    runtime_image: registry.example.com/pyrosa-api:stable
+    storage_root: /srv/containers/apps/pyrosa-api
+    mode: active-passive
+
+  - slug: pyrosa-demosync
+    client: pyrosa
+    zone: pyrosa.com.do
+    canonical_domain: demosync.pyrosa.com.do
+    aliases: []
+    backend_port: 10107
+    runtime_image: registry.example.com/pyrosa-demosync:stable
+    database:
+      engine: mariadb
+      name: app_pyrosa_demosync
+      user: app_pyrosa_demosync
+      migration_completed_from: cpanel-mysql
+      migration_completed_at: "2026-05-01T02:46:39Z"
+    storage_root: /srv/containers/apps/pyrosa-demosync
+    mode: active-passive
+
+  - slug: pyrosa-erp
+    client: pyrosa
+    zone: pyrosa.com.do
+    canonical_domain: erp.pyrosa.com.do
+    aliases: []
+    backend_port: 10108
+    runtime_image: registry.example.com/pyrosa-placeholder:stable
+    storage_root: /srv/containers/apps/pyrosa-erp
+    mode: active-passive
+
+  - slug: pyrosa-portal
+    client: pyrosa
+    zone: pyrosa.com.do
+    canonical_domain: portal.pyrosa.com.do
+    aliases: []
+    backend_port: 10109
+    runtime_image: registry.example.com/pyrosa-placeholder:stable
+    storage_root: /srv/containers/apps/pyrosa-portal
+    mode: active-passive
+
+  - slug: pyrosa-ldap
+    client: pyrosa
+    zone: pyrosa.com.do
+    canonical_domain: ldap.pyrosa.com.do
+    aliases: []
+    backend_port: 10110
+    runtime_image: registry.example.com/pyrosa-ldap:stable
+    storage_root: /srv/containers/apps/pyrosa-ldap
+    mode: active-passive
+
+  - slug: pyrosa-pgadmin
+    client: pyrosa
+    zone: pyrosa.com.do
+    canonical_domain: pgadmin.pyrosa.com.do
+    aliases: []
+    backend_port: 10111
+    runtime_image: registry.example.com/pyrosa-pgadmin:stable
+    storage_root: /srv/containers/apps/pyrosa-pgadmin
+    mode: active-passive
+
+  - slug: pyrosa-helpers
+    client: pyrosa
+    zone: pyrosa.com.do
+    canonical_domain: helpers.pyrosa.com.do
+    aliases: []
+    backend_port: 10112
+    runtime_image: registry.example.com/pyrosa-helpers:stable
+    database:
+      engine: postgresql
+      name: app_pyrosa_helpers_dfr
+      user: app_pyrosa_helpers_dfr
+      migration_completed_from: postgresql
+      migration_completed_at: "2026-05-01T05:44:20Z"
+    storage_root: /srv/containers/apps/pyrosa-helpers
     mode: active-passive
 
   - slug: gomezrosado

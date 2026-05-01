@@ -947,6 +947,47 @@ function stripCidrSuffix(value: string | null | undefined): string | undefined {
   return address?.trim() || undefined;
 }
 
+function isPgAdminRuntime(app: AppContainerDispatchRow): boolean {
+  return app.slug === "pyrosa-pgadmin" || app.runtime_image.includes("pgadmin");
+}
+
+function deriveDefaultEmailFromHostname(hostname: string): string {
+  const domain = hostname.replace(/^pgadmin\./, "");
+
+  return `webmaster@${domain}`;
+}
+
+function resolveAppTlsCertificate(
+  zoneName: string
+): Pick<ProxyRenderPayload, "tlsCertificateFile" | "tlsCertificateKeyFile"> {
+  if (zoneName === "pyrosa.com.do") {
+    return {
+      tlsCertificateFile: "/etc/ssl/simplehostman/pyrosa.com.do/fullchain.pem",
+      tlsCertificateKeyFile: "/etc/ssl/simplehostman/pyrosa.com.do/privkey.pem"
+    };
+  }
+
+  return {};
+}
+
+function resolveAppExtraProxyRoutes(
+  app: AppDispatchRow
+): ProxyRenderPayload["extraProxyRoutes"] {
+  if (app.slug === "pyrosa-helpers") {
+    return [
+      {
+        pathPrefix: "/dfr/",
+        targetUrl: "http://127.0.0.1:10113/",
+        websocket: true,
+        noCanon: true,
+        timeoutSeconds: 120
+      }
+    ];
+  }
+
+  return undefined;
+}
+
 export async function buildProxyPayload(
   client: PoolClient,
   appSlug: string
@@ -987,8 +1028,10 @@ export async function buildProxyPayload(
     serverAliases: app.aliases,
     documentRoot: `${app.storage_root}/current/public`,
     proxyPassUrl: `http://127.0.0.1:${app.backend_port}`,
+    extraProxyRoutes: resolveAppExtraProxyRoutes(app),
     proxyPreserveHost: true,
-    tls: true
+    tls: true,
+    ...resolveAppTlsCertificate(app.zone_name)
   };
   const plans = [
     {
@@ -1098,22 +1141,40 @@ export async function buildAppContainerPlans(
     environment.DB_PASSWORD = desiredPassword;
   }
 
+  const publishPorts = [`127.0.0.1:${app.backend_port}:80`];
+  let volumes = [
+    `${app.storage_root}/app:/var/www/html:Z`,
+    `${app.storage_root}/uploads:/var/www/html/public/uploads:Z`,
+    `${app.storage_root}/uploads:/var/www/html/storage/uploads:Z`
+  ];
+  let hostDirectories = [
+    app.storage_root,
+    `${app.storage_root}/app`,
+    `${app.storage_root}/uploads`
+  ];
+
+  if (isPgAdminRuntime(app)) {
+    environment.PGADMIN_DEFAULT_EMAIL = deriveDefaultEmailFromHostname(app.canonical_domain);
+    environment.PGADMIN_DEFAULT_PASSWORD_FILE = "/var/lib/pgadmin/.default-password";
+    volumes = [
+      `${app.storage_root}/data:/var/lib/pgadmin:Z`,
+      `${app.storage_root}/config/config_local.py:/pgadmin4/config_local.py:Z`
+    ];
+    hostDirectories = [
+      app.storage_root,
+      `${app.storage_root}/data`,
+      `${app.storage_root}/config`
+    ];
+  }
+
   const payload: ContainerReconcilePayload = {
     serviceName: `app-${app.slug}.service`,
     containerName: `app-${app.slug}`,
     image: app.runtime_image,
     description: `Managed app runtime for ${app.slug}`,
-    publishPorts: [`127.0.0.1:${app.backend_port}:80`],
-    volumes: [
-      `${app.storage_root}/app:/var/www/html:Z`,
-      `${app.storage_root}/uploads:/var/www/html/public/uploads:Z`,
-      `${app.storage_root}/uploads:/var/www/html/storage/uploads:Z`
-    ],
-    hostDirectories: [
-      app.storage_root,
-      `${app.storage_root}/app`,
-      `${app.storage_root}/uploads`
-    ],
+    publishPorts,
+    volumes,
+    hostDirectories,
     environment,
     envFileName: `app-${app.slug}.env`,
     restart: "always",

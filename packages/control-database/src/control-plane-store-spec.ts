@@ -1758,6 +1758,10 @@ function resolveAppPrimaryNodeId(
   inventory: PlatformInventoryDocument,
   app: PlatformInventoryApp
 ): string {
+  if (!app.database) {
+    return resolveDefaultPrimaryNodeId(inventory);
+  }
+
   return app.database.engine === "postgresql"
     ? inventory.platform.postgresql_apps.primary_node
     : inventory.platform.mariadb_apps.primary_node;
@@ -1771,6 +1775,10 @@ function resolveAppStandbyNodeId(
     return null;
   }
 
+  if (!app.database) {
+    return inventory.platform.postgresql_control.standby_node;
+  }
+
   return app.database.engine === "postgresql"
     ? inventory.platform.postgresql_apps.standby_node
     : inventory.platform.mariadb_apps.replica_node;
@@ -1780,6 +1788,10 @@ function resolveDatabaseStandbyNodeId(
   inventory: PlatformInventoryDocument,
   app: PlatformInventoryApp
 ): string | null {
+  if (!app.database) {
+    return null;
+  }
+
   return app.database.engine === "postgresql"
     ? inventory.platform.postgresql_apps.standby_node
     : inventory.platform.mariadb_apps.replica_node;
@@ -1871,19 +1883,20 @@ export function buildDesiredStateSpecFromInventory(
     })
     .sort((left, right) => left.zoneName.localeCompare(right.zoneName));
   const databases: DesiredStateDatabaseInput[] = inventory.apps
+    .filter((app) => app.database)
     .map((app) => ({
       appSlug: app.slug,
-      engine: app.database.engine,
-      databaseName: app.database.name,
-      databaseUser: app.database.user,
+      engine: app.database!.engine,
+      databaseName: app.database!.name,
+      databaseUser: app.database!.user,
       primaryNodeId:
-        app.database.engine === "postgresql"
+        app.database!.engine === "postgresql"
           ? inventory.platform.postgresql_apps.primary_node
           : inventory.platform.mariadb_apps.primary_node,
       standbyNodeId: resolveDatabaseStandbyNodeId(inventory, app) ?? undefined,
-      pendingMigrationTo: app.database.pending_migration_to,
-      migrationCompletedFrom: app.database.migration_completed_from,
-      migrationCompletedAt: app.database.migration_completed_at
+      pendingMigrationTo: app.database!.pending_migration_to,
+      migrationCompletedFrom: app.database!.migration_completed_from,
+      migrationCompletedAt: app.database!.migration_completed_at
     }))
     .sort((left, right) => left.appSlug.localeCompare(right.appSlug));
 

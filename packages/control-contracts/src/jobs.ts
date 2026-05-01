@@ -33,8 +33,19 @@ export interface ProxyRenderPayload {
   serverAliases?: string[];
   documentRoot?: string;
   proxyPassUrl?: string;
+  extraProxyRoutes?: ProxyRoutePayload[];
   proxyPreserveHost?: boolean;
   tls?: boolean;
+  tlsCertificateFile?: string;
+  tlsCertificateKeyFile?: string;
+}
+
+export interface ProxyRoutePayload {
+  pathPrefix: string;
+  targetUrl: string;
+  websocket?: boolean;
+  noCanon?: boolean;
+  timeoutSeconds?: number;
 }
 
 export interface DnsRecordPayload {

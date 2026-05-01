@@ -31,11 +31,50 @@ export function renderJobResult(result: AgentJobResult): string {
 
 export function renderApacheVhost(payload: ProxyRenderPayload): string {
   const aliases = payload.serverAliases ?? [];
+  const extraProxyRoutes = payload.extraProxyRoutes ?? [];
   const documentRoot = payload.documentRoot ?? "/var/www/html";
   const proxyPassUrl = payload.proxyPassUrl
     ? `${payload.proxyPassUrl.replace(/\/+$/, "")}/`
     : undefined;
   const shouldRenderDocumentRoot = Boolean(payload.documentRoot && !proxyPassUrl);
+  const tlsCertificateFile =
+    payload.tlsCertificateFile ??
+    `/etc/letsencrypt/live/${payload.serverName}/fullchain.pem`;
+  const tlsCertificateKeyFile =
+    payload.tlsCertificateKeyFile ??
+    `/etc/letsencrypt/live/${payload.serverName}/privkey.pem`;
+  const normalizeRouteTarget = (targetUrl: string) => `${targetUrl.replace(/\/+$/, "")}/`;
+  const renderExtraProxyRoutes = (indent = "  ") =>
+    extraProxyRoutes.flatMap((route) => {
+      const targetUrl = normalizeRouteTarget(route.targetUrl);
+      const pathPrefix = route.pathPrefix.endsWith("/")
+        ? route.pathPrefix
+        : `${route.pathPrefix}/`;
+      const timeout = route.timeoutSeconds ?? 120;
+      const flags = `${route.noCanon ? " nocanon" : ""} retry=0 timeout=${timeout}`;
+
+      return [
+        `${indent}ProxyPass ${pathPrefix} ${targetUrl}${flags}`,
+        `${indent}ProxyPassReverse ${pathPrefix} ${targetUrl}`
+      ];
+    });
+  const renderExtraWebsocketRoutes = (indent = "  ") =>
+    extraProxyRoutes
+      .filter((route) => route.websocket)
+      .flatMap((route) => {
+        const pathPrefix = route.pathPrefix.endsWith("/")
+          ? route.pathPrefix
+          : `${route.pathPrefix}/`;
+        const targetUrl = normalizeRouteTarget(route.targetUrl)
+          .replace(/^http:/, "ws:")
+          .replace(/^https:/, "wss:");
+
+        return [
+          `${indent}RewriteCond %{HTTP:Upgrade} websocket [NC]`,
+          `${indent}RewriteCond %{HTTP:Connection} upgrade [NC]`,
+          `${indent}RewriteRule ^${pathPrefix}(.*) ${targetUrl}$1 [P,L]`
+        ];
+      });
   const renderDocumentRoot = (indent = "  ") => [
     ...(shouldRenderDocumentRoot
       ? [
@@ -52,6 +91,10 @@ export function renderApacheVhost(payload: ProxyRenderPayload): string {
       ? [
           `${indent}ProxyPreserveHost ${payload.proxyPreserveHost === false ? "Off" : "On"}`,
           `${indent}ProxyRequests Off`,
+          ...renderExtraProxyRoutes(indent),
+          ...(extraProxyRoutes.some((route) => route.websocket)
+            ? [`${indent}RewriteEngine On`, ...renderExtraWebsocketRoutes(indent)]
+            : []),
           `${indent}ProxyPass / ${proxyPassUrl} retry=0 timeout=120`,
           `${indent}ProxyPassReverse / ${proxyPassUrl}`
         ]
@@ -85,8 +128,8 @@ export function renderApacheVhost(payload: ProxyRenderPayload): string {
     ...aliases.map((alias) => `  ServerAlias ${alias}`),
     "",
     "  SSLEngine on",
-    `  SSLCertificateFile /etc/letsencrypt/live/${payload.serverName}/fullchain.pem`,
-    `  SSLCertificateKeyFile /etc/letsencrypt/live/${payload.serverName}/privkey.pem`,
+    `  SSLCertificateFile ${tlsCertificateFile}`,
+    `  SSLCertificateKeyFile ${tlsCertificateKeyFile}`,
     "",
     '  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"',
     '  Header always set X-Content-Type-Options "nosniff"',

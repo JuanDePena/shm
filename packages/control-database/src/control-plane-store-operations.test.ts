@@ -10,11 +10,14 @@ import {
 
 import { createQueuedDispatchJob } from "./control-plane-store-helpers.js";
 import {
+  buildAppContainerPlans,
+  buildProxyPayload,
   buildZoneDnsPlans,
   mergeJobHistoryRows,
   purgeOperationalHistoryRows,
   shouldDispatchQueuedJob
 } from "./control-plane-store-operations.js";
+import { buildDesiredStateSpecFromInventory } from "./control-plane-store-spec.js";
 import type { JobHistoryRow } from "./control-plane-store-types.js";
 
 function createMailSyncJob(payload: Record<string, unknown>) {
@@ -285,4 +288,175 @@ test("buildZoneDnsPlans publishes node hostnames and dispatches primary plus sec
   assert.deepEqual(plans[0]?.payload.primaryAddresses, ["51.222.204.86", "10.89.0.1"]);
   assert.equal(plans[0]?.payload.deliveryRole, "primary");
   assert.equal(plans[1]?.payload.deliveryRole, "secondary");
+});
+
+test("buildAppContainerPlans preserves pgAdmin data and config mounts", async () => {
+  const client = {
+    query: async () => ({
+      rows: [
+        {
+          slug: "pyrosa-pgadmin",
+          backend_port: 10111,
+          runtime_image: "registry.example.com/pyrosa-pgadmin:stable",
+          storage_root: "/srv/containers/apps/pyrosa-pgadmin",
+          primary_node_id: "primary",
+          standby_node_id: "secondary",
+          mode: "active-passive",
+          canonical_domain: "pgadmin.pyrosa.com.do",
+          aliases: [],
+          database_engine: null,
+          database_name: null,
+          database_user: null,
+          database_primary_node_id: null,
+          database_primary_wireguard_address: null,
+          desired_password: null
+        }
+      ]
+    })
+  } as unknown as PoolClient;
+
+  const result = await buildAppContainerPlans(client, "pyrosa-pgadmin", null);
+
+  assert.equal(result.credentialMissing, false);
+  assert.equal(result.plans.length, 2);
+  assert.deepEqual(result.plans.map((plan) => plan.nodeId), ["primary", "secondary"]);
+  assert.deepEqual(result.plans[0]?.payload.volumes, [
+    "/srv/containers/apps/pyrosa-pgadmin/data:/var/lib/pgadmin:Z",
+    "/srv/containers/apps/pyrosa-pgadmin/config/config_local.py:/pgadmin4/config_local.py:Z"
+  ]);
+  assert.deepEqual(result.plans[0]?.payload.hostDirectories, [
+    "/srv/containers/apps/pyrosa-pgadmin",
+    "/srv/containers/apps/pyrosa-pgadmin/data",
+    "/srv/containers/apps/pyrosa-pgadmin/config"
+  ]);
+  assert.equal(
+    result.plans[0]?.payload.environment?.PGADMIN_DEFAULT_PASSWORD_FILE,
+    "/var/lib/pgadmin/.default-password"
+  );
+  assert.equal(
+    result.plans[0]?.payload.environment?.PGADMIN_DEFAULT_EMAIL,
+    "webmaster@pyrosa.com.do"
+  );
+});
+
+test("buildProxyPayload uses the managed Pyrosa wildcard certificate", async () => {
+  const client = {
+    query: async () => ({
+      rows: [
+        {
+          app_id: "app-pyrosa-ldap",
+          slug: "pyrosa-ldap",
+          backend_port: 10110,
+          runtime_image: "registry.example.com/pyrosa-ldap:stable",
+          primary_node_id: "primary",
+          standby_node_id: "secondary",
+          mode: "active-passive",
+          zone_name: "pyrosa.com.do",
+          canonical_domain: "ldap.pyrosa.com.do",
+          aliases: [],
+          storage_root: "/srv/containers/apps/pyrosa-ldap"
+        }
+      ]
+    })
+  } as unknown as PoolClient;
+
+  const result = await buildProxyPayload(client, "pyrosa-ldap");
+
+  assert.equal(result.plans.length, 2);
+  assert.equal(
+    result.plans[0]?.payload.tlsCertificateFile,
+    "/etc/ssl/simplehostman/pyrosa.com.do/fullchain.pem"
+  );
+  assert.equal(
+    result.plans[0]?.payload.tlsCertificateKeyFile,
+    "/etc/ssl/simplehostman/pyrosa.com.do/privkey.pem"
+  );
+});
+
+test("buildProxyPayload preserves the Pyrosa helpers DFR route", async () => {
+  const client = {
+    query: async () => ({
+      rows: [
+        {
+          app_id: "app-pyrosa-helpers",
+          slug: "pyrosa-helpers",
+          backend_port: 10112,
+          runtime_image: "registry.example.com/pyrosa-helpers:stable",
+          primary_node_id: "primary",
+          standby_node_id: "secondary",
+          mode: "active-passive",
+          zone_name: "pyrosa.com.do",
+          canonical_domain: "helpers.pyrosa.com.do",
+          aliases: [],
+          storage_root: "/srv/containers/apps/pyrosa-helpers"
+        }
+      ]
+    })
+  } as unknown as PoolClient;
+
+  const result = await buildProxyPayload(client, "pyrosa-helpers");
+
+  assert.deepEqual(result.plans[0]?.payload.extraProxyRoutes, [
+    {
+      pathPrefix: "/dfr/",
+      targetUrl: "http://127.0.0.1:10113/",
+      websocket: true,
+      noCanon: true,
+      timeoutSeconds: 120
+    }
+  ]);
+});
+
+test("buildDesiredStateSpecFromInventory supports apps without databases", () => {
+  const spec = buildDesiredStateSpecFromInventory({
+    nodes: {
+      primary: {
+        hostname: "vps-3dbbfb0b.vps.ovh.ca",
+        public_ipv4: "51.222.204.86",
+        wireguard_address: "10.89.0.1/24"
+      },
+      secondary: {
+        hostname: "vps-16535090.vps.ovh.ca",
+        public_ipv4: "51.222.206.196",
+        wireguard_address: "10.89.0.2/24"
+      }
+    },
+    platform: {
+      postgresql_apps: {
+        primary_node: "primary",
+        standby_node: "secondary",
+        primary_port: 5432
+      },
+      postgresql_control: {
+        primary_node: "primary",
+        standby_node: "secondary",
+        primary_port: 5433,
+        database: "simplehost_control",
+        user: "simplehost_control"
+      },
+      mariadb_apps: {
+        primary_node: "primary",
+        replica_node: "secondary",
+        primary_port: 3306
+      }
+    },
+    apps: [
+      {
+        slug: "pyrosa-repos",
+        client: "pyrosa",
+        zone: "pyrosa.com.do",
+        canonical_domain: "repos.pyrosa.com.do",
+        aliases: [],
+        backend_port: 10104,
+        runtime_image: "registry.example.com/pyrosa-repos:stable",
+        storage_root: "/srv/containers/apps/pyrosa-repos",
+        mode: "active-passive"
+      }
+    ]
+  });
+
+  assert.equal(spec.apps[0]?.primaryNodeId, "primary");
+  assert.equal(spec.apps[0]?.standbyNodeId, "secondary");
+  assert.equal(spec.databases.length, 0);
+  assert.equal(spec.zones[0]?.zoneName, "pyrosa.com.do");
 });

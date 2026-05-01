@@ -1516,9 +1516,9 @@ The shutdown drill surfaced two issues that were corrected:
 - the target pgAdmin Quadlet had been regenerated with generic PHP app mounts. It was restored to
   the pgAdmin-specific data/config mounts and the node-local pgAdmin entrypoint variables were
   restored with a node-local password file, without committing secrets.
-- generic `container.reconcile` should not be run for `pyrosa-pgadmin` until the control model
-  supports app-specific mounts for pgAdmin; if it is run, reapply the pgAdmin-specific Quadlet
-  layout immediately after.
+- the control model now emits pgAdmin-specific mounts and password-file environment for
+  `pyrosa-pgadmin`, so future generic `container.reconcile` jobs preserve the restored Quadlet
+  layout.
 
 Post-shutdown validation:
 
@@ -1603,3 +1603,41 @@ Rollback, if an unexpected dependency is reported before cancellation:
 - re-enable only the affected service on `vps-old` with `systemctl enable --now <unit>`
 - if authoritative DNS must be temporarily restored, start `pdns.service` and verify the relevant
   zone serial before relying on it
+
+## Operational Hardening And Bootstrap Refresh
+
+Completed on `2026-05-01` after the `vps-old` legacy service drain.
+
+Control-plane hardening:
+
+- `container.reconcile` now detects pgAdmin runtimes and emits the required data/config mounts:
+  `/srv/containers/apps/pyrosa-pgadmin/data:/var/lib/pgadmin:Z` and
+  `/srv/containers/apps/pyrosa-pgadmin/config/config_local.py:/pgadmin4/config_local.py:Z`
+- pgAdmin reconcile payloads now include `PGADMIN_DEFAULT_PASSWORD_FILE=/var/lib/pgadmin/.default-password`
+  and derive a non-secret default email from the canonical hostname
+- `proxy.render` now passes explicit Pyrosa wildcard certificate paths instead of assuming a
+  hostname-specific Let's Encrypt lineage exists for every subdomain
+- `proxy.render` now supports app-specific extra proxy routes; `pyrosa-helpers` uses this to preserve
+  `/dfr/` on backend `10113` with websocket upgrade handling while the main app remains on `10112`
+- bootstrap inventory parsing now supports apps without managed databases, which covers `repos`,
+  `api`, `erp`, `portal`, `ldap`, and `pgadmin`
+- `bootstrap/apps.bootstrap.yaml` now includes the full Pyrosa app set represented by live desired
+  state: WordPress, sync, demoportal, repos, demoerp, API, demosync, ERP placeholder, portal
+  placeholder, LDAP/LAM, pgAdmin, and helpers
+
+Validation:
+
+- `pnpm --filter @simplehost/control-database build` passed
+- `pnpm --filter @simplehost/control-database test` passed with `26` tests
+- `pnpm build:control-runtime` and `pnpm build:agent-runtime` passed
+- release `2604.28.18` was redeployed for control, worker, and agents on both SimpleHostMan nodes
+- bootstrap inventory reads successfully and builds a desired-state spec with `14` apps, `8`
+  managed database entries, and `12` Pyrosa apps
+- post-deploy forced HTTPS checks for `helpers.pyrosa.com.do/dfr/health`, helpers QR scanner,
+  pgAdmin, LDAP/LAM, and the Pyrosa apex returned `200 OK` on `primary` and `secondary`
+
+Known inventory limitation:
+
+- the transitional bootstrap format still represents one managed database per app; live desired
+  state contains secondary QBO databases for `pyrosa-sync` and `pyrosa-demosync` that remain in
+  PostgreSQL desired state but are not expressible in `apps.bootstrap.yaml` yet
