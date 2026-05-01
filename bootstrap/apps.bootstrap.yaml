@@ -45,6 +45,20 @@ apps:
     storage_root: /srv/containers/apps/pyrosa-wp
     mode: active-passive
 
+  - slug: pyrosa-demoportal
+    client: pyrosa
+    zone: pyrosa.com.do
+    canonical_domain: demoportal.pyrosa.com.do
+    aliases: []
+    backend_port: 10103
+    runtime_image: registry.example.com/pyrosa-demoportal:stable
+    database:
+      engine: mariadb
+      name: app_pyrosa_demoportal
+      user: app_pyrosa_demoportal
+    storage_root: /srv/containers/apps/pyrosa-demoportal
+    mode: active-passive
+
   - slug: pyrosa-sync
     client: pyrosa
     zone: pyrosa.com.do

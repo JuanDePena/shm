@@ -1,6 +1,6 @@
 # vps-old Domain Migration Sequence
 
-Updated on `2026-04-30`.
+Updated on `2026-05-01`.
 
 This runbook tracks the migration plan and closure status for domains discovered on
 `root@vps-old.pyrosa.com.do`, plus the earlier `adudoc.com` and `gomezrosado.com.do`
@@ -20,7 +20,7 @@ pilot migrations that established the current SimpleHostMan pattern.
 | `zcrmt.com` | migrated WordPress runtime on `app-zcrmt` | Zoho preserved | WordPress kept on MariaDB `app_zcrmt_wp` | closed |
 | `merlelaw.com` | migrated blank static runtime on `app-merlelaw` | SimpleHostMan mail live | none | closed |
 | `engilum.com` | external web targets preserved | Zoho preserved | none | DNS-only staged |
-| `pyrosa.com.do` | `pyrosa-wp` runtime active; `sync`/`helpers`/`repos` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress migrated to MariaDB `app_pyrosa_wp`; later apps separate | phase 1 propagation |
+| `pyrosa.com.do` | `pyrosa-wp` and `pyrosa-demoportal` runtimes active; `sync`/`helpers`/`repos` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress and demoportal migrated to MariaDB; later apps separate | phase 2 complete |
 | `solucionesmercantilnr.com` | not migrated | retired | none | out of scope: expired, not renewing |
 | `pyrosa.net` | not migrated | retired | none | out of scope: expired, not renewing |
 
@@ -513,6 +513,54 @@ Remaining propagation item:
 - as of `2026-04-30 22:51 UTC`, the `.do` parent still returned the old nameserver delegation
   (`vps-1926167b.vps.ovh.ca` and `sdns2.ovh.ca`) even though the registrar change to
   `vps-16535090.vps.ovh.ca` and `vps-3dbbfb0b.vps.ovh.ca` had been submitted
+
+### 2026-05-01: pyrosa.com.do demoportal phase 2
+
+`demoportal.pyrosa.com.do` was copied from `vps-old`, imported into MariaDB, and started as
+`app-pyrosa-demoportal` on both SimpleHostMan nodes.
+
+Applied app:
+
+- app slug `pyrosa-demoportal`
+- source `/home/wmpyrosa/public_html/_sites/demoportal.pyrosa.com.do/`
+- excluded `node_modules/`, root `error_log`, and `public/error_log`
+- staged file count `8,801`, staged size about `79M`
+- backend port `10103`
+- runtime image tag `registry.example.com/pyrosa-demoportal:stable`
+- storage root `/srv/containers/apps/pyrosa-demoportal`
+- `app-pyrosa-demoportal.service` active on `primary` and `secondary`
+
+Database outcome:
+
+- source database `wmpyrosa_synct`
+- target MariaDB database `app_pyrosa_demoportal`
+- target MariaDB user `app_pyrosa_demoportal`
+- imported `20` Laravel tables
+- `php artisan migrate:status` reports all `14` migrations as `Ran`
+- imported row checks: `2` `users`, `2` `organizations`, and `14` `sessions`
+- kept on MariaDB because the source is MySQL/MariaDB and PostgreSQL compatibility was not tested
+
+Runtime image outcome:
+
+- PHP/Apache runtime definition now includes `pdo_mysql`
+- build script path was corrected so the runtime image build context resolves from `scripts/agent`
+
+DNS and TLS outcome:
+
+- `.do` parent now delegates `pyrosa.com.do` to `vps-16535090.vps.ovh.ca` and
+  `vps-3dbbfb0b.vps.ovh.ca`
+- SimpleHostMan PowerDNS serves `demoportal.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- `sync.pyrosa.com.do`, `helpers.pyrosa.com.do`, and `repos.pyrosa.com.do` remain pointed at
+  `51.161.11.249`
+- Microsoft 365 MX/SPF/DKIM/Autodiscover/DMARC records remain preserved
+- existing Pyrosa wildcard certificate is used for the `demoportal.pyrosa.com.do` HTTPS vhost
+
+Validation:
+
+- `https://demoportal.pyrosa.com.do/` returns `200 OK` on both nodes using `--resolve`
+- `https://demoportal.pyrosa.com.do/login` returns `200 OK` on both nodes using `--resolve`
+- public checks from `1.1.1.1` and `8.8.8.8` returned the new `demoportal` A record
+- `sync`, `helpers`, and `repos` still returned the old-host A record from public resolver checks
 
 ### 2026-04-30: ppdpr.us web runtime cutover
 

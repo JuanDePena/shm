@@ -1,6 +1,6 @@
 # pyrosa.com.do Runtime Migration Plan
 
-Updated on `2026-04-30`.
+Updated on `2026-05-01`.
 
 This document records the read-only inspection of `pyrosa.com.do` on
 `root@vps-old.pyrosa.com.do` and the proposed execution plan for migrating selected web runtimes
@@ -26,6 +26,7 @@ SimpleHostMan mail domain should be created for `pyrosa.com.do`.
 | App | Hostnames | Backend | Database | Status |
 | --- | --- | ---: | --- | --- |
 | `pyrosa-wp` | `pyrosa.com.do`, `www.pyrosa.com.do` | `10101` | MariaDB `app_pyrosa_wp` | phase 1 runtime active on primary and secondary |
+| `pyrosa-demoportal` | `demoportal.pyrosa.com.do` | `10103` | MariaDB `app_pyrosa_demoportal` | phase 2 runtime active on primary and secondary |
 | `pyrosa-sync` | `sync.pyrosa.com.do` | `10102` | MariaDB `app_pyrosa_sync`, pending PostgreSQL | desired only; do not migrate now |
 
 The target node public IP for migrated web hostnames is `51.222.204.86`.
@@ -40,7 +41,7 @@ Legacy public IP: `51.161.11.249`.
 | `api.pyrosa.com.do` | `_sites/api.pyrosa.com.do` | `346M` | PHP plus Node helper tree | external MongoDB URI and external HANA/SAP endpoint | migrate only after external connectivity and secret handling review |
 | `code.pyrosa.com.do` | proxy, not document root content | empty docroot | `code-server` on `0.0.0.0:8080` | service account/runtime on old host | keep on `vps-old` unless intentionally rebuilding developer tooling |
 | `demoerp.pyrosa.com.do` | `_sites/demoerp.pyrosa.com.do/htdocs` | `267M` htdocs; about `2.0G` tree | Dolibarr-style PHP app | PostgreSQL `dolibarr_demoerp` on PostgreSQL 18 | migrate after a dedicated PostgreSQL dump/restore test |
-| `demoportal.pyrosa.com.do` | `_sites/demoportal.pyrosa.com.do` | `194M` | Laravel app | MySQL `wmpyrosa_synct`, Redis, local mail relay config | candidate after WordPress, likely keep on MariaDB first |
+| `demoportal.pyrosa.com.do` | `_sites/demoportal.pyrosa.com.do` | `194M` source; `79M` staged without `node_modules`/logs | Laravel 12 app | MySQL `wmpyrosa_synct`, Redis/local mail settings observed in legacy env | migrated in phase 2 as `pyrosa-demoportal`, kept on MariaDB |
 | `demosync.pyrosa.com.do` | `_sites/demosync.pyrosa.com.do` | `88M` | DIS/QBO demo app | MySQL `wmpyrosa_disdemo` and shared `wmpyrosa_qbo` | defer with the sync family unless explicitly approved |
 | `erp.pyrosa.com.do` | `_sites/erp.pyrosa.com.do` | empty | placeholder | none observed | leave DNS on old or create placeholder app later |
 | `helpers.pyrosa.com.do` | `_sites/helpers.pyrosa.com.do` | `6.6G` | helper tools; Apache proxy path to `localhost:3333` configured | PostgreSQL `do_fiscal_reports`; active cron jobs | do not migrate now |
@@ -129,7 +130,7 @@ PostgreSQL natively.
 
 Recommended order after WordPress:
 
-1. `demoportal.pyrosa.com.do`: containerized Laravel app, small DB, no large data volume.
+1. `demoportal.pyrosa.com.do`: completed as `pyrosa-demoportal`.
 2. `api.pyrosa.com.do`: containerized app after secrets are moved to environment files and external
    MongoDB/HANA connectivity is tested from the target host.
 3. `demoerp.pyrosa.com.do`: Dolibarr app with PostgreSQL dump/restore to target PostgreSQL.
@@ -308,6 +309,8 @@ at the parent:
 - `vps-16535090.vps.ovh.ca`
 - `vps-3dbbfb0b.vps.ovh.ca`
 
+The parent delegation was later confirmed during phase 2 on `2026-05-01`.
+
 ### Validation
 
 Backend and vhost validation:
@@ -331,8 +334,112 @@ Public resolver spot checks after runtime cutover:
 
 ### Follow-Up
 
-- Re-check the `.do` parent delegation until it returns only the two SimpleHostMan nameservers.
+- Parent delegation follow-up was completed during phase 2.
 - Issue a native SimpleHostMan/Let's Encrypt certificate for `pyrosa.com.do` and `www.pyrosa.com.do`
   after delegation has fully moved.
 - Run a final WordPress file delta sync if there is evidence that uploads changed on `vps-old`
   during propagation.
+
+## Phase 2 Execution Record
+
+Completed on `2026-05-01` and scoped only to:
+
+- `demoportal.pyrosa.com.do`
+
+The following hostnames remain intentionally on `vps-old`:
+
+- `sync.pyrosa.com.do`
+- `helpers.pyrosa.com.do`
+- `repos.pyrosa.com.do`
+- `api.pyrosa.com.do`
+- `demoerp.pyrosa.com.do`
+- `demosync.pyrosa.com.do`
+- `code.pyrosa.com.do`
+- `pgadmin.pyrosa.com.do`
+- `ldap.pyrosa.com.do`
+
+### Runtime
+
+Applied runtime state:
+
+- app slug `pyrosa-demoportal`
+- source path copied from `root@51.161.11.249:/home/wmpyrosa/public_html/_sites/demoportal.pyrosa.com.do/`
+- excluded `node_modules/`, root `error_log`, and `public/error_log`
+- staged file count: `8,801`
+- staged payload size: about `79M`
+- backend port `10103`
+- runtime image tag `registry.example.com/pyrosa-demoportal:stable`
+- storage root `/srv/containers/apps/pyrosa-demoportal`
+- `app-pyrosa-demoportal.service` active on `primary`
+- `app-pyrosa-demoportal.service` active on `secondary`
+
+The shared PHP/Apache runtime definition was updated to include `pdo_mysql`, which Laravel needs for
+MariaDB/MySQL through PDO. The app container also mounts an Apache site config with
+`DocumentRoot /var/www/html/public` so the Laravel project root and `.env` are not web roots.
+
+### Database
+
+Applied database state:
+
+- source database `wmpyrosa_synct`
+- target database `app_pyrosa_demoportal`
+- target database user `app_pyrosa_demoportal`
+- engine kept on MariaDB
+- imported table count: `20`
+- imported Laravel migrations marked as ran: `14`
+- imported row checks: `2` `users`, `2` `organizations`, and `14` `sessions`
+
+The app was kept on MariaDB for this phase because the source is MySQL/MariaDB and no separate
+schema compatibility pass for PostgreSQL has been performed.
+
+### TLS And Proxying
+
+The existing Pyrosa wildcard certificate under `/etc/ssl/simplehostman/pyrosa.com.do/` is used by
+the `demoportal.pyrosa.com.do` HTTPS vhost on both nodes.
+
+Proxy behavior:
+
+- HTTP redirects to HTTPS.
+- HTTPS proxies to `127.0.0.1:10103`.
+- `X-Forwarded-Proto: https` and `X-Forwarded-Port: 443` are sent to Laravel.
+
+### DNS
+
+SimpleHostMan PowerDNS now serves:
+
+- `demoportal.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- `sync.pyrosa.com.do A -> 51.161.11.249`
+- `helpers.pyrosa.com.do A -> 51.161.11.249`
+- `repos.pyrosa.com.do A -> 51.161.11.249`
+
+The `.do` parent delegation was confirmed on `2026-05-01` as:
+
+- `vps-16535090.vps.ovh.ca`
+- `vps-3dbbfb0b.vps.ovh.ca`
+
+The legacy PowerDNS zone on `vps-old` was also updated so cached old delegations answer
+`demoportal.pyrosa.com.do A -> 51.222.204.86`. `www.demoportal.pyrosa.com.do` remains pointed at
+`51.161.11.249` because it was not part of this cutover.
+
+### Validation
+
+Backend and vhost validation:
+
+- `http://127.0.0.1:10103/` returns `200 OK` on both nodes with the expected Laravel response.
+- `https://demoportal.pyrosa.com.do/` with `--resolve` to `51.222.204.86` returns `200 OK`.
+- `https://demoportal.pyrosa.com.do/` with `--resolve` to `51.222.206.196` returns `200 OK`.
+- `https://demoportal.pyrosa.com.do/login` returns `200 OK` on both nodes and title
+  `pyrosa-demoportal`.
+- `php artisan migrate:status` reports all `14` migrations as `Ran` on both nodes.
+
+Public resolver spot checks after cutover:
+
+- `1.1.1.1` returned `demoportal.pyrosa.com.do A -> 51.222.204.86`
+- `8.8.8.8` returned `demoportal.pyrosa.com.do A -> 51.222.204.86`
+- `1.1.1.1` returned `sync.pyrosa.com.do A -> 51.161.11.249`
+- `1.1.1.1` returned `helpers.pyrosa.com.do A -> 51.161.11.249`
+- `1.1.1.1` returned `repos.pyrosa.com.do A -> 51.161.11.249`
+- `1.1.1.1` returned Microsoft 365 MX for `pyrosa.com.do`
+
+Some recursive resolvers may still cache the old `demoportal.pyrosa.com.do` answer until the legacy
+TTL expires.
