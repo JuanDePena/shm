@@ -20,7 +20,7 @@ pilot migrations that established the current SimpleHostMan pattern.
 | `zcrmt.com` | migrated WordPress runtime on `app-zcrmt` | Zoho preserved | WordPress kept on MariaDB `app_zcrmt_wp` | closed |
 | `merlelaw.com` | migrated blank static runtime on `app-merlelaw` | SimpleHostMan mail live | none | closed |
 | `engilum.com` | external web targets preserved | Zoho preserved | none | DNS-only staged |
-| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, `pyrosa-repos`, `pyrosa-demoerp`, `pyrosa-api`, `pyrosa-demosync`, `pyrosa-erp`, `pyrosa-portal`, `pyrosa-ldap`, `pyrosa-pgadmin`, `pyrosa-sync`, `pyrosa-helpers`, and `code.pyrosa.com.do` host-service proxy active; second-level `www.*` aliases not required unless separately requested | Microsoft 365 preserved, no legacy mail migration planned | WordPress, demoportal, demosync, and sync migrated to MariaDB; demoerp and helpers DFR preservation database migrated to PostgreSQL; `repos`, `api`, `erp`, `portal`, and `ldap` have no local database; pgAdmin uses its migrated SQLite config store | phase 14 helpers cutover recorded |
+| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, `pyrosa-repos`, `pyrosa-demoerp`, `pyrosa-api`, `pyrosa-demosync`, `pyrosa-erp`, `pyrosa-portal`, `pyrosa-ldap`, `pyrosa-pgadmin`, `pyrosa-sync`, `pyrosa-helpers`, and `code.pyrosa.com.do` host-service proxy active; second-level `www.*` aliases not required unless separately requested | Microsoft 365 preserved, no legacy mail migration planned | WordPress, demoportal, demosync, and sync migrated to MariaDB; demoerp and helpers DFR preservation database migrated to PostgreSQL; `repos`, `api`, `erp`, `portal`, and `ldap` have no local database; pgAdmin uses its migrated SQLite config store | closed; vps-old service drain recorded |
 | `solucionesmercantilnr.com` | not migrated | retired | none | out of scope: expired, not renewing |
 | `pyrosa.net` | not migrated | retired | none | out of scope: expired, not renewing |
 
@@ -462,12 +462,17 @@ Copied mailbox counts:
 
 All copied mailbox trees were also replicated to the secondary node.
 
-## Current Next Action
+## Current Closure State
 
-The migration batch through `merlelaw.com` is closed. The remaining active `vps-old` follow-up is
-`helpers.pyrosa.com.do`, tracked under the multi-app Pyrosa migration in
-[`pyrosa-runtime-migration.md`](/opt/simplehostman/src/docs/MIGRATIONS/pyrosa-runtime-migration.md).
-Public Pyrosa mail is on Microsoft 365, so legacy cPanel mail should not be migrated.
+The migration batch through the Pyrosa service drain is closed. There is no
+active `vps-old` migration follow-up in this runbook as of `2026-05-01`.
+`merlelaw.com` may still be transferred separately, and second-level Pyrosa
+`www.*` aliases are intentionally allowed to expire unless explicitly requested.
+Public Pyrosa mail is on Microsoft 365, so legacy cPanel mail should not be
+migrated.
+
+Active post-migration hardening is tracked in
+[`OPERATIONAL_INSPECTION_20260501.md`](/opt/simplehostman/src/docs/OPERATIONAL_INSPECTION_20260501.md).
 
 ### 2026-04-30: pyrosa.com.do WordPress phase 1
 
@@ -508,11 +513,12 @@ Validation:
 - public checks from `1.1.1.1` and `8.8.8.8` returned the new apex/`www` A records, the old
   `sync` A record, and the Microsoft 365 MX record
 
-Remaining propagation item:
+Historical propagation note:
 
 - as of `2026-04-30 22:51 UTC`, the `.do` parent still returned the old nameserver delegation
   (`vps-1926167b.vps.ovh.ca` and `sdns2.ovh.ca`) even though the registrar change to
   `vps-16535090.vps.ovh.ca` and `vps-3dbbfb0b.vps.ovh.ca` had been submitted
+- parent delegation was later confirmed during Pyrosa phase 2 on `2026-05-01`
 
 ### 2026-05-01: pyrosa.com.do demoportal phase 2
 
@@ -1517,11 +1523,13 @@ Validation:
 - forced HTTPS checks for helpers DFR, helpers QR scanner, pgAdmin, LDAP/LAM, and Pyrosa apex return
   `200 OK` on both SimpleHostMan nodes
 
-Remaining limitation:
+Known inventory limitation:
 
 - the transitional bootstrap format still supports only one managed database per app, so the live
   secondary QBO databases for `pyrosa-sync` and `pyrosa-demosync` remain in desired state but are
   not represented in `apps.bootstrap.yaml`
+- this is not a migration blocker; the follow-up is tracked in
+  [`OPERATIONAL_INSPECTION_20260501.md`](/opt/simplehostman/src/docs/OPERATIONAL_INSPECTION_20260501.md)
 
 ### 2026-05-01: Pyrosa timers and publishing review
 
@@ -1556,6 +1564,8 @@ Repository publishing posture:
 - latest observed `sbotools` package metadata remains `2026-04-10 16:03 UTC`
 - `sbotools.repo`, `repomd.xml`, `repomd.xml.asc`, and `RPM-GPG-KEY-sbotools` checksums match between
   `primary` and `secondary`
+- future package publication workflow is tracked in
+  [`OPERATIONAL_INSPECTION_20260501.md`](/opt/simplehostman/src/docs/OPERATIONAL_INSPECTION_20260501.md)
 
 Validation:
 

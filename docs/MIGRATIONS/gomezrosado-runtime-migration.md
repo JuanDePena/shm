@@ -198,8 +198,13 @@ Follow-up observed on `2026-04-29`:
 - `http://gomezrosado.com.do/` redirects to HTTPS from the new Apache stack
 - `http://webmail.gomezrosado.com.do/` returns the Roundcube login surface from the new stack
 
-## Remaining Follow-ups
+## Closure Notes
 
-- spot-check external recursive DNS if a user reports stale answers
-- run one more delta Maildir sync only if logs show late mail still landing on `vps-old`
-- confirm each mailbox owner can log in and rotate any password that should not keep the migration secret
+The consolidated migration sequence marks `gomezrosado.com.do` as closed. The
+notes below are conditional operational responses, not active migration TODOs:
+
+- spot-check external recursive DNS only if a user reports stale answers
+- run another Maildir delta only if logs show late mail still landing on
+  `vps-old`
+- rotate mailbox credentials through SimpleHostMan if a mailbox owner requests a
+  post-migration credential change

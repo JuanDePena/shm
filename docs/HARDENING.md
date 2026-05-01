@@ -387,11 +387,18 @@ rm -f /usr/local/sbin/server-healthcheck
 systemctl daemon-reload
 ```
 
-## Deferred items
+## Historical Hardening Notes
 
-- Move routine administration to a non-root sudo user and keep `root` for break-glass access only.
-- Move the temporary `code-server` SSH tunnel exception away from `root` and then remove the `Match User root` forwarding allowance.
-- Automate OS security updates on a defined cadence.
-- Add backup and restore validation for `code-server` data and server configuration.
-- If your admin source IP range is stable enough, restrict SSH by source IP.
-- If desired, remove the mail-related `fail2ban` dependency chain in a later pass by repackaging the installed `fail2ban` components more explicitly.
+The original hardening backlog is no longer tracked as a document-local open
+list. Active security and resilience follow-up now lives in
+[`OPERATIONAL_INSPECTION_20260501.md`](/opt/simplehostman/src/docs/OPERATIONAL_INSPECTION_20260501.md).
+
+Historical topics retained for context:
+
+- routine administration through a non-root sudo user, with `root` kept for
+  break-glass access only
+- removing the temporary `code-server` SSH tunnel exception from `root`
+- automating OS security updates on a defined cadence
+- backup and restore validation for `code-server` data and server configuration
+- SSH source-IP restriction if the administrator source range is stable enough
+- optional cleanup of the mail-related `fail2ban` dependency chain

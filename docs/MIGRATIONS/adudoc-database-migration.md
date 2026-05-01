@@ -39,10 +39,15 @@ Expected checkpoints:
 - `Latest reconcile applied` is `yes`
 - `Backup coverage present` is `yes`
 
-## Remaining closure work
+## Historical Closure Audit Notes
 
-1. Run the audit script against production and paste the output into the migration ticket.
-2. If the script returns `model-complete-without-metadata`, backfill explicit completion metadata in desired state or bootstrap inventory using:
+This section is retained as audit guidance for the earlier Adudoc database
+migration. It is not an active migration TODO unless `TODO.md` reopens it.
+
+If this migration is audited again, run the script against production and keep
+the result with the migration evidence. If the script returns
+`model-complete-without-metadata`, backfill explicit completion metadata in
+desired state or bootstrap inventory using:
 
 ```yaml
 database:
@@ -53,9 +58,9 @@ database:
   migration_completed_at: 2026-04-12T00:00:00Z
 ```
 
-3. Confirm there is no remaining `database:adudoc` drift and that the last relevant reconcile job applied cleanly.
-4. Confirm backup policy coverage and at least one successful recent backup run for selectors covering `app:adudoc` or `database:adudoc`.
-5. Retire any legacy MariaDB leftovers outside `SimpleHost Control`: database, user, backup jobs, scripts, secrets, or manual runbooks still pointing at the old engine.
+For a future audit, also confirm there is no `database:adudoc` drift, the latest
+relevant reconcile job applied cleanly, backup policy coverage exists, and no
+legacy MariaDB leftovers outside `SimpleHost Control` are still in use.
 
 ## Notes
 

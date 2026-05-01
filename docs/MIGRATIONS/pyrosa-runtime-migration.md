@@ -1,10 +1,10 @@
-# pyrosa.com.do Runtime Migration Plan
+# pyrosa.com.do Runtime Migration Record
 
 Updated on `2026-05-01`.
 
 This document records the read-only inspection of `pyrosa.com.do` on
-`root@vps-old.pyrosa.com.do` and the proposed execution plan for migrating selected web runtimes
-into SimpleHostMan.
+`root@vps-old.pyrosa.com.do` and the execution record for migrating selected web
+runtimes into SimpleHostMan.
 
 Public mail is hosted on Microsoft 365. No legacy cPanel mailboxes should be migrated and no
 SimpleHostMan mail domain should be created for `pyrosa.com.do`.
@@ -192,9 +192,12 @@ These systems were separately approved and migrated:
 - `pgadmin.pyrosa.com.do`, completed in phase 10.
 - `ldap.pyrosa.com.do`, completed in phase 9.
 
-## Open Checks Before Execution
+## Execution Checks Status
 
-- Capture a fresh final DB dump timestamp immediately before each cutover that includes a database.
+Fresh DB dump capture was handled inside each cutover block that included a
+database. Any new validation or tuning work after the migration wave belongs in
+[`OPERATIONAL_INSPECTION_20260501.md`](/opt/simplehostman/src/docs/OPERATIONAL_INSPECTION_20260501.md),
+not as a separate open checklist in this runbook.
 
 ## Commit And Push Blocks
 
@@ -213,13 +216,13 @@ committed.
 | G | `demoerp` app | record PostgreSQL dump/restore, role/database mapping, Dolibarr checks | target PostgreSQL import and app smoke checks pass | `feat: migrate pyrosa demoerp runtime` |
 | H | `repos` RPM repository, if approved | record repo copy, checksums, metadata, and SLES client result | `.repo`, `repomd.xml`, signatures, and zypper/yum refresh pass | `feat: migrate pyrosa rpm repository` |
 
-Deferred systems get their own later block after period close:
+The originally deferred systems were later handled in dedicated blocks after
+period close:
 
 - `sync.pyrosa.com.do`
 - `helpers.pyrosa.com.do`
-- `demosync.pyrosa.com.do` if it stays coupled to the sync stack
-- `code.pyrosa.com.do`, `pgadmin.pyrosa.com.do`, and `ldap.pyrosa.com.do` if they are rebuilt on
-  SimpleHostMan
+- `demosync.pyrosa.com.do`
+- `code.pyrosa.com.do`, `pgadmin.pyrosa.com.do`, and `ldap.pyrosa.com.do`
 
 Suggested block workflow:
 
@@ -351,13 +354,12 @@ Public resolver spot checks after runtime cutover:
 - `8.8.8.8` returned `sync.pyrosa.com.do A -> 51.161.11.249`
 - `8.8.8.8` returned Microsoft 365 MX for `pyrosa.com.do`
 
-### Follow-Up
+### Phase 1 Closure Notes
 
 - Parent delegation follow-up was completed during phase 2.
-- Issue a native SimpleHostMan/Let's Encrypt certificate for `pyrosa.com.do` and `www.pyrosa.com.do`
-  after delegation has fully moved.
-- Run a final WordPress file delta sync if there is evidence that uploads changed on `vps-old`
-  during propagation.
+- Native certificate or WordPress delta work should be reopened only if a
+  certificate audit, upload mismatch, or user report creates a new operational
+  need.
 
 ## Phase 2 Execution Record
 
@@ -1065,7 +1067,7 @@ The PHP/Apache runtime now includes the LAM-required `ldap`, `gettext`, and `gmp
 LAM profile in the migrated copy uses `ldaps://ldap.pyrosa.com.do:636`; after the OpenLDAP import,
 that hostname resolves to the SimpleHostMan LDAP listener.
 
-### OpenLDAP Service Follow-Up
+### OpenLDAP Service Closure
 
 Completed on `2026-05-01` after all Pyrosa web hostnames were already served from SimpleHostMan.
 
@@ -1638,6 +1640,8 @@ Known inventory limitation:
 - the transitional bootstrap format still represents one managed database per app; live desired
   state contains secondary QBO databases for `pyrosa-sync` and `pyrosa-demosync` that remain in
   PostgreSQL desired state but are not expressible in `apps.bootstrap.yaml` yet
+- follow-up for this inventory model limitation is tracked in
+  [`OPERATIONAL_INSPECTION_20260501.md`](/opt/simplehostman/src/docs/OPERATIONAL_INSPECTION_20260501.md)
 
 ## Timers And Publishing Review
 
@@ -1674,6 +1678,8 @@ Repository publishing posture:
   on `primary` and `secondary`
 - no active publishing job for new Proyecto Iohana RPMs was found; future package publication should
   be introduced as an explicit SimpleHostMan workflow rather than by reviving stale cPanel cron jobs
+- that publishing workflow follow-up is tracked in
+  [`OPERATIONAL_INSPECTION_20260501.md`](/opt/simplehostman/src/docs/OPERATIONAL_INSPECTION_20260501.md)
 
 Validation:
 

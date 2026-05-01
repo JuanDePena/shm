@@ -73,7 +73,10 @@ These are the concrete sources used by the pilot migration scripts:
 - target DB role: `app_adudoc`
 - target backend bind: `127.0.0.1:10301`
 
-## Open Follow-ups
+## Historical Follow-ups
+
+These notes were recorded during the pilot cutover. They are not active TODOs
+unless `TODO.md` or the operational inspection plan reopens them:
 
 - confirm whether `config/auth.php` should also become environment-driven before public cutover
 - verify if any content under `lib/` is cacheable/generated and can be reduced later

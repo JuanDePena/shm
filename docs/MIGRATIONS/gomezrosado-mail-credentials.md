@@ -57,7 +57,6 @@ Explicit aliases staged for the new stack:
 
 These passwords should be treated as initial migration credentials.
 
-Recommended next follow-up after public cutover:
-
-1. confirm each mailbox owner can log in
-2. rotate any account that should not keep the migration password
+Credential rotation is conditional after public cutover: rotate an account
+through SimpleHostMan if the mailbox owner requests a post-migration password
+change or if operational policy requires replacing the migration password.

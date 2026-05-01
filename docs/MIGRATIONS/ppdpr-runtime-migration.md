@@ -209,17 +209,15 @@ TLS:
 - `http://ppdpr.us/` redirects to HTTPS
 - `https://ppdpr.us/` returns `200 OK` with the migrated static placeholder content
 
-## Remaining steps
+## Closure Notes
 
-Mail validation:
+The consolidated migration sequence marks `ppdpr.us` as closed. The mail and
+HTTPS checks that originally served as cutover gates are retained above as
+execution evidence context. Future checks should be opened from `TODO.md` only
+if a user report or operational audit reopens this domain.
 
-- validate IMAPS login
-- validate SMTP submission
-- validate Roundcube login
-- validate local inbound delivery for `it`, `postmaster`, `abuse`, and `webmaster`
-- confirm backup run evidence
+Conditional responses:
 
-Closure:
-
-- run final mailbox delta only if logs show late mail still landing on `vps-old`
-- confirm public HTTPS from at least one external resolver/client after caches settle
+- run another mailbox delta only if logs show late mail still landing on
+  `vps-old`
+- re-check external HTTPS only if a resolver or client reports stale answers

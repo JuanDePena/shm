@@ -445,7 +445,7 @@ Stop and roll back before reopening writes if any of these happen:
 
 ## Resulting policy
 
-This TODO is considered closed only under this policy:
+This runbook item is considered closed under this policy:
 
 - the upgrade path is documented and accepted
 - `postgresql@control` and `postgresql@apps` are upgraded in separate windows

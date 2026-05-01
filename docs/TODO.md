@@ -1,6 +1,6 @@
 # SimpleHost TODO
 
-Updated on `2026-04-25`.
+Updated on `2026-05-01`.
 
 This file tracks work that is still open after the current monorepo, naming, and runtime cutover work.
 Closed work should stay documented as implemented state elsewhere, not linger here.
@@ -22,4 +22,10 @@ Current baseline:
 
 ## Open items
 
-- No open product TODO entries are currently tracked in this file.
+Only active open item as of `2026-05-01`:
+
+- Post-migration operational hardening, tuning, and documentation cleanup are tracked in
+  [`/opt/simplehostman/src/docs/OPERATIONAL_INSPECTION_20260501.md`](/opt/simplehostman/src/docs/OPERATIONAL_INSPECTION_20260501.md).
+
+Historical migration runbooks can retain execution records, validation gates, and conditional
+operator notes, but they should not be treated as active TODOs unless this file links to them.
