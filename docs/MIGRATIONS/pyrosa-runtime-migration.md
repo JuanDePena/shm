@@ -40,12 +40,9 @@ Live desired state currently includes:
 | `pyrosa-sync` | `sync.pyrosa.com.do` | `10102` | MariaDB `app_pyrosa_sync`, `app_pyrosa_sync_qbo`; PostgreSQL conversion deferred | phase 13 DIS/QBO production runtime active; workers active on primary only |
 | `pyrosa-helpers` | `helpers.pyrosa.com.do` | `10112`; DFR `10113`; QR render `10114` | PostgreSQL `app_pyrosa_helpers_dfr` imported for preservation; DFR runtime remains JSON-store backed | phase 14 helper runtime active on primary and secondary |
 
-`pyrosa-wp`, `pyrosa-demoportal`, and `pyrosa-sync` are also present in
-`bootstrap/apps.bootstrap.yaml`. `pyrosa-repos`, `pyrosa-demoerp`, `pyrosa-api`, and
-`pyrosa-demosync`, `pyrosa-erp`, `pyrosa-portal`, `pyrosa-ldap`, `pyrosa-pgadmin`, and
-`pyrosa-helpers` are represented only in live desired state until the bootstrap inventory is
-refreshed. `pyrosa-repos`, `pyrosa-api`, `pyrosa-erp`, `pyrosa-portal`, and `pyrosa-ldap`
-intentionally have no database resource.
+All Pyrosa app resources in the live desired state are also represented in
+`bootstrap/apps.bootstrap.yaml`. `pyrosa-repos`, `pyrosa-api`, `pyrosa-erp`, `pyrosa-portal`,
+`pyrosa-ldap`, and `pyrosa-pgadmin` intentionally have no managed database resource.
 
 `code.pyrosa.com.do` is a host-service cutover rather than a `shp_apps` app resource. It fronts the
 existing code-server service on `127.0.0.1:8080` on the SimpleHostMan nodes and is tracked in the
@@ -96,7 +93,7 @@ PostgreSQL 18:
 | `do_fiscal_reports` | migrated to PostgreSQL `app_pyrosa_helpers_dfr` for preservation/future compatibility; current DFR runtime remains JSON-store backed |
 | `adudoc_db` / `add_xp8hnrqxr3` | legacy Adudoc leftovers |
 
-## Active Services Observed On vps-old
+## Legacy Services Originally Observed On vps-old
 
 - Apache/cPanel HTTPD.
 - MySQL on `*:3306`.
@@ -1641,3 +1638,46 @@ Known inventory limitation:
 - the transitional bootstrap format still represents one managed database per app; live desired
   state contains secondary QBO databases for `pyrosa-sync` and `pyrosa-demosync` that remain in
   PostgreSQL desired state but are not expressible in `apps.bootstrap.yaml` yet
+
+## Timers And Publishing Review
+
+Completed on `2026-05-01` after the bootstrap hardening block.
+
+Operational state enforced:
+
+- production `sync` workers are enabled and active only on `primary`:
+  `scheduler`, `workflow-checker`, `workflow-resolver`, and `workflow-runner`
+- the same `app-pyrosa-sync-worker@...` instances are disabled and inactive on `secondary`
+- `crond.service` and `atd.service` remain disabled and inactive on `vps-old`
+- no Pyrosa, repository, QBO, DFR, tasas, or QR cron entries are active on either SimpleHostMan node
+
+Legacy cron review:
+
+- `repos.pyrosa.com.do` root cron entries on `vps-old` pointed to
+  `/home/wmpyrosa/public_html/_sites/repos.pyrosa.com.do/dis/`, but that directory is absent; those
+  jobs were not recreated
+- old wildcard certificate and OpenLDAP export crons were retired because TLS material and OpenLDAP
+  now live on the SimpleHostMan nodes
+- helper QR scripts copied from the legacy tree still reference
+  `/home/wmpyrosa/public_html/helpers/qrcode/scanner` and the old `render-server.sh` restart flow; the
+  target QR renderer is now a managed Podman/systemd service with `Restart=always`, so those scripts
+  were not activated as timers
+- `banking/tasas/update_tasas.sh` exists in the migrated helper tree, but it was left manual until a
+  container-safe managed timer is defined and tested
+
+Repository publishing posture:
+
+- `repos.pyrosa.com.do` is serving the preserved static `sbotools` repository from both
+  SimpleHostMan nodes
+- latest observed `sbotools` RPM and `repodata` timestamps remain `2026-04-10 16:03 UTC`
+- `sbotools.repo`, `repomd.xml`, `repomd.xml.asc`, and `RPM-GPG-KEY-sbotools` SHA-256 checksums match
+  on `primary` and `secondary`
+- no active publishing job for new Proyecto Iohana RPMs was found; future package publication should
+  be introduced as an explicit SimpleHostMan workflow rather than by reviving stale cPanel cron jobs
+
+Validation:
+
+- forced HTTPS checks for Pyrosa apex, demoportal, repos metadata, demoerp, demosync, sync, helpers
+  DFR health, LDAP/LAM, pgAdmin, and code-server returned `200 OK` on both SimpleHostMan nodes
+- `vps-old` still has no listeners on old production ports `25`, `53`, `80`, `110`, `143`, `389`,
+  `443`, `465`, `587`, `636`, `993`, `995`, `3306`, `5432`, `6379`, or `8080`

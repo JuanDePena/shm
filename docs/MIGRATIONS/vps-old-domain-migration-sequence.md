@@ -1522,3 +1522,44 @@ Remaining limitation:
 - the transitional bootstrap format still supports only one managed database per app, so the live
   secondary QBO databases for `pyrosa-sync` and `pyrosa-demosync` remain in desired state but are
   not represented in `apps.bootstrap.yaml`
+
+### 2026-05-01: Pyrosa timers and publishing review
+
+The final operational review kept scheduled work explicit on SimpleHostMan and left stale cPanel
+cron jobs retired with `vps-old`.
+
+State enforced:
+
+- `app-pyrosa-sync-worker@scheduler.service`,
+  `app-pyrosa-sync-worker@workflow-checker.service`,
+  `app-pyrosa-sync-worker@workflow-resolver.service`, and
+  `app-pyrosa-sync-worker@workflow-runner.service` are enabled and active on `primary`
+- the same production sync worker instances are disabled and inactive on `secondary`
+- `crond.service` and `atd.service` remain disabled and inactive on `vps-old`
+- no Pyrosa, repository, QBO, DFR, tasas, or QR cron entries are active on the SimpleHostMan nodes
+
+Legacy jobs not recreated:
+
+- `repos.pyrosa.com.do` cleanup/permission/favicon cron entries pointed to a missing legacy
+  `dis/` directory
+- old wildcard certificate and OpenLDAP export cron jobs are obsolete after the SimpleHostMan TLS and
+  OpenLDAP migration
+- helper QR cron scripts still contain legacy absolute paths and an old process restart flow; the QR
+  renderer is now managed by Podman/systemd with restart policy
+- `banking/tasas/update_tasas.sh` remains available in the migrated helper tree but is intentionally
+  not scheduled until a managed, container-safe timer is defined
+
+Repository publishing posture:
+
+- `repos.pyrosa.com.do` is treated as a static SLES/RPM repository until a new publication pipeline is
+  defined
+- latest observed `sbotools` package metadata remains `2026-04-10 16:03 UTC`
+- `sbotools.repo`, `repomd.xml`, `repomd.xml.asc`, and `RPM-GPG-KEY-sbotools` checksums match between
+  `primary` and `secondary`
+
+Validation:
+
+- forced HTTPS checks for Pyrosa apex, demoportal, repos metadata, demoerp, demosync, sync, helpers
+  DFR health, LDAP/LAM, pgAdmin, and code-server returned `200 OK` on both SimpleHostMan nodes
+- `vps-old` still has no listeners on old production ports `25`, `53`, `80`, `110`, `143`, `389`,
+  `443`, `465`, `587`, `636`, `993`, `995`, `3306`, `5432`, `6379`, or `8080`
