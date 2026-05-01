@@ -3,11 +3,10 @@
 Description=SimpleHost Backup Runner Timer
 
 [Timer]
-OnCalendar=*-*-* *:*:00
+OnCalendar=*-*-* *:0/5:00
 Persistent=true
 RandomizedDelaySec=15
 Unit=simplehost-backup-runner.service
 
 [Install]
 WantedBy=timers.target
-

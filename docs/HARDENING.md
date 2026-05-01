@@ -195,7 +195,8 @@ Deployed files:
 
 What the health check verifies:
 
-- Critical services are active: `sshd`, `firewalld`, `fail2ban`, `code-server@root`
+- Critical services are active: `sshd`, `firewalld`, `fail2ban`, `code-server@root`,
+  `postfix`, `dovecot`, `rspamd`, and `valkey`
 - Disk usage for `/`, `/var`, `/home`, and `/tmp`
 - Memory pressure from `MemAvailable`
 - `fail2ban` `sshd` current failed and banned counts
@@ -206,6 +207,8 @@ Runtime state:
 - `server-healthcheck.timer` is enabled and active.
 - The timer runs 5 minutes after boot, then every 15 minutes.
 - The check exits `0` when healthy, `1` on warning, and `2` on critical state.
+- The systemd service treats exit `1` as successful so warning-only runs do not
+  leave the unit failed.
 - Warnings and critical states are written to the journal with tag `server-health`.
 - A manual operator report is available without waiting for the timer.
 
@@ -329,7 +332,7 @@ Expected observability state:
 
 ```text
 server-healthcheck.timer: enabled, active
-server-healthcheck.service: last run success when no issue is present
+server-healthcheck.service: last run success when no critical issue is present
 ```
 
 ## Rollback

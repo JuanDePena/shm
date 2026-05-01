@@ -23,9 +23,11 @@ Backup policies are declared in SimpleHostMan desired state with:
 - storage location
 - resource selectors
 
-The root-owned `simplehost-backup-runner.timer` wakes every minute and only
-executes policies whose cron expression matches that minute on the local target
-node.
+The root-owned `simplehost-backup-runner.timer` wakes every five minutes and
+only executes policies whose cron expression matches that minute on the local
+target node. Backup policy schedules should therefore use minutes aligned to the
+five-minute cadence unless the timer is intentionally moved back to minute-level
+polling.
 
 Backup storage directories are kept at `0700` and generated artifacts at `0600`
 because database dumps and globals files can contain sensitive application data,

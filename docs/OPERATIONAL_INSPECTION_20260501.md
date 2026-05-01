@@ -269,8 +269,8 @@ small for the available primary memory and current `app_pyrosa_sync` size.
 
 The physical PostgreSQL backup posture is functioning.
 
-The generic `simplehost-backup-runner.timer` currently wakes every minute. A
-recent run reported:
+At inspection time, the generic `simplehost-backup-runner.timer` woke every
+minute. A recent run reported:
 
 - no policies executed on primary
 - `14` policies skipped
@@ -278,7 +278,9 @@ recent run reported:
 - CPU time around `13s`
 
 The timer behavior is correct if minute-level scheduling is required, but it is
-expensive for idle checks.
+expensive for idle checks. Phase 1 changed the primary timer to a five-minute
+cadence after confirming all live policy schedules align to five-minute
+boundaries.
 
 ## Documentation Review Findings
 
@@ -336,6 +338,8 @@ Rollback:
 
 ### Phase 1: Low-Risk Operational Cleanup
 
+Status: completed on `2026-05-01`.
+
 Goal: remove stale failure signals and reduce obvious operational noise.
 
 Actions:
@@ -366,6 +370,45 @@ Rollback:
 - re-enable the previous timer frequency
 - restore the prior healthcheck threshold or unit behavior
 - leave old release directories untouched until rollback confidence is high
+
+Completion evidence:
+
+- `postgresql@shp.service` on `secondary` was disabled and reset; it now reports
+  `disabled` and `inactive`.
+- `server-healthcheck.service` now has `SuccessExitStatus=1`, so warning-only
+  runs no longer leave the unit failed.
+- The healthcheck script now checks `valkey` instead of the absent `redis`
+  service name, matching the installed Redis-compatible service.
+- Primary healthcheck report has no critical findings; the only observed issue
+  was the `fail2ban` banned-count warning.
+- Secondary healthcheck report exits `0` with no critical findings.
+- `systemctl --failed` reports `0` loaded failed units on both nodes after the
+  cleanup.
+- `simplehost-backup-runner.timer` now wakes every `5` minutes on the primary.
+  All `14` live backup policy schedules use minute values aligned to that
+  cadence.
+- Secondary keeps `simplehost-backup-runner.timer` disabled/inactive, matching
+  the current standby posture.
+- Tatokka rewrite rules were adjusted on both nodes so missing scanner paths
+  return `404` instead of recursing through `public/public/...`.
+- Tatokka validation on both nodes:
+  - `/` returns `200`
+  - `/dev/?page=login` returns `200`
+  - `/robots.txt` returns `404`
+  - `/.env` returns `404`
+  - no `AH00124` recursion log was emitted by the validation requests
+- Release retention dry-run:
+  - primary has `50` release directories; keeping the latest `10` leaves `40`
+    candidates, approximately `29G`
+  - secondary has `4` release directories; no candidates under the latest-`10`
+    policy
+  - no release directory was deleted in this phase
+- Podman image cleanup dry-run:
+  - primary reports `46` images, `9` active, about `2.2G` reclaimable, and `3`
+    inactive image IDs
+  - secondary reports `23` images, `8` active, about `648M` reclaimable, and `0`
+    inactive image IDs
+  - no Podman image prune was run in this phase
 
 ### Phase 2: Database Observability
 

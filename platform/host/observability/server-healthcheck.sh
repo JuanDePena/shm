@@ -18,7 +18,7 @@ readonly -a SERVICES=(
   "postfix"
   "dovecot"
   "rspamd"
-  "redis"
+  "valkey"
 )
 
 readonly -a PATHS_TO_CHECK=(
