@@ -44,6 +44,10 @@ represented only in live desired state until the bootstrap inventory is refreshe
 `pyrosa-api`, `pyrosa-erp`, `pyrosa-portal`, and `pyrosa-ldap` intentionally have no database
 resource.
 
+`code.pyrosa.com.do` is a host-service cutover rather than a `shp_apps` app resource. It fronts the
+existing code-server service on `127.0.0.1:8080` on the SimpleHostMan nodes and is tracked in the
+phase 11 execution record below.
+
 The target node public IP for migrated web hostnames is `51.222.204.86`.
 
 ## Legacy Inventory
@@ -54,7 +58,7 @@ Legacy public IP: `51.161.11.249`.
 | --- | --- | ---: | --- | --- | --- |
 | `pyrosa.com.do` / `www` | `/home/wmpyrosa/public_html` | WordPress root about `556M`; full account tree includes `_sites` | WordPress `6.9.4`, PHP 8.4 | MySQL `wmpyrosa_2024`, about `29M` | migrate first as `pyrosa-wp`; keep WordPress on MariaDB |
 | `api.pyrosa.com.do` | `_sites/api.pyrosa.com.do` | `346M` | PHP plus Node helper tree | external MongoDB URI and external HANA/SAP endpoint | migrated in phase 5 as `pyrosa-api`; external secrets preserved local-only |
-| `code.pyrosa.com.do` | proxy, not document root content | empty docroot | `code-server` on `0.0.0.0:8080` | service account/runtime on old host | keep on `vps-old` unless intentionally rebuilding developer tooling |
+| `code.pyrosa.com.do` | proxy, not document root content | empty docroot | `code-server` on `:8080` | host developer tooling service | migrated in phase 11 as an Apache host-service proxy to the existing SimpleHostMan code-server |
 | `demoerp.pyrosa.com.do` | `_sites/demoerp.pyrosa.com.do/htdocs` | `267M` htdocs; about `2.0G` tree | Dolibarr-style PHP app | PostgreSQL `dolibarr_demoerp` on PostgreSQL 18 | migrated in phase 4 as `pyrosa-demoerp`, kept on PostgreSQL |
 | `demoportal.pyrosa.com.do` | `_sites/demoportal.pyrosa.com.do` | `194M` source; `79M` staged without `node_modules`/logs | Laravel 12 app | MySQL `wmpyrosa_synct`, Redis/local mail settings observed in legacy env | migrated in phase 2 as `pyrosa-demoportal`, kept on MariaDB |
 | `demosync.pyrosa.com.do` | `_sites/demosync.pyrosa.com.do` | `88M` source; `255M` staged after local Tabler asset copy | DIS/QBO demo app | MySQL `wmpyrosa_disdemo` and shared `wmpyrosa_qbo` | migrated in phase 6 as `pyrosa-demosync`, kept on MariaDB |
@@ -1146,3 +1150,66 @@ DNS validation at `2026-05-01 04:11 UTC`:
 - `1.1.1.1` and `8.8.8.8` returned `pgadmin.pyrosa.com.do` pointing to `51.222.204.86`
 - `code.pyrosa.com.do`, `sync.pyrosa.com.do`, and `helpers.pyrosa.com.do` remained on
   `51.161.11.249`
+
+## Phase 11 Execution Record
+
+Completed on `2026-05-01` and scoped to `code.pyrosa.com.do`.
+
+This phase cut over the code-server web endpoint. Unlike the PHP apps and admin UIs above, this was
+not promoted as a containerized `shp_apps` resource because code-server was already running as a host
+developer service on both SimpleHostMan nodes. The migration installed an explicit Apache vhost on
+both nodes and moved DNS for `code.pyrosa.com.do`.
+
+The following hostnames remain intentionally on `vps-old`:
+
+- `sync.pyrosa.com.do`
+- `helpers.pyrosa.com.do`
+
+### Runtime
+
+Applied runtime state:
+
+- hostname `code.pyrosa.com.do`
+- backend service `code-server` on `127.0.0.1:8080`
+- code-server version observed on the target nodes: Code `1.117.0`
+- Apache vhost file `/etc/httpd/conf.d/pyrosa-code.conf`
+- vhost installed on `primary`
+- vhost installed on `secondary`
+
+The Apache vhost preserves the important legacy proxy behavior for code-server:
+
+- HTTPS redirect from port `80`
+- `AllowEncodedSlashes NoDecode`
+- proxying to `127.0.0.1:8080`
+- websocket upgrade rewrite to `ws://127.0.0.1:8080/`
+
+No code-server password or runtime secret was committed. The existing target host code-server
+authentication remains in place.
+
+### DNS And TLS
+
+SimpleHostMan PowerDNS now serves:
+
+- `code.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+
+The legacy DNS zone on `vps-old` was also updated so cached old delegations answer the same target
+A record with TTL `300`. The existing `*.pyrosa.com.do` wildcard certificate covers
+`code.pyrosa.com.do`, so no new certificate lineage was required.
+
+### Validation
+
+Runtime and target validation:
+
+- `https://code.pyrosa.com.do/` with `--resolve` to `primary` redirects to `/login`
+- `https://code.pyrosa.com.do/login` with `--resolve` to `primary` returns `200 OK`
+- `https://code.pyrosa.com.do/` with `--resolve` to `secondary` redirects to `/login`
+- `https://code.pyrosa.com.do/login` with `--resolve` to `secondary` returns `200 OK`
+- public `https://code.pyrosa.com.do/login` returns `200 OK` from `51.222.204.86`
+
+DNS validation at `2026-05-01 04:16 UTC`:
+
+- authoritative `51.222.204.86` returned `code.pyrosa.com.do` pointing to `51.222.204.86`
+- authoritative `51.222.206.196` returned `code.pyrosa.com.do` pointing to `51.222.204.86`
+- legacy authoritative `51.161.11.249` returned `code.pyrosa.com.do` pointing to `51.222.204.86`
+- `1.1.1.1` and `8.8.8.8` returned `code.pyrosa.com.do` pointing to `51.222.204.86`
+- `sync.pyrosa.com.do` and `helpers.pyrosa.com.do` remained on `51.161.11.249`

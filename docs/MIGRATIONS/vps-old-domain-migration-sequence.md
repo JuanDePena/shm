@@ -20,7 +20,7 @@ pilot migrations that established the current SimpleHostMan pattern.
 | `zcrmt.com` | migrated WordPress runtime on `app-zcrmt` | Zoho preserved | WordPress kept on MariaDB `app_zcrmt_wp` | closed |
 | `merlelaw.com` | migrated blank static runtime on `app-merlelaw` | SimpleHostMan mail live | none | closed |
 | `engilum.com` | external web targets preserved | Zoho preserved | none | DNS-only staged |
-| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, `pyrosa-repos`, `pyrosa-demoerp`, `pyrosa-api`, `pyrosa-demosync`, `pyrosa-erp`, `pyrosa-portal`, `pyrosa-ldap`, and `pyrosa-pgadmin` runtimes active; second-level `www` aliases active; `sync`/`helpers` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress, demoportal, and demosync migrated to MariaDB; demoerp migrated to PostgreSQL; `repos`, `api`, `erp`, `portal`, and `ldap` have no local database; pgAdmin uses its migrated SQLite config store | phase 10 complete |
+| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, `pyrosa-repos`, `pyrosa-demoerp`, `pyrosa-api`, `pyrosa-demosync`, `pyrosa-erp`, `pyrosa-portal`, `pyrosa-ldap`, `pyrosa-pgadmin`, and `code.pyrosa.com.do` host-service proxy active; second-level `www` aliases active; `sync`/`helpers` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress, demoportal, and demosync migrated to MariaDB; demoerp migrated to PostgreSQL; `repos`, `api`, `erp`, `portal`, and `ldap` have no local database; pgAdmin uses its migrated SQLite config store | phase 11 complete |
 | `solucionesmercantilnr.com` | not migrated | retired | none | out of scope: expired, not renewing |
 | `pyrosa.net` | not migrated | retired | none | out of scope: expired, not renewing |
 
@@ -1186,3 +1186,33 @@ Validation:
 - public `https://pgadmin.pyrosa.com.do/login` returns `200 OK` from `51.222.204.86`
 - authoritative PowerDNS on `primary`, `secondary`, and `vps-old` returns
   `pgadmin.pyrosa.com.do -> 51.222.204.86`
+
+### 2026-05-01: pyrosa.com.do code-server cutover
+
+`code.pyrosa.com.do` was cut over from the legacy cPanel proxy to an explicit Apache vhost on the
+SimpleHostMan nodes. This endpoint fronts the existing host-level code-server service on
+`127.0.0.1:8080`; it was not added as a containerized app resource.
+
+Applied runtime:
+
+- hostname `code.pyrosa.com.do`
+- backend service `code-server` on `127.0.0.1:8080`
+- Apache vhost `/etc/httpd/conf.d/pyrosa-code.conf`
+- vhost installed on `primary` and `secondary`
+- websocket upgrade proxy rules preserved
+
+DNS and TLS:
+
+- `code.pyrosa.com.do A -> 51.222.204.86`
+- `sync.pyrosa.com.do` and `helpers.pyrosa.com.do` remain on `51.161.11.249`
+- the legacy `vps-old` authoritative zone was updated to the same `code.pyrosa.com.do` cutover
+  record
+- the existing `*.pyrosa.com.do` wildcard certificate covers the hostname on both SimpleHostMan nodes
+
+Validation:
+
+- `https://code.pyrosa.com.do/login` returns `200 OK` on both SimpleHostMan nodes with target
+  `--resolve`
+- public `https://code.pyrosa.com.do/login` returns `200 OK` from `51.222.204.86`
+- authoritative PowerDNS on `primary`, `secondary`, and `vps-old` returns
+  `code.pyrosa.com.do -> 51.222.204.86`
