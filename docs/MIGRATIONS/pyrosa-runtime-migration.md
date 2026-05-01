@@ -29,12 +29,13 @@ Live desired state currently includes:
 | `pyrosa-demoportal` | `demoportal.pyrosa.com.do` | `10103` | MariaDB `app_pyrosa_demoportal` | phase 2 runtime active on primary and secondary |
 | `pyrosa-repos` | `repos.pyrosa.com.do` | `10104` | none | phase 3 RPM repository runtime active on primary and secondary |
 | `pyrosa-demoerp` | `demoerp.pyrosa.com.do` | `10105` | PostgreSQL `app_pyrosa_demoerp` | phase 4 Dolibarr runtime active on primary and secondary |
+| `pyrosa-api` | `api.pyrosa.com.do` | `10106` | none | phase 5 PHP API runtime active on primary and secondary |
 | `pyrosa-sync` | `sync.pyrosa.com.do` | `10102` | MariaDB `app_pyrosa_sync`, pending PostgreSQL | desired only; do not migrate now |
 
 `pyrosa-wp`, `pyrosa-demoportal`, and `pyrosa-sync` are also present in
-`bootstrap/apps.bootstrap.yaml`. `pyrosa-repos` and `pyrosa-demoerp` are represented only in live
-desired state until the bootstrap inventory is refreshed. `pyrosa-repos` intentionally has no
-database resource.
+`bootstrap/apps.bootstrap.yaml`. `pyrosa-repos`, `pyrosa-demoerp`, and `pyrosa-api` are represented
+only in live desired state until the bootstrap inventory is refreshed. `pyrosa-repos` and
+`pyrosa-api` intentionally have no database resource.
 
 The target node public IP for migrated web hostnames is `51.222.204.86`.
 
@@ -45,7 +46,7 @@ Legacy public IP: `51.161.11.249`.
 | Hostname | Source path / role | Size | Runtime or service | Data dependencies | Proposed posture |
 | --- | --- | ---: | --- | --- | --- |
 | `pyrosa.com.do` / `www` | `/home/wmpyrosa/public_html` | WordPress root about `556M`; full account tree includes `_sites` | WordPress `6.9.4`, PHP 8.4 | MySQL `wmpyrosa_2024`, about `29M` | migrate first as `pyrosa-wp`; keep WordPress on MariaDB |
-| `api.pyrosa.com.do` | `_sites/api.pyrosa.com.do` | `346M` | PHP plus Node helper tree | external MongoDB URI and external HANA/SAP endpoint | migrate only after external connectivity and secret handling review |
+| `api.pyrosa.com.do` | `_sites/api.pyrosa.com.do` | `346M` | PHP plus Node helper tree | external MongoDB URI and external HANA/SAP endpoint | migrated in phase 5 as `pyrosa-api`; external secrets preserved local-only |
 | `code.pyrosa.com.do` | proxy, not document root content | empty docroot | `code-server` on `0.0.0.0:8080` | service account/runtime on old host | keep on `vps-old` unless intentionally rebuilding developer tooling |
 | `demoerp.pyrosa.com.do` | `_sites/demoerp.pyrosa.com.do/htdocs` | `267M` htdocs; about `2.0G` tree | Dolibarr-style PHP app | PostgreSQL `dolibarr_demoerp` on PostgreSQL 18 | migrated in phase 4 as `pyrosa-demoerp`, kept on PostgreSQL |
 | `demoportal.pyrosa.com.do` | `_sites/demoportal.pyrosa.com.do` | `194M` source; `79M` staged without `node_modules`/logs | Laravel 12 app | MySQL `wmpyrosa_synct`, Redis/local mail settings observed in legacy env | migrated in phase 2 as `pyrosa-demoportal`, kept on MariaDB |
@@ -177,10 +178,6 @@ Defer until separately approved:
 
 ## Open Checks Before Execution
 
-- Confirm whether `repos.pyrosa.com.do` is only read by SLES clients or also written by a publishing
-  pipeline on `vps-old`.
-- Confirm the next hostname after `demoerp`: recommended `api` only after external service and
-  secret handling review.
 - Decide whether placeholders `erp.pyrosa.com.do` and `portal.pyrosa.com.do` should become blank
   SimpleHostMan apps or remain old-host DNS records.
 - Capture a fresh final DB dump timestamp immediately before each cutover.
@@ -462,7 +459,6 @@ The following hostnames remain intentionally on `vps-old`:
 
 - `sync.pyrosa.com.do`
 - `helpers.pyrosa.com.do`
-- `api.pyrosa.com.do`
 - `demosync.pyrosa.com.do`
 - `code.pyrosa.com.do`
 - `pgadmin.pyrosa.com.do`
@@ -648,3 +644,105 @@ DNS validation at `2026-05-01 01:54 UTC`:
 - legacy authoritative `51.161.11.249` returned `demoerp.pyrosa.com.do A -> 51.222.204.86`
 - `8.8.8.8` returned `demoerp.pyrosa.com.do A -> 51.222.204.86`
 - `1.1.1.1` returned `demoerp.pyrosa.com.do A -> 51.222.204.86`
+
+## Phase 5 Execution Record
+
+Completed on `2026-05-01` and scoped only to:
+
+- `api.pyrosa.com.do`
+
+The following hostnames remain intentionally on `vps-old`:
+
+- `sync.pyrosa.com.do`
+- `helpers.pyrosa.com.do`
+- `demosync.pyrosa.com.do`
+- `code.pyrosa.com.do`
+- `pgadmin.pyrosa.com.do`
+- `ldap.pyrosa.com.do`
+- `www.api.pyrosa.com.do`
+
+### Runtime
+
+Applied runtime state:
+
+- app slug `pyrosa-api`
+- source path copied from
+  `root@51.161.11.249:/home/wmpyrosa/public_html/_sites/api.pyrosa.com.do/`
+- copied file count after target smoke checks: `84,223`
+- copied payload size: about `343M`
+- Node exporter state logs preserved: `82,788` files under `node.js/export_to_zoho/log`
+- backend port `10106`
+- runtime image tag `registry.example.com/pyrosa-api:stable`
+- storage root `/srv/containers/apps/pyrosa-api`
+- `app-pyrosa-api.service` active on `primary`
+- `app-pyrosa-api.service` active on `secondary`
+
+The runtime is a PHP/Apache app with no local database resource. The Node `export_to_zoho` tree was
+copied with `.env`, OAuth token files, and its per-record log state because those logs prevent
+re-exporting already processed MongoDB records. No cron or active process for the exporter was found
+on `vps-old`, so no Node worker service was started on SimpleHostMan.
+
+Target `.htaccess` policy denies direct HTTP access to:
+
+- `node.js/`
+- `oauth2/.domains/`
+- `oauth2/.tokens/`
+- dotfiles, `.env`, `error_log`, `.log`, and `package*.json` files
+
+The deny rules live in `.htaccess` rather than only in the generated Apache vhost because
+SimpleHostMan's generic `proxy.render` and container reconciliation jobs may rewrite vhost and
+quadlet files for inventory-managed apps.
+
+A compatibility symlink was added at `lib/phpqrcode -> ../phpqrcode` so the legacy
+`v1/qrcode-create/index.php` include path resolves. The legacy host returned a PHP fatal error for a
+QR generation request because that include path was missing; the target now generates PNG/JSON QR
+responses successfully.
+
+The same `.htaccess` deny guard and `lib/phpqrcode` compatibility symlink were also applied on the
+legacy `vps-old` source path after cutover validation showed some recursive caches could still reach
+`51.161.11.249`. This keeps sensitive files blocked and QR generation working while stale DNS caches
+drain.
+
+### DNS And TLS
+
+SimpleHostMan PowerDNS now serves:
+
+- `api.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- `www.api.pyrosa.com.do A -> 51.161.11.249`
+- `sync.pyrosa.com.do A -> 51.161.11.249`
+- `helpers.pyrosa.com.do A -> 51.161.11.249`
+
+`www.api.pyrosa.com.do` was intentionally left on `vps-old` because the current target certificate is
+`*.pyrosa.com.do`; that wildcard covers `api.pyrosa.com.do` but not the two-label
+`www.api.pyrosa.com.do` name.
+
+The legacy DNS zone on `vps-old` was also updated so cached old delegations answer
+`api.pyrosa.com.do A -> 51.222.204.86` with TTL `300`.
+
+### Validation
+
+Backend and vhost validation:
+
+- `https://api.pyrosa.com.do/oauth2/` with `--resolve` to `51.222.204.86` returns `200 OK` and the
+  expected missing-parameter response.
+- `https://api.pyrosa.com.do/oauth2/` with `--resolve` to `51.222.206.196` returns `200 OK` and the
+  expected missing-parameter response.
+- `https://api.pyrosa.com.do/v1/qrcode-create/?data=hello` returns `200 OK`, `image/png`, and a
+  `274` byte PNG on both nodes.
+- `https://api.pyrosa.com.do/node.js/export_to_zoho/.env` returns `403 Forbidden` on both nodes.
+- `https://api.pyrosa.com.do/oauth2/.tokens/` returns `403 Forbidden` on both nodes.
+- `https://api.pyrosa.com.do/v1/qrcode-create/?data=hello` with `--resolve` to legacy
+  `51.161.11.249` returns `200 OK`, `image/png`, and a `274` byte PNG during cache drain.
+- `https://api.pyrosa.com.do/node.js/export_to_zoho/.env` with `--resolve` to legacy
+  `51.161.11.249` returns `403 Forbidden`.
+- public `https://api.pyrosa.com.do/oauth2/` returns `200 OK` and the expected missing-parameter
+  response.
+
+DNS validation at `2026-05-01 02:22 UTC`:
+
+- authoritative `51.222.204.86` returned `api.pyrosa.com.do A -> 51.222.204.86`
+- authoritative `51.222.206.196` returned `api.pyrosa.com.do A -> 51.222.204.86`
+- legacy authoritative `51.161.11.249` returned `api.pyrosa.com.do A -> 51.222.204.86`
+- `8.8.8.8` returned `api.pyrosa.com.do A -> 51.222.204.86`
+- `1.1.1.1` returned `api.pyrosa.com.do A -> 51.222.204.86`
+- public `www.api.pyrosa.com.do` remained on `51.161.11.249`

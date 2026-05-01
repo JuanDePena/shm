@@ -20,7 +20,7 @@ pilot migrations that established the current SimpleHostMan pattern.
 | `zcrmt.com` | migrated WordPress runtime on `app-zcrmt` | Zoho preserved | WordPress kept on MariaDB `app_zcrmt_wp` | closed |
 | `merlelaw.com` | migrated blank static runtime on `app-merlelaw` | SimpleHostMan mail live | none | closed |
 | `engilum.com` | external web targets preserved | Zoho preserved | none | DNS-only staged |
-| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, `pyrosa-repos`, and `pyrosa-demoerp` runtimes active; `sync`/`helpers` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress and demoportal migrated to MariaDB; demoerp migrated to PostgreSQL; `repos` has no database | phase 4 complete |
+| `pyrosa.com.do` | `pyrosa-wp`, `pyrosa-demoportal`, `pyrosa-repos`, `pyrosa-demoerp`, and `pyrosa-api` runtimes active; `sync`/`helpers` still on `vps-old` | Microsoft 365 preserved, no legacy mail migration planned | WordPress and demoportal migrated to MariaDB; demoerp migrated to PostgreSQL; `repos` and `api` have no local database | phase 5 complete |
 | `solucionesmercantilnr.com` | not migrated | retired | none | out of scope: expired, not renewing |
 | `pyrosa.net` | not migrated | retired | none | out of scope: expired, not renewing |
 
@@ -658,6 +658,61 @@ Validation:
 - authoritative checks from `51.222.204.86` and `51.222.206.196` returned the new `demoerp` A record
 - legacy authoritative check from `51.161.11.249` returned the new `demoerp` A record
 - public checks from `1.1.1.1` and `8.8.8.8` returned the new `demoerp` A record
+
+### 2026-05-01: pyrosa.com.do api phase 5
+
+`api.pyrosa.com.do` was copied from `vps-old` and started as `app-pyrosa-api` on both
+SimpleHostMan nodes.
+
+Applied app:
+
+- app slug `pyrosa-api`
+- source `/home/wmpyrosa/public_html/_sites/api.pyrosa.com.do/`
+- copied file count after target smoke checks `84,223`, staged size about `343M`
+- Node exporter state logs preserved: `82,788` files under `node.js/export_to_zoho/log`
+- backend port `10106`
+- runtime image tag `registry.example.com/pyrosa-api:stable`
+- storage root `/srv/containers/apps/pyrosa-api`
+- no database resource
+- `app-pyrosa-api.service` active on `primary` and `secondary`
+
+Runtime/security outcome:
+
+- OAuth domain/token files and the Node `.env` stayed local-only and were not committed
+- direct HTTP access to `node.js/`, `oauth2/.domains/`, `oauth2/.tokens/`, dotfiles, `.env`, logs,
+  and `package*.json` is denied by target `.htaccess` policy
+- no cron or active process for `node.js/export_to_zoho` was found on `vps-old`, so no Node worker
+  was started
+- compatibility symlink `lib/phpqrcode -> ../phpqrcode` was added so the legacy QR include path
+  resolves on the target
+- the same `.htaccess` deny guard and `lib/phpqrcode` symlink were applied on the legacy
+  `vps-old` source path to protect clients that still resolve stale DNS during cache drain
+
+DNS and TLS outcome:
+
+- SimpleHostMan PowerDNS serves `api.pyrosa.com.do A -> 51.222.204.86` with TTL `300`
+- `www.api.pyrosa.com.do` remains on `51.161.11.249` because the target wildcard certificate does
+  not cover that two-label hostname
+- the legacy DNS zone on `vps-old` also serves `api.pyrosa.com.do A -> 51.222.204.86` with TTL
+  `300` for resolvers that still have old nameserver delegation cached
+- `sync.pyrosa.com.do` and `helpers.pyrosa.com.do` remain pointed at `51.161.11.249`
+
+Validation:
+
+- `https://api.pyrosa.com.do/oauth2/` returns `200 OK` on both nodes using `--resolve`, with the
+  expected missing-parameter response
+- `https://api.pyrosa.com.do/v1/qrcode-create/?data=hello` returns `200 OK`, `image/png`, and a
+  `274` byte PNG on both nodes
+- sensitive-path checks for `node.js/export_to_zoho/.env` and `oauth2/.tokens/` return
+  `403 Forbidden` on both nodes
+- stale-cache checks against legacy `51.161.11.249` return `200 OK` image/png for QR generation and
+  `403 Forbidden` for `node.js/export_to_zoho/.env`
+- public `https://api.pyrosa.com.do/oauth2/` returns `200 OK` and the expected missing-parameter
+  response
+- authoritative checks from `51.222.204.86`, `51.222.206.196`, and legacy `51.161.11.249` returned
+  the new `api` A record
+- public checks from `1.1.1.1` and `8.8.8.8` returned the new `api` A record
+- public `www.api.pyrosa.com.do` remained on `51.161.11.249`
 
 ### 2026-04-30: ppdpr.us web runtime cutover
 
