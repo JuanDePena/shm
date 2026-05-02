@@ -1092,16 +1092,17 @@ export function renderBaseStyleBlock(): string {
       }
 
       .overview-interval-selector select {
-        min-height: 1.72rem;
-        min-width: 6.2rem;
-        max-width: 9rem;
-        padding: 0.18rem 1.8rem 0.18rem 0.62rem;
+        width: 8.8rem;
+        min-height: 1.46rem;
+        height: 1.46rem;
+        padding: 0 1.55rem 0 0.52rem;
         border-radius: var(--radius-control);
         border: 1px solid rgba(13, 32, 56, 0.14);
         background-color: rgba(255, 255, 255, 0.86);
         color: var(--navy-strong);
-        font-size: var(--font-size-label);
+        font-size: 0.74rem;
         font-weight: 700;
+        line-height: 1.05;
         box-shadow: 0 0.42rem 1rem rgba(16, 39, 68, 0.08);
       }
 
@@ -1187,7 +1188,7 @@ export function renderBaseStyleBlock(): string {
         }
 
         .overview-interval-selector select {
-          max-width: none;
+          height: 1.62rem;
           width: 100%;
         }
 
