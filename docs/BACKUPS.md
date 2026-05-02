@@ -366,6 +366,21 @@ Final cleanup evidence:
 - `/srv/restore-tests/20260502T062345Z` was removed
 - `/var/lib/pgsql/restore-tests/20260502T062345Z` was removed
 
+Post-enforcement Authentik backup on `2026-05-02`:
+
+- run id:
+  `backup-run-3db0fd3e-7651-402a-b7d4-deb894c7195e`
+- run directory:
+  `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T06-43-23-095Z`
+- run status: `succeeded`
+- artifacts remained mode `0600`
+- scratch database `restoretest_authentik_phase4_20260502t0643z` validated:
+  - `1` `code-pyrosa` application
+  - `1` `https://code.pyrosa.com.do` proxy provider
+  - `1` embedded-outpost/provider link
+  - `1` MFA-required validation stage
+- scratch database and temporary dump copy were removed.
+
 ## Physical PostgreSQL Backups
 
 `pgBackRest` is the physical backup and WAL archive layer for both host-native

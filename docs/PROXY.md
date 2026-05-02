@@ -31,12 +31,11 @@ Ingress platform:
 - As of `2026-05-02`, `code-server` is no longer exposed through
   `https://vps-prd.pyrosa.com.do:8080/` or
   `https://vps-des.pyrosa.com.do:8080/`; the canonical browser endpoint is
-  `https://code.pyrosa.com.do/` on `443`, with matching vhosts on both nodes.
-- Authentik is the selected future IAM/SSO gateway for protected browser
-  surfaces. The rollout plan lives in
-  [`IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md). Until that rollout
-  reaches its enforcement phase, `code.pyrosa.com.do` continues to proxy
-  directly to the local `code-server` backend.
+  `https://code.pyrosa.com.do/` on `443`.
+- Authentik is now the IAM/SSO gateway for `code.pyrosa.com.do` on the primary.
+  Apache routes that vhost through the Authentik embedded outpost before the
+  request can reach the local `code-server` backend on `127.0.0.1:8080`.
+  The rollout plan lives in [`IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md).
 
 ## Selected platform
 
@@ -70,7 +69,8 @@ Optional operator-convenience exposure, when enabled on a node:
 - `3200/tcp` for the SimpleHost control plane over Apache TLS proxy
 
 `code-server` is exposed only through the named HTTPS vhost
-`https://code.pyrosa.com.do/` on `443`, while the service itself stays bound to
+`https://code.pyrosa.com.do/` on `443`. That vhost routes through the
+Authentik embedded outpost, while the service itself stays bound to
 `127.0.0.1:8080`.
 
 IAM exposure:
@@ -80,11 +80,13 @@ IAM exposure:
   admin already exists and the public setup flow must not remain reachable.
 - Protected app vhosts should route through an Authentik Proxy Provider and
   outpost path before reaching their local backends.
+- `code.pyrosa.com.do` is the first enforced protected app vhost.
 - SSH and non-HTTP service transports remain outside Apache IAM enforcement.
 
-Source-controlled Authentik vhost:
+Source-controlled IAM vhosts:
 
 - [`/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-authentik.conf`](/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-authentik.conf)
+- [`/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-code.conf`](/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-code.conf)
 
 Port `80/tcp` is kept for:
 
@@ -115,6 +117,7 @@ Source-controlled proxy artifacts:
 - [`/opt/simplehostman/src/platform/httpd/conf.d/10-acme-challenge.conf`](/opt/simplehostman/src/platform/httpd/conf.d/10-acme-challenge.conf)
 - [`/opt/simplehostman/src/platform/httpd/conf.d/20-proxy-defaults.conf`](/opt/simplehostman/src/platform/httpd/conf.d/20-proxy-defaults.conf)
 - [`/opt/simplehostman/src/platform/httpd/vhosts/app-vhost.conf.template`](/opt/simplehostman/src/platform/httpd/vhosts/app-vhost.conf.template)
+- [`/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-code.conf`](/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-code.conf)
 - [`/opt/simplehostman/src/platform/httpd/vhosts/redirect-vhost.conf.template`](/opt/simplehostman/src/platform/httpd/vhosts/redirect-vhost.conf.template)
 - [`/opt/simplehostman/src/packaging/httpd/simplehost-control-http.conf.template`](/opt/simplehostman/src/packaging/httpd/simplehost-control-http.conf.template)
 - [`/opt/simplehostman/src/packaging/httpd/simplehost-control-https.conf.template`](/opt/simplehostman/src/packaging/httpd/simplehost-control-https.conf.template)

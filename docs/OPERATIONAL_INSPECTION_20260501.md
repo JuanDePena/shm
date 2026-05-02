@@ -1270,12 +1270,64 @@ Phase 5P completion evidence on `2026-05-02`:
 - No secret values were printed or committed.
 - `code.pyrosa.com.do` was not changed in this phase.
 
+Phase 5Q completion evidence on `2026-05-02`:
+
+- IAM/SSO phase 4 from
+  [`IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md) protected
+  `https://code.pyrosa.com.do/` through Authentik on the primary.
+- Authentik group `PYROSA Operators` was created and
+  `webmaster@pyrosa.com.do` was added.
+- Authentik authentication flow `pyrosa-authentication-mfa-required` was
+  created with MFA validation set to deny users with no MFA device.
+- Authentik Proxy Provider `code.pyrosa.com.do` was created in `proxy` mode
+  with external host `https://code.pyrosa.com.do` and internal host
+  `http://127.0.0.1:8080`.
+- Authentik application `code-pyrosa` was created and restricted to
+  `PYROSA Operators`.
+- The embedded outpost now includes provider `code.pyrosa.com.do`.
+- Source-controlled Apache vhost:
+  [`platform/httpd/vhosts/pyrosa-code.conf`](/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-code.conf)
+- Live Apache vhost:
+  `/etc/httpd/conf.d/pyrosa-code.conf`
+- Rollback vhost copy:
+  `/root/simplehost-rollbacks/pyrosa-code-direct-20260502T063848Z.conf`
+- A first Apache attempt returned `404` because `X-Forwarded-Host` was sent as
+  a duplicated comma-separated value; the vhost was corrected to let
+  `ProxyAddHeaders` set that header once.
+- Runtime validation:
+  - `apachectl -t` returned `Syntax OK`
+  - `https://code.pyrosa.com.do/` returned `302` to the Authentik outpost start
+    path
+  - `https://code.pyrosa.com.do/login` returned `302` to the Authentik outpost
+    start path
+  - `https://code.pyrosa.com.do/outpost.goauthentik.io/start?...` returned
+    `302` to `https://auth.pyrosa.com.do/application/o/authorize/...`
+  - `https://code.pyrosa.com.do/outpost.goauthentik.io/ping` returned `204`
+  - `https://auth.pyrosa.com.do/` returned `302`
+  - `https://auth.pyrosa.com.do/if/flow/initial-setup/` returned `403`
+  - `http://127.0.0.1:8080/login` returned `200` for break-glass validation
+- `authentik-server.service`, `authentik-worker.service`,
+  `simplehost-worker.service`, and `httpd` remained active.
+- Post-enforcement forced backup run
+  `backup-run-3db0fd3e-7651-402a-b7d4-deb894c7195e` succeeded.
+- Post-enforcement backup directory:
+  `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T06-43-23-095Z`
+- Scratch restore database `restoretest_authentik_phase4_20260502t0643z`
+  validated:
+  - `1` `code-pyrosa` application
+  - `1` `https://code.pyrosa.com.do` proxy provider
+  - `1` embedded-outpost/provider link
+  - `1` MFA-required validation stage
+- Scratch database and temporary dump copy were removed.
+- No secret values were printed or committed.
+
 ## Current Implementation Order
 
-Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H/5I/5J/5K/5L/5M/5N/5O/5P are complete.
+Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H/5I/5J/5K/5L/5M/5N/5O/5P/5Q are complete.
 Continue in this order:
 
-1. Protect `code.pyrosa.com.do` with documented break-glass and rollback.
+1. Choose the next administrative web surface for IAM protection or define the
+   secondary IAM/DR posture.
 
 ## Do Not Do Yet
 

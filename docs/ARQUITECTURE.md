@@ -57,9 +57,9 @@ Product design references:
 - The combined control plane now serves operator UI and `/v1/*` over `3200/tcp`.
 - `code-server` is reached through `https://code.pyrosa.com.do/` on `443`;
   its backend remains local-only on `127.0.0.1:8080`.
-- Authentik is selected as the planned IAM/SSO layer for browser-based
-  administrative surfaces, starting with `code.pyrosa.com.do`. SSH remains out
-  of scope for IAM/SSO and keeps the hardening policy documented separately.
+- Authentik protects `code.pyrosa.com.do` on the primary before Apache reaches
+  the local `code-server` backend. SSH remains out of scope for IAM/SSO and
+  keeps the hardening policy documented separately.
 
 ## Design goals
 

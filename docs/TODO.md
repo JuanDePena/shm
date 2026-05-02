@@ -39,7 +39,10 @@ Current active slice:
     `webmaster@pyrosa.com.do`
   - Authentik backup and restore-test coverage is complete through
     SimpleHostMan backup policy `iam-authentik-primary-daily`
-  - next implementation step: protect `https://code.pyrosa.com.do/`
+  - `https://code.pyrosa.com.do/` is now protected through Authentik on the
+    primary, with a direct-vhost rollback copy under `/root/simplehost-rollbacks`
+  - next implementation step: choose the next administrative web surface for
+    IAM protection or define the secondary IAM/DR posture
   - SSH remains unchanged and outside the Authentik scope
 
 Historical migration runbooks can retain execution records, validation gates, and conditional

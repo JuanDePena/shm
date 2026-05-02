@@ -495,16 +495,17 @@ Current decision:
 
 - keep `code-server@root` as a root-owned administrative tool
 - keep the backend bound to `127.0.0.1:8080`
-- expose browser access only through `https://code.pyrosa.com.do/`
+- expose browser access only through `https://code.pyrosa.com.do/`, protected
+  by Authentik on the primary before Apache reaches the local backend
 - keep node-name `:8080` public reverse proxies retired
 - back up root `code-server` config, user data, profiles and extensions through
   SimpleHostMan backup policies:
   - `code-server-primary-daily`
   - `code-server-secondary-daily`
 
-Recommended next hardening step:
+Implemented IAM hardening:
 
-- put `https://code.pyrosa.com.do/` behind Authentik with username/password plus
+- `https://code.pyrosa.com.do/` is behind Authentik with username/password plus
   OTP/MFA before Apache reaches `127.0.0.1:8080`
 - use Authentik to own MFA, session cookies, lockout/rate limiting, and
   recovery codes
@@ -566,6 +567,6 @@ Validation completed after `sshd` reload:
 
 Remaining related follow-up:
 
-- Implement the Authentik IAM/SSO rollout for `code.pyrosa.com.do` following
-  [`IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md), while keeping SSH
-  unchanged.
+- Continue the Authentik IAM/SSO rollout for additional administrative web
+  surfaces following [`IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md),
+  while keeping SSH unchanged.

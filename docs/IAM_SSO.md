@@ -359,6 +359,8 @@ Completion evidence:
 
 ### Phase 4: Protect `code.pyrosa.com.do`
 
+Status: completed on the primary on `2026-05-02`.
+
 Goal: require Authentik MFA before Apache reaches the local `code-server`
 backend.
 
@@ -384,6 +386,51 @@ Rollback:
   `127.0.0.1:8080`
 - reload Apache
 - leave Authentik running for investigation unless it is the outage source
+
+Completion evidence:
+
+- Authentik group `PYROSA Operators` was created and
+  `webmaster@pyrosa.com.do` was added.
+- Authentik authentication flow `pyrosa-authentication-mfa-required` was
+  created with MFA validation set to deny users that have no MFA device.
+- Authentik Proxy Provider `code.pyrosa.com.do` was created in `proxy` mode:
+  - external host: `https://code.pyrosa.com.do`
+  - internal host: `http://127.0.0.1:8080`
+  - authorization flow: `default-provider-authorization-implicit-consent`
+- Authentik application `code-pyrosa` was created and restricted to
+  `PYROSA Operators`.
+- The embedded outpost now includes provider `code.pyrosa.com.do`.
+- Source-controlled Apache vhost:
+  [`platform/httpd/vhosts/pyrosa-code.conf`](/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-code.conf)
+- Live Apache vhost:
+  `/etc/httpd/conf.d/pyrosa-code.conf`
+- Rollback vhost copy:
+  `/root/simplehost-rollbacks/pyrosa-code-direct-20260502T063848Z.conf`
+- `apachectl -t` returned `Syntax OK`; Apache was reloaded.
+- Validation from the primary public address:
+  - `https://code.pyrosa.com.do/` returns `302` to the Authentik outpost start
+    path.
+  - `https://code.pyrosa.com.do/login` returns `302` to the Authentik outpost
+    start path.
+  - `https://code.pyrosa.com.do/outpost.goauthentik.io/start?...` returns
+    `302` to `https://auth.pyrosa.com.do/application/o/authorize/...`.
+  - `https://code.pyrosa.com.do/outpost.goauthentik.io/ping` returns `204`.
+- `https://auth.pyrosa.com.do/` still returns `302`.
+- `https://auth.pyrosa.com.do/if/flow/initial-setup/` still returns `403`.
+- Break-glass local backend check:
+  `http://127.0.0.1:8080/login` still returns `200`.
+- `authentik-server.service`, `authentik-worker.service`,
+  `simplehost-worker.service`, and `httpd` remained active.
+- A post-enforcement forced backup succeeded:
+  `backup-run-3db0fd3e-7651-402a-b7d4-deb894c7195e`.
+- The post-enforcement backup restored into scratch database
+  `restoretest_authentik_phase4_20260502t0643z` and validated:
+  - `1` `code-pyrosa` application
+  - `1` `https://code.pyrosa.com.do` proxy provider
+  - `1` embedded-outpost/provider link
+  - `1` MFA-required validation stage
+- Scratch database and temporary dump copy were removed.
+- No secret values were printed or committed.
 
 ### Phase 5: Extend To Other Web Surfaces
 
@@ -419,7 +466,9 @@ behavior is explicitly tested.
 
 ## Operational Hold Points
 
-Do not protect `code.pyrosa.com.do` until all of these are true:
+These hold points were satisfied before the `2026-05-02` phase 4 enforcement.
+Do not protect any later app until the equivalent rollback and recovery
+conditions are true for that app:
 
 - Authentik admin login requires MFA.
 - A root-key SSH break-glass path is tested.
