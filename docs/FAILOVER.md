@@ -116,6 +116,67 @@ replicated `simplehost_control` PostgreSQL database.
 6. Repoint any front-facing proxy or traffic entrypoint to the promoted node as
    required by the surrounding platform.
 
+## IAM/SSO promotion
+
+`auth.pyrosa.com.do` and protected administrative apps such as
+`code.pyrosa.com.do` use Authentik. During normal operation Authentik runs only
+on the primary. The secondary is prepared as a manual standby, but
+`authentik-server` and `authentik-worker` are held inactive by
+`ConditionPathExists=/etc/simplehost/iam/authentik/SECONDARY_PROMOTED`.
+
+Only release this hold after the secondary PostgreSQL apps cluster has been
+promoted, because Authentik performs writes to `app_authentik`.
+
+1. Promote `postgresql@apps` on the secondary:
+
+   ```bash
+   sudo -u postgres psql -p 5432 -c 'select pg_promote();'
+   ```
+
+2. Wait until the apps cluster reports writable primary state:
+
+   ```bash
+   sudo -u postgres psql -p 5432 -Atqc 'select pg_is_in_recovery();'
+   ```
+
+   Expected result:
+
+   ```text
+   f
+   ```
+
+3. Confirm the secondary Authentik environment points to the local node:
+
+   ```bash
+   grep '^AUTHENTIK_POSTGRESQL__HOST=10.89.0.2$' \
+     /etc/simplehost/iam/authentik/authentik.env
+   ```
+
+4. Release and start Authentik:
+
+   ```bash
+   touch /etc/simplehost/iam/authentik/SECONDARY_PROMOTED
+   systemctl start authentik-server authentik-worker
+   ```
+
+5. Validate locally on the secondary:
+
+   ```bash
+   systemctl is-active authentik-server authentik-worker
+   curl -k --resolve auth.pyrosa.com.do:443:51.222.206.196 \
+     https://auth.pyrosa.com.do/
+   curl -k --resolve code.pyrosa.com.do:443:51.222.206.196 \
+     https://code.pyrosa.com.do/outpost.goauthentik.io/ping
+   ```
+
+6. Repoint `auth.pyrosa.com.do` and protected application records to
+   `51.222.206.196` only after the secondary login flow and protected-app
+   checks pass.
+
+If the apps standby is unavailable, restore the latest
+`app_authentik.dump` from the replicated Authentik backup seed instead of
+starting from the physical standby.
+
 ## Rebuild after failover
 
 After a failover, do not try to reconnect the old primary as if nothing

@@ -509,17 +509,85 @@ Non-candidates by default:
 
 ### Phase 6: Secondary And Disaster Recovery
 
+Status: completed in conservative standby mode on `2026-05-02`.
+
 Goal: define the passive-node IAM posture after the primary rollout is stable.
 
-Options:
+Selected posture:
 
-- primary-only Authentik with documented restore on secondary
-- standby Authentik units disabled on secondary with replicated config and
-  restored database during failover
-- later active/passive automation after failover behavior is rehearsed
+- Authentik runs on the primary only during normal operation.
+- The secondary carries restored Authentik files, secrets, media, vhosts,
+  Quadlet units and the pinned container image, but the services remain
+  inactive.
+- Secondary Authentik units have a systemd hold:
+  [`platform/host/systemd/authentik-secondary-standby-hold.conf`](/opt/simplehostman/src/platform/host/systemd/authentik-secondary-standby-hold.conf).
+  They will not start unless
+  `/etc/simplehost/iam/authentik/SECONDARY_PROMOTED` exists.
+- The secondary `app_authentik` database is supplied by the PostgreSQL apps
+  physical standby. The logical `app_authentik.dump` backup remains the
+  fallback if a fresh restore is required instead of standby promotion.
+
+Promotion outline:
+
+1. Confirm the primary is intentionally out of service or stopped for IAM.
+2. Promote the secondary PostgreSQL apps cluster and confirm
+   `pg_is_in_recovery()` returns `f` on port `5432`.
+3. Confirm `/etc/simplehost/iam/authentik/authentik.env` points to
+   `AUTHENTIK_POSTGRESQL__HOST=10.89.0.2`.
+4. Release the hold:
+
+   ```bash
+   touch /etc/simplehost/iam/authentik/SECONDARY_PROMOTED
+   systemctl start authentik-server authentik-worker
+   ```
+
+5. Repoint `auth.pyrosa.com.do` and protected app hostnames such as
+   `code.pyrosa.com.do` to the secondary public address.
+6. Validate the Authentik login flow, the embedded outpost ping and the
+   protected app.
+
+Rollback before promotion:
+
+- leave the hold marker absent
+- keep `authentik-server` and `authentik-worker` inactive
+- restore the previous secondary direct `code.pyrosa.com.do` vhost from
+  `/root/simplehost-rollbacks/pyrosa-code-secondary-direct-20260502T074400Z.conf`
+  if direct secondary code-server exposure is needed again
 
 Do not enable automatic IAM failover before database and persistent file
 behavior is explicitly tested.
+
+Completion evidence:
+
+- Latest Authentik backup seed replicated to the secondary:
+  `/srv/backups/iam/authentik/primary-replicated/iam-authentik-primary-daily-2026-05-02T07-29-56-575Z`
+- Secondary restored root-only Authentik config/runtime paths:
+  - `/etc/simplehost/iam/authentik`
+  - `/srv/containers/iam/authentik`
+- Secondary `authentik.env` was adjusted for the local standby node with
+  `AUTHENTIK_POSTGRESQL__HOST=10.89.0.2`.
+- Secondary Pyrosa logo and favicon media were present after restore.
+- Secondary Quadlet units were installed but left inactive:
+  - `/etc/containers/systemd/authentik-server.container`
+  - `/etc/containers/systemd/authentik-worker.container`
+- Secondary hold drop-ins were installed:
+  - `/etc/systemd/system/authentik-server.service.d/10-secondary-standby-hold.conf`
+  - `/etc/systemd/system/authentik-worker.service.d/10-secondary-standby-hold.conf`
+- Secondary Authentik image `ghcr.io/goauthentik/server:2026.2.2` was pulled.
+- Secondary vhosts were aligned to primary standby shape:
+  - `/etc/httpd/conf.d/pyrosa-authentik.conf`
+  - `/etc/httpd/conf.d/pyrosa-code.conf`
+  - `/etc/httpd/conf.d/pyrosa-code-internal-bridge.conf`
+- Secondary SELinux `http_port_t` includes `18080/tcp` for the internal
+  code-server bridge.
+- Secondary Apache returned `Syntax OK`, `httpd` is active and there are no
+  failed systemd units.
+- Secondary `postgresql@apps` remains in recovery and contains
+  `app_authentik`.
+- Secondary `auth.pyrosa.com.do` and `code.pyrosa.com.do` return `503` with
+  `--resolve` while Authentik is intentionally held inactive.
+- Primary `auth.pyrosa.com.do` and `code.pyrosa.com.do` still return `302`,
+  and primary Authentik services remain active.
 
 ## Operational Hold Points
 

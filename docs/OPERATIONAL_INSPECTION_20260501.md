@@ -1370,13 +1370,40 @@ Phase 5Q completion evidence on `2026-05-02`:
 - Scratch database and temporary dump copy were removed.
 - No secret values were printed or committed.
 
+Phase 5R completion evidence on `2026-05-02`:
+
+- IAM/SSO phase 6 from
+  [`IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md) defined and staged
+  the conservative secondary DR posture.
+- Authentik remains active on the primary only during normal operation.
+- The latest Authentik backup seed was replicated to the secondary:
+  `/srv/backups/iam/authentik/primary-replicated/iam-authentik-primary-daily-2026-05-02T07-29-56-575Z`
+- Secondary root-only Authentik config/runtime paths were restored from backup:
+  - `/etc/simplehost/iam/authentik`
+  - `/srv/containers/iam/authentik`
+- Secondary `authentik.env` points to local apps PostgreSQL host
+  `10.89.0.2`.
+- Secondary Quadlet units and the pinned Authentik image
+  `ghcr.io/goauthentik/server:2026.2.2` are present.
+- Secondary Authentik services remain inactive and are protected by the
+  `SECONDARY_PROMOTED` systemd hold marker.
+- Secondary Authentik and code-server vhosts are aligned to the primary standby
+  shape, including the internal `10.88.0.1:18080` bridge.
+- Secondary SELinux `http_port_t` includes `18080/tcp`; Apache is active and
+  `apachectl -t` returned `Syntax OK`.
+- Secondary `postgresql@apps` remains in recovery and contains
+  `app_authentik`.
+- Secondary `auth.pyrosa.com.do` and `code.pyrosa.com.do` return `503` with
+  `--resolve` while Authentik is intentionally held inactive.
+- Primary `auth.pyrosa.com.do` and `code.pyrosa.com.do` still return `302`, and
+  primary Authentik services remain active.
+
 ## Current Implementation Order
 
-Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H/5I/5J/5K/5L/5M/5N/5O/5P/5Q are complete.
+Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H/5I/5J/5K/5L/5M/5N/5O/5P/5Q/5R are complete.
 Continue in this order:
 
-1. Choose the next administrative web surface for IAM protection or define the
-   secondary IAM/DR posture.
+1. Choose the next administrative web surface for IAM protection.
 
 ## Do Not Do Yet
 

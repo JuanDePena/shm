@@ -41,8 +41,11 @@ Current active slice:
     SimpleHostMan backup policy `iam-authentik-primary-daily`
   - `https://code.pyrosa.com.do/` is now protected through Authentik on the
     primary, with a direct-vhost rollback copy under `/root/simplehost-rollbacks`
+  - secondary IAM/DR posture is defined and staged conservatively: Authentik
+    files, vhosts and units are present on the secondary, but startup is held
+    behind `/etc/simplehost/iam/authentik/SECONDARY_PROMOTED`
   - next implementation step: choose the next administrative web surface for
-    IAM protection or define the secondary IAM/DR posture
+    IAM protection
   - SSH remains unchanged and outside the Authentik scope
 
 Historical migration runbooks can retain execution records, validation gates, and conditional
