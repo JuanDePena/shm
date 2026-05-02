@@ -35,9 +35,8 @@ Current active slice:
 - Phase 5 resilience and IAM/SSO follow-up:
   - continue the Authentik rollout tracked in
     [`/opt/simplehostman/src/docs/IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md)
-  - current hold point: create Authentik recovery codes for
-    `webmaster@pyrosa.com.do` before protecting any app
-  - admin TOTP MFA is already enrolled
+  - admin TOTP MFA and recovery codes are already enrolled for
+    `webmaster@pyrosa.com.do`
   - next implementation step: add backup and restore-test coverage for
     Authentik
   - first protected surface: `https://code.pyrosa.com.do/`

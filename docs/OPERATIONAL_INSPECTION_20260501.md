@@ -1121,8 +1121,7 @@ Phase 5K completion evidence on `2026-05-02`:
 
 Remaining Phase 5 maintenance-window items:
 
-- create Authentik recovery codes, add backup coverage, and then protect
-  `https://code.pyrosa.com.do/`
+- add Authentik backup coverage, and then protect `https://code.pyrosa.com.do/`
 
 Phase 5L completion evidence on `2026-05-02`:
 
@@ -1208,17 +1207,34 @@ Phase 5N completion evidence on `2026-05-02`:
   Authentik authentication flow.
 - `https://auth.pyrosa.com.do/if/flow/initial-setup/` remained blocked with
   `403`.
-- Remaining hold point before protecting apps: create Authentik recovery codes
+- Remaining hold point at phase 5N completion: create Authentik recovery codes
   for `webmaster@pyrosa.com.do`.
+
+Phase 5O completion evidence on `2026-05-02`:
+
+- Authentik recovery codes were created for `webmaster@pyrosa.com.do`.
+- The codes are stored only in the root-only file
+  `/etc/simplehost/iam/authentik/recovery-codes-webmaster-pyrosa-20260502.txt`
+  with mode `0600`.
+- Console validation showed:
+  - confirmed TOTP devices: `1`
+  - confirmed static/recovery-code devices: `1`
+  - remaining static/recovery-code tokens: `10`
+- `authentik-server.service`, `authentik-worker.service`, and `httpd` remained
+  active.
+- `https://auth.pyrosa.com.do/` continued to return `302` to the default
+  Authentik authentication flow.
+- `https://auth.pyrosa.com.do/if/flow/initial-setup/` remained blocked with
+  `403`.
+- `code.pyrosa.com.do` was not changed in this phase.
 
 ## Current Implementation Order
 
-Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H/5I/5J/5K/5L/5M/5N are complete.
+Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H/5I/5J/5K/5L/5M/5N/5O are complete.
 Continue in this order:
 
-1. Create Authentik recovery codes for `webmaster@pyrosa.com.do`.
-2. Add backup and restore-test coverage for Authentik.
-3. Protect `code.pyrosa.com.do` with documented break-glass and rollback.
+1. Add backup and restore-test coverage for Authentik.
+2. Protect `code.pyrosa.com.do` with documented break-glass and rollback.
 
 ## Do Not Do Yet
 
