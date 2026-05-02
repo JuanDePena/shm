@@ -68,8 +68,7 @@ function createOverviewMetricsSnapshot(): OverviewMetricsSnapshot {
       memoryFreeBytes: 0,
       storageTotalBytes: 0,
       storageAvailableBytes: 0,
-      apiService: "active",
-      uiService: "active",
+      controlService: "active",
       version: "test",
       currentIpv4: "127.0.0.1"
     }

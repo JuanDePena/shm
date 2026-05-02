@@ -26,7 +26,7 @@ type DashboardShellCopy = DashboardCopyLabels & {
   languageLabel: string;
   latestReconciliation: string;
   managedNodes: string;
-  metricsApiService: string;
+  metricsControlService: string;
   metricsCpuCores: string;
   metricsCpuLoad: string;
   metricsCurrentIpv4: string;
@@ -41,7 +41,6 @@ type DashboardShellCopy = DashboardCopyLabels & {
   metricsStorageAvailable: string;
   metricsStorageTotal: string;
   metricsSystemTitle: string;
-  metricsUiService: string;
   metricsUpdatedAt: string;
   metricsVersion: string;
   navApps: string;

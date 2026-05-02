@@ -19,7 +19,7 @@ type StatsCopy = {
 };
 
 type OverviewMetricsCopy = {
-  metricsApiService: string;
+  metricsControlService: string;
   metricsCpuCores: string;
   metricsCpuLoad: string;
   metricsCurrentIpv4: string;
@@ -34,7 +34,6 @@ type OverviewMetricsCopy = {
   metricsStorageAvailable: string;
   metricsStorageTotal: string;
   metricsSystemTitle: string;
-  metricsUiService: string;
   metricsUpdatedAt: string;
   metricsVersion: string;
 };
@@ -222,8 +221,7 @@ export function renderOverviewMetrics<Copy extends OverviewMetricsCopy>(
         ${metric(copy.metricsMemoryFree, formatBytes(overviewMetrics.system.memoryFreeBytes))}
         ${metric(copy.metricsStorageTotal, formatBytes(overviewMetrics.system.storageTotalBytes))}
         ${metric(copy.metricsStorageAvailable, formatBytes(overviewMetrics.system.storageAvailableBytes))}
-        ${metric(copy.metricsApiService, overviewMetrics.system.apiService)}
-        ${metric(copy.metricsUiService, overviewMetrics.system.uiService)}
+        ${metric(copy.metricsControlService, overviewMetrics.system.controlService)}
         ${metric(copy.metricsCurrentIpv4, overviewMetrics.system.currentIpv4 ?? "-")}
       </div>
     </article>

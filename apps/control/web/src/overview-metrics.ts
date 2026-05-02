@@ -56,8 +56,7 @@ export interface OverviewSystemMetrics {
   memoryFreeBytes: number;
   storageTotalBytes: number;
   storageAvailableBytes: number;
-  apiService: string;
-  uiService: string;
+  controlService: string;
   version: string;
   currentIpv4: string | null;
 }
@@ -292,8 +291,7 @@ function collectSystemMetrics(config: ControlWebRuntimeConfig): Omit<
     cpuLoadPercent: Math.max(0, (loadAverage / cpuCores) * 100),
     memoryTotalBytes: os.totalmem(),
     memoryFreeBytes: os.freemem(),
-    apiService: `${config.api.host}:${config.api.port}`,
-    uiService: `${config.web.host}:${config.web.port}`,
+    controlService: `${config.web.host}:${config.web.port}`,
     version: config.version,
     currentIpv4: getCurrentIpv4()
   };
