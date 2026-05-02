@@ -1,6 +1,6 @@
 {
   "name": "@simplehost/agent-cli",
-  "version": "2605.02.21",
+  "version": "2605.02.22",
   "private": true,
   "type": "module",
   "main": "dist/index.js",

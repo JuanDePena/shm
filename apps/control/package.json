@@ -1,6 +1,6 @@
 {
   "name": "@simplehost/control",
-  "version": "2605.02.21",
+  "version": "2605.02.22",
   "private": true,
   "type": "module",
   "scripts": {
