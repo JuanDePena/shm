@@ -1243,6 +1243,18 @@ DNS validation at `2026-05-01 04:16 UTC`:
 - `1.1.1.1` and `8.8.8.8` returned `code.pyrosa.com.do` pointing to `51.222.204.86`
 - `sync.pyrosa.com.do` and `helpers.pyrosa.com.do` remained on `51.161.11.249`
 
+### 2026-05-02 Canonical Endpoint Cleanup
+
+The earlier node-name convenience proxies for code-server were removed from both
+SimpleHostMan nodes:
+
+- `https://vps-prd.pyrosa.com.do:8080/`
+- `https://vps-des.pyrosa.com.do:8080/`
+
+The only browser endpoint for code-server is now `https://code.pyrosa.com.do/`
+on `443`. Apache no longer listens publicly on `8080/tcp`; the code-server
+backend remains local-only on `127.0.0.1:8080` on each node.
+
 ## Phase 12 Hold Record
 
 Recorded on `2026-05-01` and scoped to closing the current Pyrosa migration wave without touching

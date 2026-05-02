@@ -52,8 +52,10 @@ Product design references:
 - `SimpleHost Agent` is active on both nodes and desired state already lives in `SimpleHost Control` PostgreSQL.
 - PostgreSQL `control_plane_*` tables are the desired-state source of truth;
   generated exports remain available for audit and disaster recovery.
-- Public operator ingress is normalized on both nodes through the `public` zone for `80/tcp`, `443/tcp`, `51820/udp`, `3200/tcp`, and `8080/tcp`.
+- Public operator ingress is normalized on both nodes through the `public` zone for `80/tcp`, `443/tcp`, `51820/udp`, and `3200/tcp`.
 - The combined control plane now serves operator UI and `/v1/*` over `3200/tcp`.
+- `code-server` is reached through `https://code.pyrosa.com.do/` on `443`;
+  its backend remains local-only on `127.0.0.1:8080`.
 
 ## Design goals
 
@@ -108,7 +110,6 @@ Current normalized public ingress to both nodes:
 - `443/tcp`
 - `51820/udp`
 - `3200/tcp` for `SimpleHost Control` web
-- `8080/tcp` for `code-server`
 
 Future DNS cutover, when activated publicly:
 
@@ -233,7 +234,7 @@ The current hardening baseline in [`/opt/simplehostman/src/docs/HARDENING.md`](/
 - HTTPS: `443/tcp`
 - WireGuard: `51820/udp`
 - `SimpleHost Control` web: `3200/tcp`
-- `code-server`: `8080/tcp`
+- `code-server`: `https://code.pyrosa.com.do/` on `443`
 
 If authoritative DNS is cut over to these nodes publicly, add:
 

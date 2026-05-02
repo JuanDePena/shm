@@ -3581,7 +3581,7 @@ async function executeFirewallApplyJob(
 
     if (applyPublicZone) {
       const publicServices = ["ssh", "http", "https", "dhcpv6-client"];
-      const publicPorts = ["51820/udp", "3200/tcp", "8080/tcp"];
+      const publicPorts = ["51820/udp", "3200/tcp"];
 
       for (const service of publicServices) {
         await runFirewallCommand([

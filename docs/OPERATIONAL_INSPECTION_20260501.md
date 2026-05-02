@@ -690,7 +690,7 @@ Completion evidence:
 
 ### Phase 5: Resilience And Failover Improvements
 
-Status: in progress; phases 5A through 5E completed on `2026-05-02`.
+Status: in progress; phases 5A through 5F completed on `2026-05-02`.
 
 Goal: reduce single points of failure that remain after the vps-old retirement.
 
@@ -909,20 +909,48 @@ Phase 5E completion evidence on `2026-05-02`:
 - Source-IP SSH restriction remains deferred because the operator source range
   is not documented as stable enough.
 
+Phase 5F completion evidence on `2026-05-02`:
+
+- The legacy node-name code-server reverse proxies were removed:
+  - `https://vps-prd.pyrosa.com.do:8080/`
+  - `https://vps-des.pyrosa.com.do:8080/`
+- The canonical code-server browser endpoint is now
+  `https://code.pyrosa.com.do/` on `443`.
+- Apache no longer listens publicly on `51.222.204.86:8080` or
+  `51.222.206.196:8080`; only the local code-server backends remain on
+  `127.0.0.1:8080`.
+- `8080/tcp` was removed from the `public` firewalld zone on both nodes.
+- Validation after Apache reload:
+  - `https://code.pyrosa.com.do/` with `--resolve` to primary redirected to
+    `/login`
+  - `https://code.pyrosa.com.do/login` with `--resolve` to primary returned
+    `200 OK`
+  - `https://code.pyrosa.com.do/` with `--resolve` to secondary redirected to
+    `/login`
+  - `https://code.pyrosa.com.do/login` with `--resolve` to secondary returned
+    `200 OK`
+  - `https://vps-prd.pyrosa.com.do:8080/` and
+    `https://vps-des.pyrosa.com.do:8080/` refused connection
+- The source templates, renderer, and firewall desired state were updated so
+  reconciliation does not reintroduce public `8080/tcp`.
+- The active release on both nodes was hot-patched with the same renderer and
+  driver changes, then `simplehost-agent` was restarted and verified active, so
+  a `firewall.apply` job cannot re-add `8080/tcp` while this source commit waits
+  for the next full release promotion.
+
 Remaining Phase 5 maintenance-window items:
 
 - decide whether to install and configure `dnf-automatic`
-- revisit code-server public proxy exposure and root-owned service posture,
-  including a scheduled backup policy for code-server config and user data
+- review code-server root-owned service posture, including a scheduled backup
+  policy for code-server config and user data
 
 ## Current Implementation Order
 
-Phases 1 through 4 and phase 5A/5B/5C/5D/5E are complete. Continue in this
+Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F are complete. Continue in this
 order:
 
 1. Decide whether to install and configure security-update automation.
-2. Revisit code-server exposure, root-owned service posture, and scheduled
-   backup coverage.
+2. Review code-server root-owned service posture and scheduled backup coverage.
 
 ## Do Not Do Yet
 

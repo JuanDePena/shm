@@ -11,7 +11,9 @@ primary and secondary VPS nodes:
 
 - SSH access is key-only.
 - `root` is still allowed over SSH, but passwords are disabled.
-- `code-server` can be reached through a local SSH tunnel to `127.0.0.1:8080` and may also be proxied over Apache HTTPS on `:8080` when operator ingress is enabled.
+- `code-server` can be reached through the named HTTPS vhost
+  `https://code.pyrosa.com.do/`; its backend remains local-only on
+  `127.0.0.1:8080`.
 - The SimpleHost control plane may also be proxied over Apache HTTPS on `:3200`.
 - Host firewalling is active through `firewalld`.
 - `rpcbind` has been disabled.
@@ -21,10 +23,12 @@ primary and secondary VPS nodes:
 ## Status on 2026-03-14
 
 - The `public.xml` source now matches the normalized live operator-facing posture.
-- The current platform runtime exposes `http`, `https`, `51820/udp`, and operator ports `3200/tcp` and `8080/tcp` on both nodes.
+- The current platform runtime exposes `http`, `https`, `51820/udp`, and
+  operator port `3200/tcp` on both nodes.
 - Private platform ports `3306/tcp`, `5432/tcp`, `5433/tcp`, and `8081/tcp` remain intended for localhost or WireGuard only.
 - The passive secondary keeps the same public operator ingress shape as the primary for smoke tests and controlled failover.
-- `httpd` operator listeners on `3200` and `8080` stay pinned to the node public IPv4 and use a `network-online` dependency to avoid boot-time bind failures.
+- The `httpd` operator listener on `3200` stays pinned to the node public IPv4
+  and uses a `network-online` dependency to avoid boot-time bind failures.
 
 ## Baseline observed before changes
 
@@ -112,7 +116,7 @@ Effective `firewalld` zone:
 <?xml version="1.0" encoding="utf-8"?>
 <zone>
   <short>Public</short>
-  <description>Public operator-facing zone for Apache TLS ingress, code-server proxy access, and WireGuard.</description>
+  <description>Public operator-facing zone for Apache TLS ingress and WireGuard.</description>
   <interface name="eth0"/>
   <service name="ssh"/>
   <service name="http"/>
@@ -120,7 +124,6 @@ Effective `firewalld` zone:
   <service name="dhcpv6-client"/>
   <port protocol="udp" port="51820"/>
   <port protocol="tcp" port="3200"/>
-  <port protocol="tcp" port="8080"/>
 </zone>
 ```
 
@@ -129,9 +132,10 @@ Runtime state:
 - `firewalld` is enabled and active.
 - `eth0` is bound to the `public` zone.
 - Allowed inbound services are `ssh`, `http`, `https`, and `dhcpv6-client`.
-- Allowed inbound ports are `51820/udp`, `3200/tcp`, and `8080/tcp`.
+- Allowed inbound ports are `51820/udp` and `3200/tcp`.
 - Zone forwarding is disabled.
-- `httpd.service` now waits for `network-online.target` before trying to bind the public-IP listeners on `3200` and `8080`.
+- `httpd.service` now waits for `network-online.target` before trying to bind
+  the public-IP listener on `3200`.
 
 ### rpcbind
 
@@ -221,7 +225,9 @@ Runtime state:
 - SSH TCP forwarding is disabled by default for all other users.
 - SSH agent forwarding is disabled.
 - Host-level inbound filtering is active.
-- Public operator ingress is exposed through Apache on `443`, `3200`, and `8080`.
+- Public operator ingress is exposed through Apache on `443` and `3200`.
+- `code-server` browser access is exposed through `https://code.pyrosa.com.do/`
+  on `443`.
 - `code-server` itself still remains local-only on `127.0.0.1:8080`.
 - `rpcbind` is no longer exposed.
 - Repeated SSH auth failures are rate-limited through `fail2ban`.
@@ -276,7 +282,7 @@ Expected firewall state:
 public (default, active)
   interfaces: eth0
   services: dhcpv6-client http https ssh
-  ports: 51820/udp 3200/tcp 8080/tcp
+  ports: 51820/udp 3200/tcp
   forward: no
 ```
 
@@ -455,8 +461,8 @@ Validation completed after `sshd` reload:
 
 Remaining related follow-up:
 
-- Decide whether public Apache exposure for code-server on `8080` remains
-  necessary, or whether the platform should return to SSH-tunnel-only access.
+- Review the root-owned `code-server@root` service posture and scheduled
+  backup coverage for code-server config and user data.
 - If automatic security updates are desired, install and configure
   `dnf-automatic` in download-only or security-only mode first, with an
   explicit package hold/rollback procedure.

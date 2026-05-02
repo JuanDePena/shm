@@ -13,8 +13,6 @@ fi
 cert_email="${4:-${CERTBOT_EMAIL:-${default_cert_email}}}"
 public_ip="${SIMPLEHOST_PUBLIC_BIND_IP:-$(getent ahostsv4 "${server_name}" | awk 'NR==1{print $1}')}"
 document_root="${SIMPLEHOST_DOCUMENT_ROOT:-/var/www/html}"
-code_backend_host="${CODE_SERVER_BACKEND_HOST:-127.0.0.1}"
-code_backend_port="${CODE_SERVER_BACKEND_PORT:-8080}"
 
 if [[ -z "${public_ip}" ]]; then
   echo "could not determine an IPv4 address for ${server_name}" >&2
@@ -42,8 +40,6 @@ render_template() {
     -e "s|__DOCUMENT_ROOT__|${document_root}|g" \
     -e "s|__BACKEND_HOST__|${backend_host}|g" \
     -e "s|__BACKEND_PORT__|${backend_port}|g" \
-    -e "s|__CODE_BACKEND_HOST__|${code_backend_host}|g" \
-    -e "s|__CODE_BACKEND_PORT__|${code_backend_port}|g" \
     -e "s|__CERT_NAME__|${cert_name}|g" \
     "${source_template}" >"${target_path}"
 }
@@ -64,8 +60,6 @@ if command -v semanage >/dev/null 2>&1; then
   restorecon -Rv /var/www/letsencrypt
   semanage port -a -t http_port_t -p tcp 3200 2>/dev/null || \
     semanage port -m -t http_port_t -p tcp 3200
-  semanage port -a -t http_port_t -p tcp 8080 2>/dev/null || \
-    semanage port -m -t http_port_t -p tcp 8080
 else
   chcon -R -t httpd_sys_content_t /var/www/letsencrypt
 fi
@@ -73,7 +67,6 @@ fi
 firewall-cmd --permanent --add-service=http
 firewall-cmd --permanent --add-service=https
 firewall-cmd --permanent --add-port=3200/tcp
-firewall-cmd --permanent --add-port=8080/tcp
 firewall-cmd --reload
 
 setsebool -P httpd_can_network_connect 1

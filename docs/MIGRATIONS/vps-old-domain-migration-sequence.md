@@ -1237,6 +1237,17 @@ Validation:
 - authoritative PowerDNS on `primary`, `secondary`, and `vps-old` returns
   `code.pyrosa.com.do -> 51.222.204.86`
 
+### 2026-05-02: code-server canonical endpoint cleanup
+
+The node-name convenience proxies for code-server were removed:
+
+- `https://vps-prd.pyrosa.com.do:8080/`
+- `https://vps-des.pyrosa.com.do:8080/`
+
+The only browser endpoint for code-server is now `https://code.pyrosa.com.do/`
+on `443`. Apache no longer listens publicly on `8080/tcp`; the service backend
+continues to bind locally on `127.0.0.1:8080` on each node.
+
 ### 2026-05-01: pyrosa.com.do migration hold
 
 The current Pyrosa wave is paused after the code-server cutover because the only remaining primary

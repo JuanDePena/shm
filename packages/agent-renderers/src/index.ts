@@ -403,7 +403,7 @@ export function renderHostPublicFirewalldZone(): string {
     '<?xml version="1.0" encoding="utf-8"?>',
     "<zone>",
     "  <short>Public</short>",
-    "  <description>Public operator-facing zone for Apache TLS ingress, code-server proxy access, and WireGuard.</description>",
+    "  <description>Public operator-facing zone for Apache TLS ingress and WireGuard.</description>",
     '  <interface name="eth0"/>',
     '  <service name="ssh"/>',
     '  <service name="http"/>',
@@ -411,7 +411,6 @@ export function renderHostPublicFirewalldZone(): string {
     '  <service name="dhcpv6-client"/>',
     '  <port protocol="udp" port="51820"/>',
     '  <port protocol="tcp" port="3200"/>',
-    '  <port protocol="tcp" port="8080"/>',
     "</zone>"
   ].join("\n");
 }
