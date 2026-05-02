@@ -395,8 +395,19 @@ Completion evidence:
   created with MFA validation set to deny users that have no MFA device.
 - Authentik Proxy Provider `code.pyrosa.com.do` was created in `proxy` mode:
   - external host: `https://code.pyrosa.com.do`
-  - internal host: `http://127.0.0.1:8080`
+  - internal host: `http://host.containers.internal:18080`
   - authorization flow: `default-provider-authorization-implicit-consent`
+- The provider internal host uses the Podman host alias because the embedded
+  outpost runs inside the Authentik container; `127.0.0.1` there is the
+  container itself, not the SimpleHostMan host.
+- Source-controlled internal Apache bridge:
+  [`platform/httpd/vhosts/pyrosa-code-internal-bridge.conf`](/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-code-internal-bridge.conf)
+- Live internal Apache bridge:
+  `/etc/httpd/conf.d/pyrosa-code-internal-bridge.conf`
+- The bridge listens on `10.88.0.1:18080`, allows only the Podman subnet, and
+  proxies to the local `code-server` backend on `127.0.0.1:8080`.
+- SELinux port label: `18080/tcp` is registered as `http_port_t` for the
+  internal Apache listener.
 - Authentik application `code-pyrosa` was created and restricted to
   `PYROSA Operators`.
 - The embedded outpost now includes provider `code.pyrosa.com.do`.
@@ -419,10 +430,20 @@ Completion evidence:
 - `https://auth.pyrosa.com.do/if/flow/initial-setup/` still returns `403`.
 - Break-glass local backend check:
   `http://127.0.0.1:8080/login` still returns `200`.
+- Internal bridge checks:
+  - `http://10.88.0.1:18080/login` returns `200`.
+  - `http://host.containers.internal:18080/login` returns `200` from inside
+    the Authentik container.
+- Authenticated browser traffic after the bridge correction returned `200` for
+  code-server pages and `101` for WebSocket upgrade requests through the bridge.
 - `authentik-server.service`, `authentik-worker.service`,
   `simplehost-worker.service`, and `httpd` remained active.
 - A post-enforcement forced backup succeeded:
   `backup-run-3db0fd3e-7651-402a-b7d4-deb894c7195e`.
+- A post-bridge-correction forced backup succeeded:
+  `backup-run-846c771e-a73b-48ea-9153-babc69eccbf6`.
+- Post-bridge-correction backup directory:
+  `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T06-58-38-417Z`
 - The post-enforcement backup restored into scratch database
   `restoretest_authentik_phase4_20260502t0643z` and validated:
   - `1` `code-pyrosa` application

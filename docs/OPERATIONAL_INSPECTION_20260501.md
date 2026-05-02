@@ -1281,12 +1281,17 @@ Phase 5Q completion evidence on `2026-05-02`:
   created with MFA validation set to deny users with no MFA device.
 - Authentik Proxy Provider `code.pyrosa.com.do` was created in `proxy` mode
   with external host `https://code.pyrosa.com.do` and internal host
-  `http://127.0.0.1:8080`.
+  `http://host.containers.internal:18080`.
+- An internal Apache bridge was added on `10.88.0.1:18080` for the Authentik
+  container to reach host-local code-server; it proxies to
+  `127.0.0.1:8080` and is limited to the Podman subnet.
 - Authentik application `code-pyrosa` was created and restricted to
   `PYROSA Operators`.
 - The embedded outpost now includes provider `code.pyrosa.com.do`.
 - Source-controlled Apache vhost:
   [`platform/httpd/vhosts/pyrosa-code.conf`](/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-code.conf)
+- Source-controlled internal Apache bridge:
+  [`platform/httpd/vhosts/pyrosa-code-internal-bridge.conf`](/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-code-internal-bridge.conf)
 - Live Apache vhost:
   `/etc/httpd/conf.d/pyrosa-code.conf`
 - Rollback vhost copy:
@@ -1306,10 +1311,19 @@ Phase 5Q completion evidence on `2026-05-02`:
   - `https://auth.pyrosa.com.do/` returned `302`
   - `https://auth.pyrosa.com.do/if/flow/initial-setup/` returned `403`
   - `http://127.0.0.1:8080/login` returned `200` for break-glass validation
+  - `http://10.88.0.1:18080/login` returned `200`
+  - `http://host.containers.internal:18080/login` returned `200` from inside
+    the Authentik container
+  - authenticated browser traffic returned `200` for code-server pages and
+    `101` for WebSocket upgrade requests through the bridge
 - `authentik-server.service`, `authentik-worker.service`,
   `simplehost-worker.service`, and `httpd` remained active.
 - Post-enforcement forced backup run
   `backup-run-3db0fd3e-7651-402a-b7d4-deb894c7195e` succeeded.
+- Post-bridge-correction forced backup run
+  `backup-run-846c771e-a73b-48ea-9153-babc69eccbf6` succeeded.
+- Post-bridge-correction backup directory:
+  `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T06-58-38-417Z`
 - Post-enforcement backup directory:
   `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T06-43-23-095Z`
 - Scratch restore database `restoretest_authentik_phase4_20260502t0643z`

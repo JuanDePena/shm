@@ -58,8 +58,10 @@ Product design references:
 - `code-server` is reached through `https://code.pyrosa.com.do/` on `443`;
   its backend remains local-only on `127.0.0.1:8080`.
 - Authentik protects `code.pyrosa.com.do` on the primary before Apache reaches
-  the local `code-server` backend. SSH remains out of scope for IAM/SSO and
-  keeps the hardening policy documented separately.
+  the local `code-server` backend. The Authentik outpost reaches code-server
+  through the internal Apache bridge on `10.88.0.1:18080` because the outpost
+  runs inside a container. SSH remains out of scope for IAM/SSO and keeps the
+  hardening policy documented separately.
 
 ## Design goals
 

@@ -35,6 +35,8 @@ Ingress platform:
 - Authentik is now the IAM/SSO gateway for `code.pyrosa.com.do` on the primary.
   Apache routes that vhost through the Authentik embedded outpost before the
   request can reach the local `code-server` backend on `127.0.0.1:8080`.
+  Because the outpost runs inside the Authentik container, its upstream target
+  is the internal Apache bridge at `http://host.containers.internal:18080`.
   The rollout plan lives in [`IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md).
 
 ## Selected platform
@@ -70,8 +72,8 @@ Optional operator-convenience exposure, when enabled on a node:
 
 `code-server` is exposed only through the named HTTPS vhost
 `https://code.pyrosa.com.do/` on `443`. That vhost routes through the
-Authentik embedded outpost, while the service itself stays bound to
-`127.0.0.1:8080`.
+Authentik embedded outpost and then through an internal Apache bridge on
+`10.88.0.1:18080`; the service itself stays bound to `127.0.0.1:8080`.
 
 IAM exposure:
 
@@ -87,6 +89,7 @@ Source-controlled IAM vhosts:
 
 - [`/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-authentik.conf`](/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-authentik.conf)
 - [`/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-code.conf`](/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-code.conf)
+- [`/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-code-internal-bridge.conf`](/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-code-internal-bridge.conf)
 
 Port `80/tcp` is kept for:
 

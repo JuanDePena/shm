@@ -506,7 +506,10 @@ Current decision:
 Implemented IAM hardening:
 
 - `https://code.pyrosa.com.do/` is behind Authentik with username/password plus
-  OTP/MFA before Apache reaches `127.0.0.1:8080`
+  OTP/MFA before traffic reaches the local `code-server` backend
+- the Authentik outpost reaches code-server through the internal Apache bridge
+  on `10.88.0.1:18080`; that bridge is limited to the Podman subnet and proxies
+  to `127.0.0.1:8080`
 - use Authentik to own MFA, session cookies, lockout/rate limiting, and
   recovery codes
 - keep code-server's own password enabled as a second layer unless an explicit
