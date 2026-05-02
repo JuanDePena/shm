@@ -690,7 +690,7 @@ Completion evidence:
 
 ### Phase 5: Resilience And Failover Improvements
 
-Status: in progress; phases 5A through 5G completed on `2026-05-02`.
+Status: in progress; phases 5A through 5H completed on `2026-05-02`.
 
 Goal: reduce single points of failure that remain after the vps-old retirement.
 
@@ -708,6 +708,8 @@ Actions:
   source-IP SSH restriction that is practical for the operator workflow
 - confirm the OS security-update cadence and whether it should be automated
 - add code-server data and server configuration to the restore-test calendar
+- retire legacy secondary `spanel` runtime and align the public control-plane
+  vhost with the primary SimpleHost release
 - revisit mail-related `fail2ban` packaging cleanup only after the current
   healthcheck threshold behavior is settled
 
@@ -960,10 +962,9 @@ Phase 5G completion evidence on `2026-05-02`:
   - `/etc/simplehost/control.env`, `/etc/simplehost/worker.env`, and
     `/etc/simplehost/agent.env` report `SIMPLEHOST_VERSION=2605.02.04`
   - `simplehost-agent` is active
-  - `simplehost-control` and `simplehost-worker` remain inactive by design
-- Secondary note: public `:3200` still returns `200 OK` because it is served by
-  the legacy `spanel-web.service` from `/opt/simplehost/spanel/current`, not by
-  `simplehost-control`.
+  - `simplehost-control` and `simplehost-worker` remained inactive by design at
+    this checkpoint; the legacy `spanel-web.service` was still serving public
+    `:3200`
 - Post-release validation:
   - `systemctl --failed` reported no failed units on both nodes
   - active release artifacts no longer contain public `8080/tcp` or
@@ -976,6 +977,43 @@ Phase 5G completion evidence on `2026-05-02`:
   - `https://vps-prd.pyrosa.com.do:8080/` and
     `https://vps-des.pyrosa.com.do:8080/` refused connection
 
+Phase 5H completion evidence on `2026-05-02`:
+
+- The secondary public control-plane vhost was aligned with the primary naming:
+  - `00-spanel-ssl-listen.conf` was replaced by
+    `00-simplehost-ssl-listen.conf`
+  - `spanel-web.conf` was replaced by `simplehost-control.conf`
+  - `simplehost-src-docs-deny.conf` was installed so `/opt/simplehostman/src/docs`
+    remains denied through Apache
+- Legacy secondary runtime and service units were archived, not deleted:
+  - backup: `/root/simplehost-secondary-legacy-cleanup-20260502T041540Z`
+  - `/opt/simplehost` moved to
+    `/opt/simplehost.legacy-20260502T041540Z`
+  - `/etc/spanel` moved to `/etc/spanel.legacy-20260502T041540Z`
+  - `spanel-web`, `spanel-api`, `spanel-worker`, and `shm-agent` units were
+    disabled and moved out of the active systemd unit namespace
+- The secondary service account was aligned with the primary unit files:
+  - legacy `spanel` user/group was renamed to `simplehost`
+  - backup: `/root/simplehost-secondary-user-rename-20260502T041636Z`
+- Secondary `simplehost-control` is now active from
+  `/opt/simplehostman/release/current/apps/control/dist/index.js`.
+- Secondary `simplehost-control` uses the primary PostgreSQL control database
+  through WireGuard at `10.89.0.1:5433`; validation returned
+  `simplehost_control|10.89.0.1|f`, confirming it is not connected to the
+  standby PostgreSQL instance.
+- Secondary `simplehost-worker` remains disabled/inactive intentionally to
+  avoid duplicate background execution in the active-passive topology.
+- Secondary `simplehost-agent` remains active.
+- Validation after Apache reload and service restart:
+  - `apachectl -t` returned `Syntax OK`
+  - `systemctl --failed` reported no failed units
+  - `127.0.0.1:3200` is now served by `simplehost-control`, not by
+    `/opt/simplehost/spanel/current`
+  - `https://vps-des.pyrosa.com.do:3200/` returned `200 OK`
+  - `https://code.pyrosa.com.do/login` with `--resolve` to secondary returned
+    `200 OK`
+  - `https://vps-des.pyrosa.com.do:8080/` refused connection
+
 Remaining Phase 5 maintenance-window items:
 
 - decide whether to install and configure `dnf-automatic`
@@ -984,7 +1022,7 @@ Remaining Phase 5 maintenance-window items:
 
 ## Current Implementation Order
 
-Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G are complete. Continue in
+Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H are complete. Continue in
 this order:
 
 1. Decide whether to install and configure security-update automation.
