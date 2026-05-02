@@ -1090,20 +1090,20 @@ export function renderBaseStyleBlock(): string {
         display: flex;
         justify-content: flex-end;
         flex: 0 0 auto;
-        width: 12rem;
+        width: 9rem;
         max-width: 100%;
       }
 
       .overview-interval-selector .select-shell {
-        flex: 0 0 12rem;
-        width: 12rem;
-        max-width: 12rem;
+        flex: 0 0 9rem;
+        width: 9rem;
+        max-width: 9rem;
       }
 
       .overview-interval-selector .select-trigger {
         display: flex;
         align-items: center;
-        width: 12rem;
+        width: 9rem;
         min-height: 1.32rem;
         height: 1.32rem;
         padding: 0 1.5rem 0 0.52rem;
@@ -1124,8 +1124,8 @@ export function renderBaseStyleBlock(): string {
       .overview-interval-selector .select-panel {
         left: auto;
         right: 0;
-        width: 12rem;
-        min-width: 12rem;
+        width: 9rem;
+        min-width: 9rem;
         max-width: calc(100vw - 2rem);
         gap: 0.12rem;
         padding: 0.22rem;
@@ -1147,9 +1147,9 @@ export function renderBaseStyleBlock(): string {
       select.overview-interval-select {
         box-sizing: border-box;
         display: block;
-        width: 12rem !important;
-        min-width: 12rem !important;
-        max-width: 12rem !important;
+        width: 9rem !important;
+        min-width: 9rem !important;
+        max-width: 9rem !important;
         min-height: 1.32rem !important;
         height: 1.32rem !important;
         padding: 0 1.5rem 0 0.52rem !important;
