@@ -1284,8 +1284,9 @@ Phase 5Q completion evidence on `2026-05-02`:
   - logo media `pyrosa/logo-transp-white.png`
   - favicon media `pyrosa/favicon.ico`
   - authentication flow `pyrosa-authentication-mfa-required`
-  - custom CSS hides the flow footer links, including `Powered by authentik`
-- The flow title was updated to `PYROSA | Inicio de Sesión`.
+  - custom CSS hides the flow footer links, including `Powered by authentik`,
+    and centers the login title/header
+- The flow title was updated to locale-neutral `PYROSA`.
 - Authentik Proxy Provider `code.pyrosa.com.do` was created in `proxy` mode
   with external host `https://code.pyrosa.com.do` and internal host
   `http://host.containers.internal:18080`.
@@ -1321,8 +1322,9 @@ Phase 5Q completion evidence on `2026-05-02`:
   - `https://auth.pyrosa.com.do/if/flow/pyrosa-authentication-mfa-required/`
     rendered with `<title>PYROSA</title>`, Pyrosa media-backed logo/favicon,
     and no static `Welcome to authentik!` or `Powered by authentik` text
-  - the flow executor API returned title `PYROSA | Inicio de Sesión`
-  - the flow executor API returned the same Spanish title with
+  - the login title/header was centered by the Brand custom CSS
+  - the flow executor API returned title `PYROSA`
+  - the flow executor API returned the same locale-neutral title with
     `Accept-Language` set to `en`, `es`, and `fr`
   - `https://auth.pyrosa.com.do/if/flow/initial-setup/` returned `403`
   - `http://127.0.0.1:8080/login` returned `200` for break-glass validation
@@ -1347,6 +1349,10 @@ Phase 5Q completion evidence on `2026-05-02`:
   `backup-run-02e1fc98-1798-4be7-8504-f9a8c3c42430` succeeded.
 - Post-title-adjustment backup directory:
   `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T07-17-03-754Z`
+- Post-centered-title forced backup run
+  `backup-run-b3f8ac07-9a0e-4131-96ee-79a3e4f0e678` succeeded.
+- Post-centered-title backup directory:
+  `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T07-26-10-550Z`
 - Post-enforcement backup directory:
   `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T06-43-23-095Z`
 - Scratch restore database `restoretest_authentik_phase4_20260502t0643z`

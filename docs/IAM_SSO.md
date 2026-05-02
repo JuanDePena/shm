@@ -398,9 +398,10 @@ Completion evidence:
   - logo media: `pyrosa/logo-transp-white.png`
   - favicon media: `pyrosa/favicon.ico`
   - authentication flow: `pyrosa-authentication-mfa-required`
-  - brand CSS hides the flow footer links, including `Powered by authentik`
+  - brand CSS hides the flow footer links, including `Powered by authentik`,
+    and centers the login title/header
 - The `pyrosa-authentication-mfa-required` flow title was updated to
-  `PYROSA | Inicio de Sesión`.
+  locale-neutral `PYROSA`.
 - Authentik Proxy Provider `code.pyrosa.com.do` was created in `proxy` mode:
   - external host: `https://code.pyrosa.com.do`
   - internal host: `http://host.containers.internal:18080`
@@ -441,9 +442,10 @@ Completion evidence:
 - `https://auth.pyrosa.com.do/if/flow/pyrosa-authentication-mfa-required/`
   renders with `<title>PYROSA</title>`, Pyrosa media-backed logo/favicon, and
   no static `Welcome to authentik!` or `Powered by authentik` text.
-- The flow executor API reports title `PYROSA | Inicio de Sesión`.
-- The flow executor API returned the same Spanish title with `Accept-Language`
-  set to `en`, `es`, and `fr`.
+- The login title/header is centered by the Brand custom CSS.
+- The flow executor API reports title `PYROSA`.
+- The flow executor API returned the same locale-neutral title with
+  `Accept-Language` set to `en`, `es`, and `fr`.
 - Break-glass local backend check:
   `http://127.0.0.1:8080/login` still returns `200`.
 - Internal bridge checks:
@@ -468,6 +470,10 @@ Completion evidence:
   `backup-run-02e1fc98-1798-4be7-8504-f9a8c3c42430`.
 - Post-title-adjustment backup directory:
   `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T07-17-03-754Z`
+- A post-centered-title forced backup succeeded:
+  `backup-run-b3f8ac07-9a0e-4131-96ee-79a3e4f0e678`.
+- Post-centered-title backup directory:
+  `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T07-26-10-550Z`
 - The post-enforcement backup restored into scratch database
   `restoretest_authentik_phase4_20260502t0643z` and validated:
   - `1` `code-pyrosa` application
