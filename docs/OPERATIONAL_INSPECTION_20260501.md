@@ -1183,21 +1183,24 @@ Phase 5M completion evidence on `2026-05-02`:
   - `https://auth.pyrosa.com.do/if/flow/initial-setup/` returned `403`
   - `10170/tcp` listened only on `127.0.0.1`
   - `systemctl --failed` reported no failed units
-- The bootstrap `akadmin` account exists, is active, is a superuser, and has a
-  usable password. The initial password is stored only in
+- The bootstrap admin account uses username/email `webmaster@pyrosa.com.do`,
+  is active, is a superuser, and has a usable password. The initial password is
+  stored only in
   `/etc/simplehost/iam/authentik/akadmin-initial-password` with mode `0600`.
 - Live Authentik bootstrap values remain only in
   `/etc/simplehost/iam/authentik/authentik.env` with mode `0600`.
 - `code.pyrosa.com.do` was not changed in this phase.
-- Hold point: an operator must log in to `https://auth.pyrosa.com.do/`, enroll
-  admin MFA, and create recovery codes before app protection is enabled.
+- Hold point: an operator must log in to `https://auth.pyrosa.com.do/` as
+  `webmaster@pyrosa.com.do`, enroll admin MFA, and create recovery codes before
+  app protection is enabled.
 
 ## Current Implementation Order
 
 Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H/5I/5J/5K/5L/5M are complete.
 Continue in this order:
 
-1. Enroll Authentik admin MFA and recovery codes.
+1. Enroll Authentik admin MFA and recovery codes for
+   `webmaster@pyrosa.com.do`.
 2. Add backup and restore-test coverage for Authentik.
 3. Protect `code.pyrosa.com.do` with documented break-glass and rollback.
 

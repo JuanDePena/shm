@@ -259,7 +259,7 @@ Actions:
 Validation:
 
 - `https://auth.pyrosa.com.do/` reaches Authentik
-- `akadmin` exists as an active superuser with a usable password
+- `webmaster@pyrosa.com.do` exists as an active superuser with a usable password
 - `/if/flow/initial-setup/` is blocked at Apache after bootstrap
 - admin MFA and recovery codes must be enrolled from the Authentik UI before
   the first protected app is enforced
@@ -289,7 +289,7 @@ Completion evidence:
 - `authentik-server.service`, `authentik-worker.service`, and `httpd` are
   active.
 - `10170/tcp` remains bound only to `127.0.0.1`.
-- The initial `akadmin` password is stored only in
+- The initial admin password is stored only in
   `/etc/simplehost/iam/authentik/akadmin-initial-password` with mode `0600`.
 - Live bootstrap values remain only in
   `/etc/simplehost/iam/authentik/authentik.env` with mode `0600`.
