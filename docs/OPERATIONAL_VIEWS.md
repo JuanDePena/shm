@@ -39,6 +39,30 @@ Those compact rows keep timestamps, status, resource keys and summaries for
 navigation badges and related-job panels, but omit large payload/result detail
 documents until the operator opens Jobs.
 
+## Rendered Browser Captures
+
+Both SimpleHostMan nodes provide a host-level browser capture helper outside any
+application repository:
+
+```sh
+simplehost-screenshot https://newsync.pyrosa.com.do/ /opt/simplehostman/screenshots/newsync.png
+```
+
+The helper wraps `/usr/lib64/chromium-browser/headless_shell` from the
+`chromium-headless` RPM and writes viewport screenshots as PNG files. Default
+capture settings are `1920x1080`, `3000ms` virtual render budget and a `30s`
+command timeout.
+
+Useful options:
+
+```sh
+simplehost-screenshot --viewport 1366x768 --wait-ms 5000 https://newsync.pyrosa.com.do/ /opt/simplehostman/screenshots/newsync-1366.png
+simplehost-screenshot --resolve newsync.pyrosa.com.do:51.222.204.86 https://newsync.pyrosa.com.do/ /opt/simplehostman/screenshots/newsync-primary.png
+```
+
+Store ad-hoc captures under `/opt/simplehostman/screenshots/` unless a task
+needs a different output path.
+
 ## Overview, Parameters and Reconciliation
 
 Overview is the lightweight landing workspace. It keeps platform status in a
