@@ -245,6 +245,66 @@ test("missing session on protected routes redirects to login", async () => {
   assert.match(String(response.headers["set-cookie"]), /shp_session=;/);
 });
 
+test("logout clears the local session and redirects to the local login for direct sessions", async () => {
+  let logoutToken: string | null = null;
+  const handler = createControlWebSurface(
+    {
+      config: createConfig(),
+      startedAt: Date.now()
+    },
+    createStubApi({
+      logout: async (token) => {
+        logoutToken = token;
+      }
+    })
+  ).requestListener;
+
+  const response = await invokeRequestHandler(handler, {
+    method: "POST",
+    url: "/auth/logout",
+    headers: {
+      cookie: "shp_session=test-token"
+    }
+  });
+
+  assert.equal(logoutToken, "test-token");
+  assert.equal(response.statusCode, 303);
+  assert.equal(response.headers.location, "/login?notice=Session%20closed&kind=info");
+  assert.match(String(response.headers["set-cookie"]), /shp_session=;/);
+});
+
+test("logout clears the local session and starts Authentik outpost sign-out for SSO sessions", async () => {
+  let logoutToken: string | null = null;
+  const handler = createControlWebSurface(
+    {
+      config: createConfig(),
+      startedAt: Date.now()
+    },
+    createStubApi({
+      logout: async (token) => {
+        logoutToken = token;
+      }
+    })
+  ).requestListener;
+
+  const response = await invokeRequestHandler(handler, {
+    method: "POST",
+    url: "/auth/logout",
+    headers: {
+      cookie: "shp_session=test-token",
+      "x-authentik-email": "webmaster@pyrosa.com.do"
+    }
+  });
+
+  const location = new URL(String(response.headers.location), "http://localhost");
+
+  assert.equal(logoutToken, "test-token");
+  assert.equal(response.statusCode, 303);
+  assert.equal(location.pathname, "/outpost.goauthentik.io/sign_out");
+  assert.equal(location.searchParams.get("rd"), "/login");
+  assert.match(String(response.headers["set-cookie"]), /shp_session=;/);
+});
+
 test("parameter and history actions call the authenticated API and return to the dashboard", async () => {
   const savedRequests: Array<{ key: string; value?: string; sensitive?: boolean }> = [];
   const deletedKeys: string[] = [];

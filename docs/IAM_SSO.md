@@ -589,6 +589,10 @@ Completion evidence:
   - local and Authentik-container simulations for an unprovisioned SSO email
     returned `403`, rendered `Acceso no provisionado`, did not set
     `shp_session`, and included the Authentik outpost sign-out link
+  - SimpleHostMan logout now clears `shp_session` and, when the request carries
+    Authentik SSO headers, redirects to
+    `/outpost.goauthentik.io/sign_out?rd=%2Flogin` so the Authentik outpost can
+    invalidate the external SSO session before the next login attempt
 - Secondary validation:
   - `http://127.0.0.1:3200/` returned `200`
   - `https://vps-des.pyrosa.com.do:3200/` returned `200`

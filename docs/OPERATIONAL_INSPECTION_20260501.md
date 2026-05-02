@@ -1516,9 +1516,37 @@ Phase 5U completion evidence on `2026-05-02`:
   - `simplehost-control`, `simplehost-worker`, `httpd`, `authentik-server`,
     and `authentik-worker` remained active
 
+Phase 5V completion evidence on `2026-05-02`:
+
+- SimpleHostMan logout now distinguishes direct sessions from SSO sessions.
+- Direct/local sessions still clear `shp_session` and redirect to
+  `/login?notice=Session%20closed&kind=info`.
+- SSO sessions, detected by Authentik identity/outpost headers, clear
+  `shp_session` and redirect to
+  `/outpost.goauthentik.io/sign_out?rd=%2Flogin`.
+- This gives Authentik's outpost the chance to invalidate the proxied SSO
+  session and then route the browser back through the configured authentication
+  flow. If an external Identity Provider is configured in Authentik, that
+  upstream logout/redirect behavior remains owned by Authentik's flow and
+  provider configuration.
+- Validation:
+  - `pnpm --dir apps/control typecheck:local` passed
+  - `pnpm --dir apps/control/web test` passed with `41/41`
+  - `pnpm build:control-runtime` passed
+  - local direct logout returned `303` to
+    `/login?notice=Session%20closed&kind=info`
+  - local SSO-header logout returned `303` to
+    `/outpost.goauthentik.io/sign_out?rd=%2Flogin`
+  - Authentik-container bridge logout through
+    `host.containers.internal:13200` returned the same outpost sign-out
+    redirect
+  - all logout paths cleared the local `shp_session` cookie
+  - `simplehost-control`, `simplehost-worker`, `httpd`, `authentik-server`,
+    and `authentik-worker` remained active
+
 ## Current Implementation Order
 
-Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H/5I/5J/5K/5L/5M/5N/5O/5P/5Q/5R/5S/5T/5U are complete.
+Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H/5I/5J/5K/5L/5M/5N/5O/5P/5Q/5R/5S/5T/5U/5V are complete.
 Continue in this order:
 
 1. Decide whether the secondary node-name SimpleHostMan UI remains a
