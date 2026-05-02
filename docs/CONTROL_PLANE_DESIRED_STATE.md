@@ -255,6 +255,8 @@ Implementation notes:
 
 Goal: prove the platform can operate and recover without YAML inputs.
 
+Status: completed on `2026-05-02`.
+
 Validation:
 
 - `pnpm --filter @simplehost/control-database test`
@@ -265,6 +267,37 @@ Validation:
 - forced export from `GET /v1/resources/spec`
 - restore rehearsal from the phase-0 control-plane dump into a temporary
   database, if a recovery rehearsal is required before closing the transition
+
+Implementation notes:
+
+- `pnpm --filter @simplehost/control-database test` passed with `27/27` tests
+- `pnpm build:control-runtime`, `pnpm build:agent-runtime`, and
+  `git diff --check` passed
+- active code, env, release and packaging paths on both nodes have no
+  `SIMPLEHOST_INVENTORY_PATH` references
+- removed import surfaces still return `404`:
+  - `POST /v1/inventory/import`
+  - `POST /actions/inventory-import`
+- `GET /v1/inventory/export` returned `200`, `35466` bytes, SHA-256
+  `ce6f8da0eb2942ea7d1c9cd5615bc60a6fc093e662b5dc4b504ca416bad07104`
+- `GET /v1/resources/spec` returned the expected PostgreSQL catalog:
+  `11` tenants, `2` nodes, `11` zones, `96` DNS records, `21` apps, `11`
+  databases, `14` backup policies, `8` mail domains, `23` mailboxes, `20`
+  aliases, and `23` quotas
+- fresh reconciliation run
+  `reconcile-d1a38983-1ed2-4306-a6fd-020cfdf6d31c` generated `0` jobs,
+  skipped `131`, and left `0` pending jobs
+- phase-0 dump restore rehearsal succeeded in temporary database
+  `simplehost_control_phase4_20260502023052`; restored counts were `21` apps,
+  `11` databases, `11` zones, `96` DNS records, `8` mail domains, and `23`
+  mailboxes; the temporary database and dump copy were removed afterward
+
+Final state:
+
+- PostgreSQL `control_plane_*` tables are the only live desired-state source
+- YAML imports are not exposed through normal API/UI/runtime flows
+- YAML exports remain available for audit, review, and disaster recovery
+- historical migration runbooks remain as evidence only
 
 ## Rollback
 
@@ -289,3 +322,5 @@ Rollback should use the phase-0 artifacts:
   PostgreSQL desired-state export remains available.
 - `2026-05-02`: phase 3 completed; source-controlled bootstrap inventory was
   deleted and active docs now point to PostgreSQL desired state.
+- `2026-05-02`: phase 4 completed; tests, builds, live export, reconcile, and
+  phase-0 restore rehearsal all passed without YAML inputs.
