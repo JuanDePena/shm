@@ -243,6 +243,9 @@ Completion evidence:
 
 ### Phase 2: Publish `auth.pyrosa.com.do`
 
+Status: published on `2026-05-02`; admin MFA enrollment is the operator hold
+point before any protected app enforcement.
+
 Goal: expose only the Authentik login/admin surface.
 
 Actions:
@@ -256,7 +259,10 @@ Actions:
 Validation:
 
 - `https://auth.pyrosa.com.do/` reaches Authentik
-- admin login requires MFA
+- `akadmin` exists as an active superuser with a usable password
+- `/if/flow/initial-setup/` is blocked at Apache after bootstrap
+- admin MFA and recovery codes must be enrolled from the Authentik UI before
+  the first protected app is enforced
 - logout and session expiry work
 - no existing app vhost is changed
 
@@ -265,6 +271,29 @@ Rollback:
 - remove or disable the `auth.pyrosa.com.do` vhost
 - stop Authentik units if needed
 - keep existing app vhosts untouched
+
+Completion evidence:
+
+- DNS desired state now includes `auth.pyrosa.com.do A 51.222.204.86` with
+  TTL `300`.
+- DNS sync completed on the primary and secondary authoritative nodes.
+- Both authoritative nodes answer `auth.pyrosa.com.do` as `51.222.204.86`.
+- Source-controlled Apache vhost:
+  [`platform/httpd/vhosts/pyrosa-authentik.conf`](/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-authentik.conf)
+- Live Apache vhost:
+  `/etc/httpd/conf.d/pyrosa-authentik.conf`
+- `apachectl -t` returned `Syntax OK`; Apache was reloaded.
+- `https://auth.pyrosa.com.do/` returns `302` to the default Authentik
+  authentication flow with a valid wildcard `pyrosa.com.do` certificate.
+- `https://auth.pyrosa.com.do/if/flow/initial-setup/` returns `403`.
+- `authentik-server.service`, `authentik-worker.service`, and `httpd` are
+  active.
+- `10170/tcp` remains bound only to `127.0.0.1`.
+- The initial `akadmin` password is stored only in
+  `/etc/simplehost/iam/authentik/akadmin-initial-password` with mode `0600`.
+- Live bootstrap values remain only in
+  `/etc/simplehost/iam/authentik/authentik.env` with mode `0600`.
+- `code.pyrosa.com.do` was not changed in this phase.
 
 ### Phase 3: Backup Policy And Restore Test
 

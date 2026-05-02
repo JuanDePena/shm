@@ -73,13 +73,18 @@ Optional operator-convenience exposure, when enabled on a node:
 `https://code.pyrosa.com.do/` on `443`, while the service itself stays bound to
 `127.0.0.1:8080`.
 
-Planned IAM exposure:
+IAM exposure:
 
-- `auth.pyrosa.com.do` will expose the Authentik browser surface after local
-  health checks pass.
+- `auth.pyrosa.com.do` exposes the Authentik browser surface on the primary.
+  The Apache vhost blocks `/if/flow/initial-setup/` because the bootstrap
+  admin already exists and the public setup flow must not remain reachable.
 - Protected app vhosts should route through an Authentik Proxy Provider and
   outpost path before reaching their local backends.
 - SSH and non-HTTP service transports remain outside Apache IAM enforcement.
+
+Source-controlled Authentik vhost:
+
+- [`/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-authentik.conf`](/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-authentik.conf)
 
 Port `80/tcp` is kept for:
 

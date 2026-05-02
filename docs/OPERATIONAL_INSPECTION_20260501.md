@@ -1121,7 +1121,7 @@ Phase 5K completion evidence on `2026-05-02`:
 
 Remaining Phase 5 maintenance-window items:
 
-- publish `auth.pyrosa.com.do`, bootstrap admin MFA, add backup coverage, and
+- enroll admin MFA and recovery codes in Authentik, add backup coverage, and
   then protect `https://code.pyrosa.com.do/`
 
 Phase 5L completion evidence on `2026-05-02`:
@@ -1159,12 +1159,45 @@ Phase 5L completion evidence on `2026-05-02`:
 - No DNS record, public Apache vhost, `auth.pyrosa.com.do` publication, or
   `code.pyrosa.com.do` proxy enforcement was applied in this phase.
 
+Phase 5M completion evidence on `2026-05-02`:
+
+- IAM/SSO phase 2 from
+  [`IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md) published the
+  Authentik browser surface on the primary as `https://auth.pyrosa.com.do/`.
+- DNS desired state includes `auth.pyrosa.com.do A 51.222.204.86` with
+  TTL `300`.
+- Primary and secondary DNS sync jobs completed for `pyrosa.com.do`, and both
+  authoritative nodes answer `auth.pyrosa.com.do` as `51.222.204.86`.
+- Source-controlled Apache vhost:
+  [`platform/httpd/vhosts/pyrosa-authentik.conf`](/opt/simplehostman/src/platform/httpd/vhosts/pyrosa-authentik.conf)
+- Live Apache vhost:
+  `/etc/httpd/conf.d/pyrosa-authentik.conf`
+- Runtime validation:
+  - `apachectl -t` returned `Syntax OK`
+  - `authentik-server.service` active
+  - `authentik-worker.service` active
+  - `httpd` active
+  - `https://auth.pyrosa.com.do/` returned `302` to the default Authentik
+    authentication flow
+  - certificate verification for `auth.pyrosa.com.do` returned `0`
+  - `https://auth.pyrosa.com.do/if/flow/initial-setup/` returned `403`
+  - `10170/tcp` listened only on `127.0.0.1`
+  - `systemctl --failed` reported no failed units
+- The bootstrap `akadmin` account exists, is active, is a superuser, and has a
+  usable password. The initial password is stored only in
+  `/etc/simplehost/iam/authentik/akadmin-initial-password` with mode `0600`.
+- Live Authentik bootstrap values remain only in
+  `/etc/simplehost/iam/authentik/authentik.env` with mode `0600`.
+- `code.pyrosa.com.do` was not changed in this phase.
+- Hold point: an operator must log in to `https://auth.pyrosa.com.do/`, enroll
+  admin MFA, and create recovery codes before app protection is enabled.
+
 ## Current Implementation Order
 
-Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H/5I/5J/5K/5L are complete.
+Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H/5I/5J/5K/5L/5M are complete.
 Continue in this order:
 
-1. Publish `auth.pyrosa.com.do`, bootstrap admin MFA, and validate recovery.
+1. Enroll Authentik admin MFA and recovery codes.
 2. Add backup and restore-test coverage for Authentik.
 3. Protect `code.pyrosa.com.do` with documented break-glass and rollback.
 
