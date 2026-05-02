@@ -9,7 +9,6 @@ export const operationsCopyByLocale = {
     overviewDescription: "Live platform counts plus high-signal control-plane status.",
     overviewStatusTitle: "Status",
     actionsRunReconciliation: "Run reconciliation",
-    actionsImportInventory: "Bootstrap YAML import",
     actionsDownloadYaml: "Download resource YAML",
     actionDispatchDnsSync: "Dispatch dns.sync",
     actionFullReconcile: "Full reconcile",
@@ -17,8 +16,6 @@ export const operationsCopyByLocale = {
     actionDispatchDatabaseReconcile: "Dispatch database reconcile",
     actionPlanDescription:
       "Compare the platform resource catalog against the last successful apply and dispatch missing work.",
-    actionImportDescription:
-      "Use the transitional YAML import path to seed or recover the PostgreSQL resource catalog.",
     actionExportDescription:
       "Export the current resource catalog for audit, review, or disaster recovery.",
     overviewTitle: "Operations overview",
@@ -170,10 +167,8 @@ export const operationsCopyByLocale = {
     failedBackups: "Failed backups",
     runningBackups: "Running backups",
     policyCoverage: "Policy coverage",
-    transitionalBootstrapNote:
-      "Transitional only. Keep operational edits in PostgreSQL desired state.",
     dailyOperationsSourceNote:
-      "Use these product forms for day-to-day changes. YAML remains a bootstrap and disaster-recovery path only.",
+      "Use these product forms for day-to-day changes. The catalog export is generated from PostgreSQL desired state.",
     openJobHistory: "Open job history",
     openAuditHistory: "Open audit",
     openDriftView: "Open drift view",
@@ -186,9 +181,9 @@ export const operationsCopyByLocale = {
     driftDiagnosticsTitle: "Drift diagnostics",
     driftDiagnosticsDescription:
       "Inspect the selected drift record, linked resource specification and dispatch guidance.",
-    bootstrapInventoryTitle: "Catalog import/export",
+    bootstrapInventoryTitle: "Catalog export",
     bootstrapInventoryDescription:
-      "Export the PostgreSQL resource catalog as YAML for review or recovery. Use YAML import only for controlled seed or disaster-recovery flows.",
+      "Export the PostgreSQL resource catalog as YAML for review or disaster recovery.",
     globalRoles: "Global roles",
     tenantMemberships: "Tenant memberships",
     yesLabel: "yes",
@@ -632,7 +627,6 @@ export const operationsCopyByLocale = {
       "Conteos vivos y estado clave del control plane.",
     overviewStatusTitle: "Estado",
     actionsRunReconciliation: "Ejecutar reconciliación",
-    actionsImportInventory: "Importar YAML bootstrap",
     actionsDownloadYaml: "Descargar YAML de recursos",
     actionDispatchDnsSync: "Despachar dns.sync",
     actionFullReconcile: "Reconciliación completa",
@@ -640,8 +634,6 @@ export const operationsCopyByLocale = {
     actionDispatchDatabaseReconcile: "Despachar reconcile de base de datos",
     actionPlanDescription:
       "Compara el catálogo de recursos de plataforma con la última aplicación exitosa y despacha el trabajo faltante.",
-    actionImportDescription:
-      "Usa la ruta YAML transicional para sembrar o recuperar el catálogo de recursos en PostgreSQL.",
     actionExportDescription:
       "Exporta el catálogo actual de recursos para auditoría, revisión o recuperación.",
     overviewTitle: "Resumen operativo",
@@ -800,10 +792,8 @@ export const operationsCopyByLocale = {
     failedBackups: "Backups fallidos",
     runningBackups: "Backups ejecutándose",
     policyCoverage: "Cobertura de políticas",
-    transitionalBootstrapNote:
-      "Solo transicional. Mantén las ediciones operativas en PostgreSQL como estado deseado.",
     dailyOperationsSourceNote:
-      "Usa estos formularios del producto para los cambios del día a día. El YAML queda solo para bootstrap y disaster recovery.",
+      "Usa estos formularios del producto para los cambios del día a día. La exportación del catálogo se genera desde el estado deseado en PostgreSQL.",
     openJobHistory: "Abrir historial de jobs",
     openAuditHistory: "Abrir auditoría",
     openDriftView: "Abrir vista de drift",
@@ -816,9 +806,9 @@ export const operationsCopyByLocale = {
     driftDiagnosticsTitle: "Diagnóstico de drift",
     driftDiagnosticsDescription:
       "Inspecciona el registro de drift seleccionado, su especificación vinculada y la guía de despacho.",
-    bootstrapInventoryTitle: "Importación/exportación del catálogo",
+    bootstrapInventoryTitle: "Exportación del catálogo",
     bootstrapInventoryDescription:
-      "Exporta el catálogo de recursos en PostgreSQL como YAML para revisión o recovery. Usa la importación YAML solo para seed controlado o disaster recovery.",
+      "Exporta el catálogo de recursos en PostgreSQL como YAML para revisión o recovery.",
     globalRoles: "Roles globales",
     tenantMemberships: "Membresías por tenant",
     yesLabel: "sí",

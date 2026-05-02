@@ -12,7 +12,6 @@ export interface CombinedControlReleaseCandidateConfig {
   readonly origin: string;
   readonly environment: string;
   readonly version: string;
-  readonly inventoryImportPath: string | null;
   readonly sessionTtlSeconds: number;
   readonly databaseUrlConfigured: boolean;
   readonly jobPayloadSecretConfigured: boolean;
@@ -48,7 +47,6 @@ export function createCombinedControlReleaseCandidateConfig(args: {
     origin,
     environment: context.config.env,
     version: context.config.version,
-    inventoryImportPath: context.config.inventory.importPath,
     sessionTtlSeconds: context.config.auth.sessionTtlSeconds,
     databaseUrlConfigured: hasValue(context.config.database.url),
     jobPayloadSecretConfigured: hasValue(context.config.jobs.payloadSecret),

@@ -1,8 +1,7 @@
 import type {
   AppReconcileRequest,
   DatabaseReconcileRequest,
-  DesiredStateApplyRequest,
-  InventoryImportRequest
+  DesiredStateApplyRequest
 } from "@simplehost/control-contracts";
 
 import {
@@ -25,18 +24,6 @@ export const handleResourceRoutes: ApiRouteHandler = async ({
       response,
       200,
       await controlPlaneStore.getInventorySnapshot(bearerToken)
-    );
-    return true;
-  }
-
-  if (request.method === "POST" && url.pathname === "/v1/inventory/import") {
-    writeJson(
-      response,
-      200,
-      await controlPlaneStore.importInventory(
-        await readJsonBody<InventoryImportRequest>(request),
-        bearerToken
-      )
     );
     return true;
   }

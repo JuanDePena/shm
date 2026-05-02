@@ -51,9 +51,6 @@ function toEnvFileContent(config: CombinedControlReleaseCandidateConfig): string
     `SIMPLEHOST_VERSION=${config.version}`,
     `SIMPLEHOST_WEB_HOST=${config.host}`,
     `SIMPLEHOST_WEB_PORT=${config.port}`,
-    ...(config.inventoryImportPath
-      ? [`SIMPLEHOST_INVENTORY_PATH=${config.inventoryImportPath}`]
-      : []),
     "SIMPLEHOST_CONTROL_RUNTIME_MODE=combined",
     "SIMPLEHOST_CONTROL_SANDBOX_MODE=release-sandbox",
     `SIMPLEHOST_CONTROL_SANDBOX_ORIGIN=${config.origin}`

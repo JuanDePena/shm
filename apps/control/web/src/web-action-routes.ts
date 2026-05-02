@@ -20,7 +20,6 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
   response,
   url,
   api,
-  config,
   requireSession
 }) => {
   if (request.method === "GET" && url.pathname === "/inventory/export") {
@@ -31,28 +30,6 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
       "content-disposition": 'attachment; filename="simplehost-desired-state.yaml"'
     });
     response.end(yaml);
-    return true;
-  }
-
-  if (request.method === "POST" && url.pathname === "/actions/inventory-import") {
-    const token = await requireSessionToken({ requireSession });
-    const form = await readFormBody(request);
-    const pathValue = form.get("path")?.trim() || config.inventory.importPath;
-    if (!pathValue) {
-      redirect(
-        response,
-        noticeLocation("Inventory import requires an explicit YAML path.", "error")
-      );
-      return true;
-    }
-    const result = await api.importInventory(token, pathValue);
-    redirect(
-      response,
-      noticeLocation(
-        `Imported inventory from ${result.sourcePath}. ${result.appCount} apps and ${result.databaseCount} databases refreshed.`,
-        "success"
-      )
-    );
     return true;
   }
 

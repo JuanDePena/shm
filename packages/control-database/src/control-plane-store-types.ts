@@ -20,7 +20,6 @@ import type {
   EnvironmentParametersSnapshot,
   Fail2BanApplyRequest,
   FirewallApplyRequest,
-  InventoryImportRequest,
   InventoryImportSummary,
   InventoryStateSnapshot,
   JobClaimRequest,
@@ -438,7 +437,6 @@ export interface ControlPlaneStoreOptions {
   bootstrapAdminEmail: string | null;
   bootstrapAdminPassword: string | null;
   bootstrapAdminName: string | null;
-  defaultInventoryImportPath: string | null;
   jobPayloadSecret: string | null;
 }
 
@@ -463,10 +461,6 @@ export interface ControlPlaneStore {
     presentedToken: string | null
   ): Promise<CreateUserResponse>;
   listUsers(presentedToken: string | null): Promise<AuthenticatedUserSummary[]>;
-  importInventory(
-    request: InventoryImportRequest,
-    presentedToken: string | null
-  ): Promise<InventoryImportSummary>;
   applyDesiredState(
     request: DesiredStateApplyRequest,
     presentedToken: string | null
@@ -621,7 +615,6 @@ export type ControlPlaneAuthMethods = Pick<
 
 export type ControlPlaneSpecMethods = Pick<
   ControlPlaneStore,
-  | "importInventory"
   | "getInventorySnapshot"
   | "applyDesiredState"
   | "exportDesiredState"

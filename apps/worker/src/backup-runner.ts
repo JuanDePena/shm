@@ -1075,7 +1075,6 @@ async function buildExecutionContext(
     bootstrapAdminEmail: bootstrapAdminEmail,
     bootstrapAdminPassword,
     bootstrapAdminName: config.auth.bootstrapAdminName,
-    defaultInventoryImportPath: config.inventory.importPath,
     jobPayloadSecret: config.jobs.payloadSecret
   });
 

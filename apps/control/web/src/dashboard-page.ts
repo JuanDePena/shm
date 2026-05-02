@@ -100,7 +100,6 @@ import { copyByLocale, type WebCopy } from "./web-copy.js";
 type RenderDashboardArgs = {
   currentPath: string;
   data: DashboardData;
-  defaultImportPath: string | null;
   desiredStateTab: DesiredStateTabId;
   focus?: string;
   historyReplaceUrl?: string;
@@ -146,7 +145,6 @@ function renderDesiredStateSection(
   copy: WebCopy,
   locale: WebLocale,
   defaultTabId: DesiredStateTabId,
-  defaultImportPath: string | null,
   focus?: string,
   options: {
     mode?: "full" | "single" | "workspace";
@@ -160,7 +158,6 @@ function renderDesiredStateSection(
     copy,
     locale,
     defaultTabId,
-    defaultImportPath,
     focus,
     options,
     formatDate,
@@ -196,11 +193,10 @@ function renderSingleDesiredStateObjectView(
   copy: WebCopy,
   locale: WebLocale,
   defaultTabId: DesiredStateTabId,
-  defaultImportPath: string | null,
   focus?: string,
   panelsOnly = false
 ): string {
-  return renderDesiredStateSection(data, copy, locale, defaultTabId, defaultImportPath, focus, {
+  return renderDesiredStateSection(data, copy, locale, defaultTabId, focus, {
     mode: "single",
     panelsOnly
   });
@@ -211,12 +207,11 @@ function renderDesiredStateObjectWorkspaceView(
   copy: WebCopy,
   locale: WebLocale,
   defaultTabId: DesiredStateTabId,
-  defaultImportPath: string | null,
   focus: string | undefined,
   workspaceTabId: string,
   workspaceKind?: "apps" | "proxies"
 ): string {
-  return renderDesiredStateSection(data, copy, locale, defaultTabId, defaultImportPath, focus, {
+  return renderDesiredStateSection(data, copy, locale, defaultTabId, focus, {
     mode: "workspace",
     workspaceTabId,
     workspaceKind
@@ -227,7 +222,6 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
   const {
     currentPath,
     data,
-    defaultImportPath,
     desiredStateTab,
     focus,
     historyReplaceUrl,
@@ -455,7 +449,6 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
       copy,
       locale,
       "desired-state-nodes",
-      defaultImportPath,
       focus,
       true
     ),
@@ -508,7 +501,6 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
           copy,
           locale,
           "desired-state-tenants",
-          defaultImportPath,
           focus,
           tenantWorkspaceTab
         );
@@ -520,7 +512,6 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
           copy,
           locale,
           "desired-state-zones",
-          defaultImportPath,
           focus,
           zoneWorkspaceTab
         );
@@ -530,7 +521,6 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
           copy,
           locale,
           "desired-state-apps",
-          defaultImportPath,
           focus,
           proxyWorkspaceTab,
           "proxies"
@@ -541,7 +531,6 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
           copy,
           locale,
           "desired-state-apps",
-          defaultImportPath,
           focus,
           appWorkspaceTab,
           "apps"
@@ -552,7 +541,6 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
           copy,
           locale,
           "desired-state-databases",
-          defaultImportPath,
           focus,
           databaseWorkspaceTab
         );
@@ -585,7 +573,6 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
           copy,
           locale,
           "desired-state-backups",
-          defaultImportPath,
           focus,
           backupPolicyWorkspaceTab
         );
@@ -946,7 +933,6 @@ export function renderDashboardPage(args: RenderDashboardArgs): string {
           copy,
           locale,
           resolvedDesiredStateTab,
-          defaultImportPath,
           focus
         );
       case "overview":

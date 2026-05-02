@@ -25,11 +25,10 @@ import {
   minimumMailboxQuotaBytes
 } from "@simplehost/control-contracts";
 
-import {
-  readPlatformInventory,
-  type PlatformInventoryApp,
-  type PlatformInventoryAppDatabase,
-  type PlatformInventoryDocument
+import type {
+  PlatformInventoryApp,
+  PlatformInventoryAppDatabase,
+  PlatformInventoryDocument
 } from "./inventory.js";
 import { requireAuthorizedUser } from "./control-plane-store-auth.js";
 import { insertAuditEvent, withTransaction } from "./control-plane-store-db.js";
@@ -2598,67 +2597,6 @@ export function createControlPlaneSpecMethods(
   };
 
   return {
-    async importInventory(request, presentedToken) {
-      const sourcePath = request.path?.trim() || options.defaultInventoryImportPath;
-      if (!sourcePath) {
-        throw new Error(
-          "Inventory import requires an explicit source path because no YAML inventory path is configured as a runtime default."
-        );
-      }
-      const inventory = await readPlatformInventory(sourcePath);
-      const desiredStateSpec = buildDesiredStateSpecFromInventory(inventory);
-      const importedAt = new Date().toISOString();
-      const importId = `import-${randomUUID()}`;
-
-      return withTransaction(pool, async (client) => {
-        const actor = await requireAuthorizedUser(client, presentedToken, [
-          "platform_admin",
-          "platform_operator"
-        ]);
-        await applyDesiredStateSpec(client, desiredStateSpec, jobPayloadKey);
-        const desiredSummary = summarizeDesiredStateSpec(desiredStateSpec);
-        const summary = {
-          tenantCount: desiredSummary.tenantCount,
-          nodeCount: desiredSummary.nodeCount,
-          zoneCount: desiredSummary.zoneCount,
-          appCount: desiredSummary.appCount,
-          siteCount: desiredSummary.appCount,
-          databaseCount: desiredSummary.databaseCount
-        };
-
-        await client.query(
-          `INSERT INTO control_plane_inventory_import_runs (
-             import_id,
-             source_path,
-             summary,
-             imported_at
-           )
-           VALUES ($1, $2, $3::jsonb, $4)`,
-          [importId, sourcePath, JSON.stringify(summary), importedAt]
-        );
-
-        await insertAuditEvent(client, {
-          actorType: "user",
-          actorId: actor.userId,
-          eventType: "inventory.imported",
-          entityType: "inventory",
-          entityId: importId,
-          payload: {
-            sourcePath,
-            summary
-          },
-          occurredAt: importedAt
-        });
-
-        return {
-          importId,
-          sourcePath,
-          importedAt,
-          ...summary
-        };
-      });
-    },
-
     async getInventorySnapshot(presentedToken) {
       return withTransaction(pool, async (client) => {
         await requireAuthorizedUser(client, presentedToken, [

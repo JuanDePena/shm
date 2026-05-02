@@ -16,7 +16,6 @@ import {
   type Fail2BanApplyRequest,
   type FirewallApplyRequest,
   type InventoryStateSnapshot,
-  type InventoryImportSummary,
   type JobDispatchResponse,
   type JobHistoryEntry,
   type MailboxCredentialMutationResult,
@@ -94,7 +93,6 @@ export interface ControlWebApi extends ControlAuthSurface {
   deleteParameter(token: string, key: string): Promise<void>;
   loadRustDeskPublicConnection(): Promise<RustDeskPublicConnectionInfo>;
   exportInventory(token: string): Promise<string>;
-  importInventory(token: string, path: string): Promise<InventoryImportSummary>;
   runReconciliation(token: string): Promise<{ generatedJobCount: number; skippedJobCount: number }>;
   purgeOperationalHistory(token: string): Promise<OperationHistoryPurgeSummary>;
   syncZone(token: string, zoneName: string): Promise<JobDispatchResponse>;
@@ -325,13 +323,6 @@ export function createControlWebApiFromRequest(request: ControlWebApiRequest): C
       return request<string>("/v1/inventory/export", {
         token,
         responseType: "text"
-      });
-    },
-    importInventory(token: string, path: string): Promise<InventoryImportSummary> {
-      return request<InventoryImportSummary>("/v1/inventory/import", {
-        method: "POST",
-        token,
-        body: { path }
       });
     },
     runReconciliation(

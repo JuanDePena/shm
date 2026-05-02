@@ -1,7 +1,3 @@
-export interface InventoryImportRequest {
-  path?: string;
-}
-
 export interface InventoryImportSummary {
   importId: string;
   sourcePath: string;

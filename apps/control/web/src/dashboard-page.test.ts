@@ -82,7 +82,6 @@ function renderView(data: DashboardData, view: DashboardView, focus?: string): s
       ? `/?view=${encodeURIComponent(view)}&focus=${encodeURIComponent(focus)}`
       : `/?view=${encodeURIComponent(view)}`,
     data,
-    defaultImportPath: "/etc/simplehost/inventory.yaml",
     desiredStateTab: "desired-state-create",
     focus,
     locale: "en",
@@ -121,7 +120,6 @@ test("renderDashboardPage renders only the active workspace body", () => {
   const html = renderDashboardPage({
     currentPath: "/?view=overview",
     data,
-    defaultImportPath: "/etc/simplehost/inventory.yaml",
     desiredStateTab: "desired-state-create",
     locale: "en",
     overviewMetrics: createOverviewMetricsSnapshot(),

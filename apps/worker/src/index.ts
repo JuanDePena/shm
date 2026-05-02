@@ -18,7 +18,6 @@ function createWorkerStore(
     bootstrapAdminEmail: config.auth.bootstrapAdminEmail,
     bootstrapAdminPassword: config.auth.bootstrapAdminPassword,
     bootstrapAdminName: config.auth.bootstrapAdminName,
-    defaultInventoryImportPath: config.inventory.importPath,
     jobPayloadSecret: config.jobs.payloadSecret
   });
 }

@@ -59,7 +59,6 @@ export function createControlWebSurface(
     config: context.config,
     handleDashboard: createDashboardHandler({
       api,
-      defaultImportPath: context.config.inventory.importPath,
       overviewMetrics,
       renderLoginPage,
       version: context.config.version

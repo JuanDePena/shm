@@ -74,7 +74,6 @@ export async function createControlApiSurface(
       bootstrapAdminEmail: context.config.auth.bootstrapAdminEmail,
       bootstrapAdminPassword: context.config.auth.bootstrapAdminPassword,
       bootstrapAdminName: context.config.auth.bootstrapAdminName,
-      defaultInventoryImportPath: context.config.inventory.importPath,
       jobPayloadSecret: context.config.jobs.payloadSecret
     }
   );

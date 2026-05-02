@@ -55,9 +55,6 @@ function createStubApi(
     exportInventory: async () => {
       throw new Error("Unexpected inventory export in test");
     },
-    importInventory: async () => {
-      throw new Error("Unexpected inventory import in test");
-    },
     runReconciliation: async () => {
       throw new Error("Unexpected reconciliation run in test");
     },
@@ -150,7 +147,6 @@ function createConfig(): ControlWebRuntimeConfig {
   return {
     api: { host: "127.0.0.1", port: 4100 },
     env: "test",
-    inventory: { importPath: "/tmp/inventory.yaml" },
     version: "0.1.0-test",
     web: { host: "127.0.0.1", port: 3200 }
   };

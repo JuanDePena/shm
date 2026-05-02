@@ -26,9 +26,6 @@ export interface ControlWebRuntimeConfig {
     port: number;
   };
   env: string;
-  inventory: {
-    importPath: string | null;
-  };
   version: string;
   web: {
     host: string;

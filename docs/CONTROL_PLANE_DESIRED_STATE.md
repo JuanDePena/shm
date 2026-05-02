@@ -85,12 +85,14 @@ PostgreSQL desired-state export summary:
 | mail aliases | 20 |
 | mailbox quotas | 23 |
 
-Runtime config still references the transitional YAML path on both nodes:
+At the phase-0 baseline, runtime config still referenced the transitional YAML
+path on both nodes:
 
 - `primary`: `/etc/simplehost/control.env`
 - `secondary`: `/etc/simplehost/control.env`
 
-Both contain `SIMPLEHOST_INVENTORY_PATH=/etc/simplehost/inventory.apps.yaml`.
+Both contained `SIMPLEHOST_INVENTORY_PATH=/etc/simplehost/inventory.apps.yaml`.
+Phase 1 removed this variable from active runtime env files on both nodes.
 
 ## YAML Audit
 
@@ -170,9 +172,8 @@ Implementation notes:
 
 - control runtime config now treats `SIMPLEHOST_INVENTORY_PATH` as optional and
   no longer defaults it to `/etc/simplehost/inventory.apps.yaml`
-- YAML import can still be used only with an explicit source path; this keeps a
-  narrow rollback/manual-import path until Phase 2 removes the normal import
-  surface
+- Phase 1 temporarily kept YAML import available only with an explicit source
+  path; Phase 2 later removed the normal import surface
 - packaging examples no longer include `SIMPLEHOST_INVENTORY_PATH`
 - `/etc/simplehost/control.env` on `primary` and `secondary` no longer contains
   `SIMPLEHOST_INVENTORY_PATH`
@@ -192,6 +193,8 @@ Implementation notes:
 
 Goal: remove operator-facing YAML import as a normal workflow.
 
+Status: completed on `2026-05-02`.
+
 Tasks:
 
 - remove or disable `POST /v1/inventory/import`
@@ -203,7 +206,20 @@ Exit criteria:
 
 - operators can edit desired state without YAML import
 - exported catalog remains available from PostgreSQL
-- tests pass without constructing desired state from YAML inventory
+- API/UI tests pass without exposing a YAML import route or action
+
+Implementation notes:
+
+- API route `POST /v1/inventory/import` was removed
+- web action `/actions/inventory-import` and the corresponding UI form were
+  removed
+- runtime config, worker startup, release manifests and sandbox env generation
+  no longer carry an inventory import path
+- PostgreSQL catalog export remains available through `GET /v1/resources/spec`
+  and `GET /v1/inventory/export`
+- historical latest-import metadata remains visible read-only for audit context
+- legacy inventory converter helpers remain covered by unit tests until the repo
+  bootstrap file is retired in Phase 3
 
 ### Phase 3: Retire Repo Bootstrap File
 
@@ -264,3 +280,5 @@ After Phase 3, rollback should use the phase-0 artifacts:
 - `2026-05-02`: phase 1 completed; runtime config no longer requires
   `SIMPLEHOST_INVENTORY_PATH`, active env files no longer define it, and a fresh
   reconciliation generated `0` jobs.
+- `2026-05-02`: phase 2 completed; YAML import route/UI were removed while
+  PostgreSQL desired-state export remains available.

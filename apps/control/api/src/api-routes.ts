@@ -26,7 +26,6 @@ const rootEndpoints = [
   "GET /v1/users",
   "POST /v1/users",
   "GET /v1/inventory/summary",
-  "POST /v1/inventory/import",
   "GET /v1/inventory/export",
   "GET /v1/resources/spec",
   "PUT /v1/resources/spec",

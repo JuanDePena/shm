@@ -189,7 +189,6 @@ export function createTestContext(args: {
         url: "postgresql://simplehost_control:test@127.0.0.1:5433/simplehost_control"
       },
       env: "test",
-      inventory: { importPath: "/tmp/inventory.yaml" },
       jobs: {
         payloadSecret: "test-payload-secret"
       },

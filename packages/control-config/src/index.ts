@@ -23,10 +23,6 @@ export interface ControlAuthRuntimeConfig {
   sessionTtlSeconds: number;
 }
 
-export interface ControlInventoryRuntimeConfig {
-  importPath: string | null;
-}
-
 export interface ControlJobRuntimeConfig {
   payloadSecret: string | null;
 }
@@ -48,7 +44,6 @@ export interface ControlRuntimeConfig {
   worker: ControlWorkerConfig;
   database: ControlDatabaseRuntimeConfig;
   auth: ControlAuthRuntimeConfig;
-  inventory: ControlInventoryRuntimeConfig;
   jobs: ControlJobRuntimeConfig;
   rustdesk: ControlRustDeskRuntimeConfig;
 }
@@ -130,9 +125,6 @@ export function createControlRuntimeConfig(
       bootstrapAdminPassword: readOptionalString(env.SIMPLEHOST_BOOTSTRAP_ADMIN_PASSWORD),
       bootstrapAdminName: readOptionalString(env.SIMPLEHOST_BOOTSTRAP_ADMIN_NAME),
       sessionTtlSeconds: readPositiveInt(env.SIMPLEHOST_SESSION_TTL_SECONDS, 43200)
-    },
-    inventory: {
-      importPath: readOptionalString(env.SIMPLEHOST_INVENTORY_PATH)
     },
     jobs: {
       payloadSecret:

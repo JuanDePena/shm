@@ -14,7 +14,6 @@ import {
 import { type WebLocale } from "./request.js";
 
 export interface DesiredStateCreateCopy {
-  actionsImportInventory: string;
   actionsDownloadYaml: string;
   backupPolicies: string;
   bootstrapInventoryDescription: string;
@@ -34,7 +33,6 @@ export interface DesiredStateCreateCopy {
   tabNodes: string;
   tabTenants: string;
   tabZones: string;
-  transitionalBootstrapNote: string;
 }
 
 export function buildDesiredStateCreateTab<Copy extends DesiredStateCreateCopy>(args: {
@@ -42,7 +40,6 @@ export function buildDesiredStateCreateTab<Copy extends DesiredStateCreateCopy>(
   data: DashboardData;
   locale: WebLocale;
   defaultTabId: DesiredStateTabId;
-  defaultImportPath: string | null;
   tenantOptions: DesiredStateSelectOption[];
   nodeOptions: DesiredStateSelectOption[];
   zoneOptions: DesiredStateSelectOption[];
@@ -63,7 +60,6 @@ export function buildDesiredStateCreateTab<Copy extends DesiredStateCreateCopy>(
     copy,
     data,
     locale,
-    defaultImportPath,
     tenantOptions,
     nodeOptions,
     zoneOptions,
@@ -344,7 +340,6 @@ export function buildDesiredStateCreateTab<Copy extends DesiredStateCreateCopy>(
       <details class="panel panel-muted detail-shell">
         <summary>${escapeHtml(copy.bootstrapInventoryTitle)}</summary>
         <p class="muted section-description">${escapeHtml(copy.bootstrapInventoryDescription)}</p>
-        <p class="muted">${escapeHtml(copy.transitionalBootstrapNote)}</p>
         ${renderActionFacts([
           { label: copy.latestImport, value: escapeHtml(desiredStateLatestImportSummary) },
           { label: copy.latestExport, value: escapeHtml(desiredStateLatestExportSummary) },
@@ -365,20 +360,6 @@ export function buildDesiredStateCreateTab<Copy extends DesiredStateCreateCopy>(
             copy.actionsDownloadYaml
           )}</a>
         </div>
-        <form method="post" action="/actions/inventory-import" class="stack">
-          <input
-            type="text"
-            name="path"
-            value="${escapeHtml(defaultImportPath ?? "")}"
-          />
-          <button
-            class="secondary"
-            type="submit"
-            data-confirm="${escapeHtml(
-              "Import the bootstrap YAML into PostgreSQL desired state? Existing desired-state rows may be refreshed from the transitional source."
-            )}"
-          >${escapeHtml(copy.actionsImportInventory)}</button>
-        </form>
       </details>
     </div>`;
 

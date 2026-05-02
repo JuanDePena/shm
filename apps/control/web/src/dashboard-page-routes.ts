@@ -28,7 +28,6 @@ import type { OverviewMetricsCollector } from "./overview-metrics.js";
 
 export function createDashboardHandler(args: {
   api: ControlWebApi;
-  defaultImportPath: string | null;
   overviewMetrics: OverviewMetricsCollector;
   renderLoginPage: (locale: WebLocale, notice?: PanelNotice) => string;
   version: string;
@@ -96,7 +95,6 @@ export function createDashboardHandler(args: {
         renderDashboardPage({
           currentPath: sanitizeReturnTo(`${url.pathname}${url.search}`),
           data: dashboard,
-          defaultImportPath: args.defaultImportPath,
           desiredStateTab,
           focus,
           historyReplaceUrl,
