@@ -690,7 +690,7 @@ Completion evidence:
 
 ### Phase 5: Resilience And Failover Improvements
 
-Status: in progress; phase 5A completed on `2026-05-02`.
+Status: in progress; phases 5A and 5B completed on `2026-05-02`.
 
 Goal: reduce single points of failure that remain after the vps-old retirement.
 
@@ -745,9 +745,9 @@ Phase 5A completion evidence on `2026-05-02`:
   - `gtid_strict_mode = ON`
   - current primary binlog at inspection time:
     `mariadb-bin.000010:207086900`
-- No `mariadb-replica` container is active on the secondary yet. Replica
-  activation is intentionally left for a maintenance window with backup
-  preflight and rollback.
+- At the phase 5A checkpoint, no `mariadb-replica` container was active on the
+  secondary yet. Replica activation was intentionally left for a maintenance
+  window with backup preflight and rollback.
 - Administrative access review found:
   - `PermitRootLogin yes`
   - `PasswordAuthentication yes`
@@ -764,10 +764,34 @@ Phase 5A completion evidence on `2026-05-02`:
   - [`BACKUPS.md`](/opt/simplehostman/src/docs/BACKUPS.md)
   - [`HARDENING.md`](/opt/simplehostman/src/docs/HARDENING.md)
 
+Phase 5B completion evidence on `2026-05-02`:
+
+- `mariadb-replica` was seeded on the secondary from a prepared
+  `mariadb-backup` physical backup.
+- Seed id: `20260502T025409Z`.
+- Seed backup GTID: `0-1-61870`.
+- Source backup position: `mariadb-bin.000010:209333327`.
+- Replication account scope:
+  - user: `replicator`
+  - host: `10.89.0.2`
+  - grants: `REPLICATION SLAVE`, `BINLOG MONITOR`
+  - secret storage: root-only files under
+    `/root/simplehost-mariadb-replica-20260502/`
+- `mariadb-replica` is active on the secondary and published only on
+  `127.0.0.1:3306` and `10.89.0.2:3306`.
+- Validation after a controlled create/insert/drop probe showed:
+  - primary GTID: `0-1-62106`
+  - replica GTID: `0-1-62106`
+  - `Slave_IO_Running: Yes`
+  - `Slave_SQL_Running: Yes`
+  - `Seconds_Behind_Master: 0`
+  - `read_only = ON`
+  - `server_id = 2`
+- `super_read_only` was removed from the MariaDB replica config because MariaDB
+  `11.8.6` rejects it as an unknown server option in this image.
+
 Remaining Phase 5 maintenance-window items:
 
-- seed and start `mariadb-replica` on the secondary
-- validate controlled writes replicate and catch up
 - rehearse MariaDB promotion on non-production data
 - move routine administration from root to a tested non-root sudo path
 - decide whether to install and configure `dnf-automatic`
@@ -775,16 +799,13 @@ Remaining Phase 5 maintenance-window items:
 
 ## Current Implementation Order
 
-Phases 1 through 4 are complete. After phase 5A, continue in this order:
+Phases 1 through 4 and phase 5A/5B are complete. Continue in this order:
 
-1. Schedule a MariaDB maintenance window with backup preflight and rollback.
-2. Seed and start the secondary `mariadb-replica`.
-3. Validate controlled writes replicate and catch up.
-4. Rehearse MariaDB promotion on non-production data.
-5. Move routine administration from direct root SSH to a tested non-root sudo
+1. Rehearse MariaDB promotion on non-production data.
+2. Move routine administration from direct root SSH to a tested non-root sudo
    path.
-6. Decide whether to install and configure security-update automation.
-7. Revisit code-server exposure and root-owned service posture.
+3. Decide whether to install and configure security-update automation.
+4. Revisit code-server exposure and root-owned service posture.
 
 ## Do Not Do Yet
 

@@ -9,7 +9,6 @@ binlog_format=ROW
 log_slave_updates=ON
 gtid_strict_mode=ON
 read_only=ON
-super_read_only=ON
 
 character-set-server=utf8mb4
 collation-server=utf8mb4_unicode_ci

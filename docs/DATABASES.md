@@ -403,18 +403,27 @@ Planned transition:
 Current status on `2026-05-02`:
 
 - `mariadb-primary` is active on the primary only.
-- No `mariadb-replica` container is active on the secondary yet.
-- Secondary MariaDB-backed application containers currently reach the primary
-  MariaDB listener over WireGuard.
+- `mariadb-replica` is active on the secondary only.
+- MariaDB-backed applications still write to the primary. The secondary is a
+  passive, read-only replica until a manual promotion.
 - Primary binlog and GTID prerequisites are present:
   - `log_bin = ON`
   - `gtid_strict_mode = ON`
   - `server_id = 1`
+- Replica validation after activation:
+  - seed id: `20260502T025409Z`
+  - seed GTID: `0-1-61870`
+  - validated GTID on both nodes: `0-1-62106`
+  - `Slave_IO_Running = Yes`
+  - `Slave_SQL_Running = Yes`
+  - `Seconds_Behind_Master = 0`
+  - `read_only = ON`
+  - `server_id = 2`
 
-Replica activation should be treated as a maintenance-window task. Do not start
-the replica from an empty datadir and do not reuse a stale datadir.
+Replica rebuilds should still be treated as maintenance-window tasks. Do not
+start the replica from an empty datadir and do not reuse a stale datadir.
 
-Planned replica seed sequence:
+Replica seed or rebuild sequence:
 
 1. Confirm `pgBackRest`, MariaDB logical dumps, and app-file backups are fresh.
 2. Generate or retrieve a unique MariaDB replication password from root-only
@@ -424,7 +433,7 @@ Planned replica seed sequence:
 
    ```sql
    CREATE USER 'replicator'@'10.89.0.2' IDENTIFIED BY '<secret>';
-   GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'replicator'@'10.89.0.2';
+   GRANT REPLICATION SLAVE, BINLOG MONITOR ON *.* TO 'replicator'@'10.89.0.2';
    FLUSH PRIVILEGES;
    ```
 
@@ -439,6 +448,10 @@ Planned replica seed sequence:
 8. Configure GTID replication from the primary:
 
    ```sql
+   SET GLOBAL read_only = OFF;
+   RESET MASTER;
+   SET GLOBAL gtid_slave_pos = '<backup_gtid>';
+
    CHANGE MASTER TO
      MASTER_HOST='10.89.0.1',
      MASTER_PORT=3306,
@@ -446,6 +459,7 @@ Planned replica seed sequence:
      MASTER_PASSWORD='<secret>',
      MASTER_USE_GTID=slave_pos;
 
+   SET GLOBAL read_only = ON;
    START REPLICA;
    ```
 
@@ -464,20 +478,22 @@ Manual MariaDB promotion outline:
    STOP REPLICA;
    RESET REPLICA ALL;
    SET GLOBAL read_only = OFF;
-   SET GLOBAL super_read_only = OFF;
    ```
 
 5. Repoint MariaDB-backed app environment to the promoted node's WireGuard
    listener and restart only those app containers.
 6. Keep the old primary isolated until it is rebuilt from the promoted node.
 
-Expected posture before the replica exists:
+Expected passive-replica posture:
 
 - MariaDB-backed apps can continue running on the primary.
-- Secondary app failover for MariaDB-backed workloads remains limited by primary
-  MariaDB availability and backup/binlog recovery.
-- Expected RPO/RTO for MariaDB-backed apps should be treated as backup-driven
-  until the replica is deployed and validated.
+- The secondary MariaDB service stays read-only and should not receive app
+  writes unless it is manually promoted.
+- Expected RPO is asynchronous GTID replication lag. During validation this was
+  `0` seconds, but failover remains manual.
+- Expected RTO includes freezing app writes, confirming catch-up, promoting the
+  secondary, repointing MariaDB-backed app environment, and restarting only the
+  affected app containers.
 
 ### Version choice
 
