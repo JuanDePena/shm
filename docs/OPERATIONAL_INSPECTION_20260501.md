@@ -1279,6 +1279,13 @@ Phase 5Q completion evidence on `2026-05-02`:
   `webmaster@pyrosa.com.do` was added.
 - Authentik authentication flow `pyrosa-authentication-mfa-required` was
   created with MFA validation set to deny users with no MFA device.
+- Authentik Brand `pyrosa.com.do` was created for Pyrosa-owned subdomains:
+  - title `PYROSA`
+  - logo media `pyrosa/logo-transp-white.png`
+  - favicon media `pyrosa/favicon.ico`
+  - authentication flow `pyrosa-authentication-mfa-required`
+  - custom CSS hides the flow footer links, including `Powered by authentik`
+- The flow title was updated to `PYROSA Inicio de Sesión`.
 - Authentik Proxy Provider `code.pyrosa.com.do` was created in `proxy` mode
   with external host `https://code.pyrosa.com.do` and internal host
   `http://host.containers.internal:18080`.
@@ -1309,6 +1316,12 @@ Phase 5Q completion evidence on `2026-05-02`:
     `302` to `https://auth.pyrosa.com.do/application/o/authorize/...`
   - `https://code.pyrosa.com.do/outpost.goauthentik.io/ping` returned `204`
   - `https://auth.pyrosa.com.do/` returned `302`
+  - `https://auth.pyrosa.com.do/flows/-/default/authentication/?next=/`
+    redirected to `/if/flow/pyrosa-authentication-mfa-required/?next=%2F`
+  - `https://auth.pyrosa.com.do/if/flow/pyrosa-authentication-mfa-required/`
+    rendered with `<title>PYROSA</title>`, Pyrosa media-backed logo/favicon,
+    and no static `Welcome to authentik!` or `Powered by authentik` text
+  - the flow executor API returned title `PYROSA Inicio de Sesión`
   - `https://auth.pyrosa.com.do/if/flow/initial-setup/` returned `403`
   - `http://127.0.0.1:8080/login` returned `200` for break-glass validation
   - `http://10.88.0.1:18080/login` returned `200`
@@ -1324,6 +1337,10 @@ Phase 5Q completion evidence on `2026-05-02`:
   `backup-run-846c771e-a73b-48ea-9153-babc69eccbf6` succeeded.
 - Post-bridge-correction backup directory:
   `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T06-58-38-417Z`
+- Post-branding forced backup run
+  `backup-run-0cb8786b-47f7-4a80-bc56-bfa1e7de299f` succeeded.
+- Post-branding backup directory:
+  `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T07-13-23-428Z`
 - Post-enforcement backup directory:
   `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T06-43-23-095Z`
 - Scratch restore database `restoretest_authentik_phase4_20260502t0643z`

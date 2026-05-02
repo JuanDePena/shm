@@ -80,6 +80,9 @@ IAM exposure:
 - `auth.pyrosa.com.do` exposes the Authentik browser surface on the primary.
   The Apache vhost blocks `/if/flow/initial-setup/` because the bootstrap
   admin already exists and the public setup flow must not remain reachable.
+- Authentik uses the `pyrosa.com.do` Brand for Pyrosa-owned subdomains,
+  including Pyrosa media-backed logo/favicon and the
+  `pyrosa-authentication-mfa-required` authentication flow.
 - Protected app vhosts should route through an Authentik Proxy Provider and
   outpost path before reaching their local backends.
 - `code.pyrosa.com.do` is the first enforced protected app vhost.

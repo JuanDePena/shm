@@ -393,6 +393,14 @@ Completion evidence:
   `webmaster@pyrosa.com.do` was added.
 - Authentik authentication flow `pyrosa-authentication-mfa-required` was
   created with MFA validation set to deny users that have no MFA device.
+- Authentik Brand `pyrosa.com.do` was created for Pyrosa-owned subdomains:
+  - title: `PYROSA`
+  - logo media: `pyrosa/logo-transp-white.png`
+  - favicon media: `pyrosa/favicon.ico`
+  - authentication flow: `pyrosa-authentication-mfa-required`
+  - brand CSS hides the flow footer links, including `Powered by authentik`
+- The `pyrosa-authentication-mfa-required` flow title was updated to
+  `PYROSA Inicio de Sesión`.
 - Authentik Proxy Provider `code.pyrosa.com.do` was created in `proxy` mode:
   - external host: `https://code.pyrosa.com.do`
   - internal host: `http://host.containers.internal:18080`
@@ -427,7 +435,13 @@ Completion evidence:
     `302` to `https://auth.pyrosa.com.do/application/o/authorize/...`.
   - `https://code.pyrosa.com.do/outpost.goauthentik.io/ping` returns `204`.
 - `https://auth.pyrosa.com.do/` still returns `302`.
+- `https://auth.pyrosa.com.do/flows/-/default/authentication/?next=/`
+  redirects to `/if/flow/pyrosa-authentication-mfa-required/?next=%2F`.
 - `https://auth.pyrosa.com.do/if/flow/initial-setup/` still returns `403`.
+- `https://auth.pyrosa.com.do/if/flow/pyrosa-authentication-mfa-required/`
+  renders with `<title>PYROSA</title>`, Pyrosa media-backed logo/favicon, and
+  no static `Welcome to authentik!` or `Powered by authentik` text.
+- The flow executor API reports title `PYROSA Inicio de Sesión`.
 - Break-glass local backend check:
   `http://127.0.0.1:8080/login` still returns `200`.
 - Internal bridge checks:
@@ -444,6 +458,10 @@ Completion evidence:
   `backup-run-846c771e-a73b-48ea-9153-babc69eccbf6`.
 - Post-bridge-correction backup directory:
   `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T06-58-38-417Z`
+- A post-branding forced backup succeeded:
+  `backup-run-0cb8786b-47f7-4a80-bc56-bfa1e7de299f`.
+- Post-branding backup directory:
+  `/srv/backups/iam/authentik/primary/iam-authentik-primary-daily-2026-05-02T07-13-23-428Z`
 - The post-enforcement backup restored into scratch database
   `restoretest_authentik_phase4_20260502t0643z` and validated:
   - `1` `code-pyrosa` application
