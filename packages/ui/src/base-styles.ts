@@ -1087,31 +1087,34 @@ export function renderBaseStyleBlock(): string {
       }
 
       .overview-interval-selector {
-        display: block;
+        display: flex;
+        justify-content: flex-end;
         flex: 0 0 auto;
+        width: 12rem;
+        max-width: 100%;
       }
 
-      .overview-interval-selector select {
+      select.overview-interval-select {
         box-sizing: border-box;
         display: block;
-        width: 10rem;
-        min-width: 10rem;
-        max-width: none;
-        min-height: 1.38rem;
-        height: 1.38rem;
-        padding: 0 1.45rem 0 0.5rem;
+        width: 12rem !important;
+        min-width: 12rem !important;
+        max-width: 12rem !important;
+        min-height: 1.32rem !important;
+        height: 1.32rem !important;
+        padding: 0 1.5rem 0 0.52rem !important;
         border-radius: var(--radius-control);
         border: 1px solid rgba(13, 32, 56, 0.14);
         background-color: rgba(255, 255, 255, 0.86);
         color: var(--navy-strong);
-        font-size: 0.74rem;
+        font-size: 0.72rem !important;
         font-weight: 700;
-        line-height: 1.05;
+        line-height: 1 !important;
         box-shadow: 0 0.42rem 1rem rgba(16, 39, 68, 0.08);
       }
 
-      .overview-interval-selector select:focus,
-      .overview-interval-selector select:focus-visible {
+      select.overview-interval-select:focus,
+      select.overview-interval-select:focus-visible {
         border-color: rgba(16, 39, 68, 0.3);
         outline: none;
         box-shadow:
@@ -1191,10 +1194,12 @@ export function renderBaseStyleBlock(): string {
           width: 100%;
         }
 
-        .overview-interval-selector select {
-          min-width: 0;
-          height: 1.56rem;
-          width: 100%;
+        select.overview-interval-select {
+          width: 100% !important;
+          min-width: 0 !important;
+          max-width: none !important;
+          height: 1.5rem !important;
+          min-height: 1.5rem !important;
         }
 
         .overview-metric-grid {

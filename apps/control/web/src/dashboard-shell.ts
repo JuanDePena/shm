@@ -181,7 +181,12 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
 
     return `<label class="overview-interval-selector">
       <span class="sr-only">${escapeHtml(copy.overviewIntervalLabel)}</span>
-      <select name="statusInterval" data-status-interval-select aria-label="${escapeHtml(copy.overviewIntervalLabel)}">
+      <select
+        name="statusInterval"
+        class="overview-interval-select"
+        data-status-interval-select
+        aria-label="${escapeHtml(copy.overviewIntervalLabel)}"
+      >
         ${intervals
           .map(
             (interval) => `<option value="${escapeHtml(interval.id)}"${
