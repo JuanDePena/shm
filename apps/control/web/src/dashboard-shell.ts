@@ -184,6 +184,7 @@ export function renderDashboardShell<Copy extends DashboardShellCopy>(args: {
       <select
         name="statusInterval"
         class="overview-interval-select"
+        data-select-search="false"
         data-status-interval-select
         aria-label="${escapeHtml(copy.overviewIntervalLabel)}"
       >

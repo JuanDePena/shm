@@ -1094,6 +1094,56 @@ export function renderBaseStyleBlock(): string {
         max-width: 100%;
       }
 
+      .overview-interval-selector .select-shell {
+        flex: 0 0 12rem;
+        width: 12rem;
+        max-width: 12rem;
+      }
+
+      .overview-interval-selector .select-trigger {
+        display: flex;
+        align-items: center;
+        width: 12rem;
+        min-height: 1.32rem;
+        height: 1.32rem;
+        padding: 0 1.5rem 0 0.52rem;
+        border-color: rgba(13, 32, 56, 0.14);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 253, 0.96));
+        color: var(--navy-strong);
+        font-size: 0.72rem;
+        font-weight: 700;
+        line-height: 1;
+        box-shadow: 0 0.42rem 1rem rgba(16, 39, 68, 0.08);
+      }
+
+      .overview-interval-selector .select-trigger-icon {
+        right: 0.38rem;
+      }
+
+      .overview-interval-selector .select-panel {
+        left: auto;
+        right: 0;
+        width: 12rem;
+        min-width: 12rem;
+        max-width: calc(100vw - 2rem);
+        gap: 0.12rem;
+        padding: 0.22rem;
+      }
+
+      .overview-interval-selector .select-options {
+        gap: 0.08rem;
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+      }
+
+      .overview-interval-selector .select-option {
+        min-height: 1.45rem;
+        padding: 0.2rem 0.45rem;
+        font-size: 0.72rem;
+      }
+
       select.overview-interval-select {
         box-sizing: border-box;
         display: block;
@@ -1192,6 +1242,18 @@ export function renderBaseStyleBlock(): string {
 
         .overview-interval-selector {
           width: 100%;
+        }
+
+        .overview-interval-selector .select-shell,
+        .overview-interval-selector .select-trigger,
+        .overview-interval-selector .select-panel {
+          width: 100%;
+          min-width: 0;
+          max-width: none;
+        }
+
+        .overview-interval-selector .select-shell {
+          flex-basis: 100%;
         }
 
         select.overview-interval-select {

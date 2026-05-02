@@ -137,6 +137,7 @@ test("overview keeps status focused and reconciliation lives in its own workspac
   assert.match(overviewHtml, /overview-status-card/);
   assert.match(overviewHtml, /overview-signal-card/);
   assert.match(overviewHtml, /aria-label="Status interval"/);
+  assert.match(overviewHtml, /data-select-search="false"/);
   assert.match(overviewHtml, /data-status-interval-select/);
   assert.match(overviewHtml, /<option value="day" selected>Day<\/option>/);
   assert.match(overviewHtml, /<option value="week">Week<\/option>/);

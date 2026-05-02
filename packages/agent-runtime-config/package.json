@@ -1,6 +1,6 @@
 {
   "name": "@simplehost/agent-runtime-config",
-  "version": "2605.02.19",
+  "version": "2605.02.20",
   "private": true,
   "type": "module",
   "main": "dist/index.js",

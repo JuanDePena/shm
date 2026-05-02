@@ -938,8 +938,7 @@ export function renderAdminShellClientScript(): string {
 
           if (
             !(trigger instanceof HTMLButtonElement) ||
-            !(panel instanceof HTMLElement) ||
-            !(search instanceof HTMLInputElement)
+            !(panel instanceof HTMLElement)
           ) {
             return;
           }
@@ -954,8 +953,19 @@ export function renderAdminShellClientScript(): string {
           activeSelectRoot = root;
 
           window.requestAnimationFrame(() => {
-            search.focus();
-            search.select();
+            if (search instanceof HTMLInputElement) {
+              search.focus();
+              search.select();
+              return;
+            }
+
+            const selectedOption =
+              root.querySelector(".select-option.is-selected:not(.is-disabled)") ??
+              root.querySelector(".select-option:not(.is-disabled)");
+
+            if (selectedOption instanceof HTMLButtonElement) {
+              selectedOption.focus();
+            }
           });
         };
 
@@ -1000,6 +1010,7 @@ export function renderAdminShellClientScript(): string {
           }
 
           const wrapper = document.createElement("div");
+          const isSearchable = select.dataset.selectSearch !== "false";
           wrapper.className = "select-shell";
           parent.insertBefore(wrapper, select);
           wrapper.appendChild(select);
@@ -1041,7 +1052,9 @@ export function renderAdminShellClientScript(): string {
           empty.textContent = selectNoResultsLabel;
           empty.hidden = true;
 
-          panel.appendChild(search);
+          if (isSearchable) {
+            panel.appendChild(search);
+          }
           panel.appendChild(options);
           panel.appendChild(empty);
           wrapper.appendChild(trigger);
@@ -1061,7 +1074,7 @@ export function renderAdminShellClientScript(): string {
           };
 
           const renderOptions = () => {
-            const query = search.value.trim().toLowerCase();
+            const query = isSearchable ? search.value.trim().toLowerCase() : "";
             options.textContent = "";
             let visibleCount = 0;
 
@@ -1141,23 +1154,25 @@ export function renderAdminShellClientScript(): string {
             }
           });
 
-          search.addEventListener("input", () => {
-            renderOptions();
-          });
+          if (isSearchable) {
+            search.addEventListener("input", () => {
+              renderOptions();
+            });
 
-          search.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              closeSelectPanel(wrapper);
-              trigger.focus();
-            } else if (event.key === "ArrowDown") {
-              event.preventDefault();
-              const firstOption = options.querySelector(".select-option:not(.is-disabled)");
-              if (firstOption instanceof HTMLButtonElement) {
-                firstOption.focus();
+            search.addEventListener("keydown", (event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                closeSelectPanel(wrapper);
+                trigger.focus();
+              } else if (event.key === "ArrowDown") {
+                event.preventDefault();
+                const firstOption = options.querySelector(".select-option:not(.is-disabled)");
+                if (firstOption instanceof HTMLButtonElement) {
+                  firstOption.focus();
+                }
               }
-            }
-          });
+            });
+          }
 
           select.addEventListener("change", () => {
             syncTrigger();
