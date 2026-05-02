@@ -32,8 +32,11 @@ Active open items as of `2026-05-02`:
 
 Current active slice:
 
-- Phase 5 resilience and failover follow-up:
-  - choose and implement the `code.pyrosa.com.do` MFA gateway
+- Phase 5 resilience and IAM/SSO follow-up:
+  - implement the Authentik rollout tracked in
+    [`/opt/simplehostman/src/docs/IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md)
+  - first protected surface: `https://code.pyrosa.com.do/`
+  - SSH remains unchanged and outside the Authentik scope
 
 Historical migration runbooks can retain execution records, validation gates, and conditional
 operator notes, but they should not be treated as active TODOs unless this file links to them.

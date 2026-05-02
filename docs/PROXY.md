@@ -32,6 +32,11 @@ Ingress platform:
   `https://vps-prd.pyrosa.com.do:8080/` or
   `https://vps-des.pyrosa.com.do:8080/`; the canonical browser endpoint is
   `https://code.pyrosa.com.do/` on `443`, with matching vhosts on both nodes.
+- Authentik is the selected future IAM/SSO gateway for protected browser
+  surfaces. The rollout plan lives in
+  [`IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md). Until that rollout
+  reaches its enforcement phase, `code.pyrosa.com.do` continues to proxy
+  directly to the local `code-server` backend.
 
 ## Selected platform
 
@@ -67,6 +72,14 @@ Optional operator-convenience exposure, when enabled on a node:
 `code-server` is exposed only through the named HTTPS vhost
 `https://code.pyrosa.com.do/` on `443`, while the service itself stays bound to
 `127.0.0.1:8080`.
+
+Planned IAM exposure:
+
+- `auth.pyrosa.com.do` will expose the Authentik browser surface after local
+  health checks pass.
+- Protected app vhosts should route through an Authentik Proxy Provider and
+  outpost path before reaching their local backends.
+- SSH and non-HTTP service transports remain outside Apache IAM enforcement.
 
 Port `80/tcp` is kept for:
 

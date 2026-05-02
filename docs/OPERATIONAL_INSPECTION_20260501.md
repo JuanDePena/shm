@@ -690,7 +690,7 @@ Completion evidence:
 
 ### Phase 5: Resilience And Failover Improvements
 
-Status: in progress; phases 5A through 5J completed on `2026-05-02`.
+Status: in progress; phases 5A through 5K completed on `2026-05-02`.
 
 Goal: reduce single points of failure that remain after the vps-old retirement.
 
@@ -1100,17 +1100,41 @@ Phase 5J completion evidence on `2026-05-02`:
   secret so it can read encrypted desired-state values from the primary
   PostgreSQL control database. Secret values were not printed or committed.
 
+Phase 5K completion evidence on `2026-05-02`:
+
+- Authentik was selected as the IAM/SSO product for browser-based
+  administrative surfaces.
+- SSH was explicitly excluded from the Authentik scope and remains governed by
+  the existing public-key hardening posture.
+- The first protected target remains `https://code.pyrosa.com.do/`.
+- The IAM/SSO rollout plan was documented in
+  [`IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md).
+- Authentik was classified as a dedicated IAM stack rather than a generic
+  `control_plane_apps` record because it needs server, worker, PostgreSQL,
+  Redis or Valkey, and outpost behavior.
+- The plan reserves `auth.pyrosa.com.do` and local backend ports
+  `10170-10179`, but no live DNS, vhost, database, container, or
+  `code-server` proxy change was applied in this design phase.
+- The rollout keeps the previous direct `code.pyrosa.com.do` vhost as the
+  rollback target and keeps `code-server` own password as a second layer during
+  first enforcement.
+
 Remaining Phase 5 maintenance-window items:
 
-- design and implement an MFA gateway for `https://code.pyrosa.com.do/`
+- stage and implement the Authentik IAM/SSO rollout for
+  `https://code.pyrosa.com.do/`
 
 ## Current Implementation Order
 
-Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H/5I/5J are complete.
+Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H/5I/5J/5K are complete.
 Continue in this order:
 
-1. Choose the `code.pyrosa.com.do` MFA gateway implementation.
-2. Implement the gateway with a documented break-glass path and rollback.
+1. Execute IAM/SSO phase 1 from
+   [`IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md): stage Authentik on
+   the primary without protecting existing apps.
+2. Publish `auth.pyrosa.com.do`, bootstrap admin MFA, and validate recovery.
+3. Add backup and restore-test coverage for Authentik.
+4. Protect `code.pyrosa.com.do` with documented break-glass and rollback.
 
 ## Do Not Do Yet
 

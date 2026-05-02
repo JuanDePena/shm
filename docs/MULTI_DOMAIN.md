@@ -126,6 +126,7 @@ Within the Pyrosa block:
 - `10120-10129` for DIS/sync operational apps
 - `10140-10149` for infrastructure-style web apps
 - `10160-10169` for helpers and helper sidecars
+- `10170-10179` for IAM/SSO surfaces
 
 Examples:
 
@@ -133,6 +134,7 @@ Examples:
 - `pyrosa-sync`: `10121`
 - `pyrosa-repos`: `10141`
 - `pyrosa-helpers`: `10161`
+- `authentik-server`: `10170`
 - `gomezrosado`: `10201`
 - `adudoc`: `10301`
 

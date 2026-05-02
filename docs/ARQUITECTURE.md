@@ -27,6 +27,7 @@ Detailed service docs:
 - [`/opt/simplehostman/src/docs/DATABASES.md`](/opt/simplehostman/src/docs/DATABASES.md)
 - [`/opt/simplehostman/src/docs/MAIL.md`](/opt/simplehostman/src/docs/MAIL.md)
 - [`/opt/simplehostman/src/docs/PROXY.md`](/opt/simplehostman/src/docs/PROXY.md)
+- [`/opt/simplehostman/src/docs/IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md)
 - [`/opt/simplehostman/src/docs/MULTI_DOMAIN.md`](/opt/simplehostman/src/docs/MULTI_DOMAIN.md)
 - [`/opt/simplehostman/src/docs/REPO_LAYOUT.md`](/opt/simplehostman/src/docs/REPO_LAYOUT.md)
 
@@ -56,6 +57,9 @@ Product design references:
 - The combined control plane now serves operator UI and `/v1/*` over `3200/tcp`.
 - `code-server` is reached through `https://code.pyrosa.com.do/` on `443`;
   its backend remains local-only on `127.0.0.1:8080`.
+- Authentik is selected as the planned IAM/SSO layer for browser-based
+  administrative surfaces, starting with `code.pyrosa.com.do`. SSH remains out
+  of scope for IAM/SSO and keeps the hardening policy documented separately.
 
 ## Design goals
 
@@ -66,6 +70,8 @@ Product design references:
 - Use simple, explicit failover instead of unsafe two-node automatic promotion.
 - Preserve a clean split between host-level infrastructure and containerized workloads.
 - Support multiple customer domains and applications from the same two-node platform.
+- Protect administrative browser surfaces with a dedicated IAM/SSO layer
+  without putting SSH or non-HTTP service transports behind that layer.
 
 ## Node roles
 

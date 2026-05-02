@@ -504,15 +504,20 @@ Current decision:
 
 Recommended next hardening step:
 
-- put `https://code.pyrosa.com.do/` behind an authentication gateway with
-  username/password plus OTP/MFA before Apache proxies to `127.0.0.1:8080`
-- prefer an established gateway such as Authelia or Authentik over ad hoc Basic
-  Auth; it should own MFA, session cookies, lockout/rate limiting, and recovery
-  codes
+- put `https://code.pyrosa.com.do/` behind Authentik with username/password plus
+  OTP/MFA before Apache reaches `127.0.0.1:8080`
+- use Authentik to own MFA, session cookies, lockout/rate limiting, and
+  recovery codes
 - keep code-server's own password enabled as a second layer unless an explicit
   operational reason exists to remove it
 - use a break-glass path documented outside the browser flow before enforcing
   MFA
+- keep SSH out of the Authentik scope; SSH remains governed by the hardened
+  public-key policy in this document
+
+IAM/SSO rollout plan:
+
+- [`/opt/simplehostman/src/docs/IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md)
 
 ## Phase 5 Administrative Access Review
 
@@ -561,4 +566,6 @@ Validation completed after `sshd` reload:
 
 Remaining related follow-up:
 
-- Decide and implement the `code.pyrosa.com.do` MFA gateway.
+- Implement the Authentik IAM/SSO rollout for `code.pyrosa.com.do` following
+  [`IAM_SSO.md`](/opt/simplehostman/src/docs/IAM_SSO.md), while keeping SSH
+  unchanged.
