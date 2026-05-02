@@ -1041,6 +1041,7 @@ Phase 5I completion evidence on `2026-05-02`:
   - no `/etc/.legacy-spanel-*`
   - no `/var/lib/spanel` or `/var/log/spanel`
   - no `spanel`/`shm-agent` disabled unit or vhost leftovers on secondary
+  - no disabled or backup vhost leftovers in secondary `/etc/httpd/conf.d`
 - Space after cleanup:
   - primary `/`: `88G` used, `211G` available
   - secondary `/`: `37G` used, `163G` available
