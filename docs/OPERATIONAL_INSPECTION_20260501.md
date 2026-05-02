@@ -690,7 +690,7 @@ Completion evidence:
 
 ### Phase 5: Resilience And Failover Improvements
 
-Status: in progress; phases 5A through 5H completed on `2026-05-02`.
+Status: in progress; phases 5A through 5I completed on `2026-05-02`.
 
 Goal: reduce single points of failure that remain after the vps-old retirement.
 
@@ -710,6 +710,8 @@ Actions:
 - add code-server data and server configuration to the restore-test calendar
 - retire legacy secondary `spanel` runtime and align the public control-plane
   vhost with the primary SimpleHost release
+- remove stale release directories, legacy runtime archives, and transient
+  root-only cleanup backups after validation
 - revisit mail-related `fail2ban` packaging cleanup only after the current
   healthcheck threshold behavior is settled
 
@@ -777,8 +779,8 @@ Phase 5B completion evidence on `2026-05-02`:
   - user: `replicator`
   - host: `10.89.0.2`
   - grants: `REPLICATION SLAVE`, `BINLOG MONITOR`
-  - secret storage: root-only files under
-    `/root/simplehost-mariadb-replica-20260502/`
+  - secret storage: root-only files under `/etc/simplehost/mariadb-replica/`
+    after phase 5I cleanup
 - `mariadb-replica` is active on the secondary and published only on
   `127.0.0.1:3306` and `10.89.0.2:3306`.
 - Validation after a controlled create/insert/drop probe showed:
@@ -986,15 +988,20 @@ Phase 5H completion evidence on `2026-05-02`:
   - `simplehost-src-docs-deny.conf` was installed so `/opt/simplehostman/src/docs`
     remains denied through Apache
 - Legacy secondary runtime and service units were archived, not deleted:
-  - backup: `/root/simplehost-secondary-legacy-cleanup-20260502T041540Z`
+  - backup created during execution:
+    `/root/simplehost-secondary-legacy-cleanup-20260502T041540Z`
+    (removed during phase 5I cleanup)
   - `/opt/simplehost` moved to
-    `/opt/simplehost.legacy-20260502T041540Z`
-  - `/etc/spanel` moved to `/etc/spanel.legacy-20260502T041540Z`
+    `/opt/simplehost.legacy-20260502T041540Z` before final removal in phase 5I
+  - `/etc/spanel` moved to `/etc/spanel.legacy-20260502T041540Z` before final
+    removal in phase 5I
   - `spanel-web`, `spanel-api`, `spanel-worker`, and `shm-agent` units were
     disabled and moved out of the active systemd unit namespace
 - The secondary service account was aligned with the primary unit files:
   - legacy `spanel` user/group was renamed to `simplehost`
-  - backup: `/root/simplehost-secondary-user-rename-20260502T041636Z`
+  - backup created during execution:
+    `/root/simplehost-secondary-user-rename-20260502T041636Z` (removed during
+    phase 5I cleanup)
 - Secondary `simplehost-control` is now active from
   `/opt/simplehostman/release/current/apps/control/dist/index.js`.
 - Secondary `simplehost-control` uses the primary PostgreSQL control database
@@ -1014,6 +1021,37 @@ Phase 5H completion evidence on `2026-05-02`:
     `200 OK`
   - `https://vps-des.pyrosa.com.do:8080/` refused connection
 
+Phase 5I completion evidence on `2026-05-02`:
+
+- Release retention was normalized on both nodes:
+  - deleted old release directories matching `2604.19.*` and `2604.20.*`
+  - retained releases on both nodes: `2604.28.18` and active `2605.02.04`
+  - `/opt/simplehostman/release/current` still points to
+    `/opt/simplehostman/release/releases/2605.02.04`
+- Transient root-only cleanup and migration backup directories were removed
+  from `/root` on both nodes.
+- MariaDB replication metadata was preserved, but moved out of `/root` to
+  `/etc/simplehost/mariadb-replica/` on both nodes:
+  - `replication.env`
+  - `current-seed-id`
+  - `20260502T025409Z.binlog-info`
+- Legacy `spanel` and archived SimpleHost paths were removed:
+  - no `/opt/simplehost.legacy-*`
+  - no `/etc/spanel.legacy-*`
+  - no `/etc/.legacy-spanel-*`
+  - no `/var/lib/spanel` or `/var/log/spanel`
+  - no `spanel`/`shm-agent` disabled unit or vhost leftovers on secondary
+- Space after cleanup:
+  - primary `/`: `88G` used, `211G` available
+  - secondary `/`: `37G` used, `163G` available
+- Validation after cleanup:
+  - primary services active: `simplehost-control`, `simplehost-worker`,
+    `simplehost-agent`
+  - secondary services active: `simplehost-control`, `simplehost-agent`
+  - secondary `simplehost-worker` remains intentionally inactive/disabled
+  - `systemctl --failed` reported no failed units on both nodes
+  - `https://vps-des.pyrosa.com.do:3200/` returned `200 OK`
+
 Remaining Phase 5 maintenance-window items:
 
 - decide whether to install and configure `dnf-automatic`
@@ -1022,8 +1060,8 @@ Remaining Phase 5 maintenance-window items:
 
 ## Current Implementation Order
 
-Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H are complete. Continue in
-this order:
+Phases 1 through 4 and phase 5A/5B/5C/5D/5E/5F/5G/5H/5I are complete.
+Continue in this order:
 
 1. Decide whether to install and configure security-update automation.
 2. Review code-server root-owned service posture and scheduled backup coverage.

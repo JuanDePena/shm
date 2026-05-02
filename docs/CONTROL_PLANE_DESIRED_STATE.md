@@ -44,9 +44,13 @@ Operator decisions recorded on `2026-05-02`:
 
 ## Current Baseline
 
-Sensitive phase-0 artifacts are stored outside the repository under:
+Sensitive phase-0 artifacts were generated outside the repository under:
 
 - `/root/simplehost-control-backups/phase0-20260501/`
+
+That transient `/root` backup directory was removed during the operational
+cleanup on `2026-05-02`; the hashes below remain as the audit record for what
+was generated before the PostgreSQL-only desired-state cutover.
 
 Files:
 
@@ -183,7 +187,9 @@ Implementation notes:
 - the post-deploy reconciliation run generated `0` jobs and left `0` pending
   jobs
 - old `control.env` copies with the retired variable were moved under
-  `/root/simplehost-control-backups/phase0-20260501/env/`
+  `/root/simplehost-control-backups/phase0-20260501/env/` during phase 1, then
+  removed with the rest of the transient `/root` backup directory during the
+  `2026-05-02` operational cleanup
 - `systemctl --failed` on `primary` still reports out-of-band
   `pyrosa-newsync` worker units; they were intentionally not changed by this
   phase because `pyrosa-newsync` is being handled outside the control-plane
