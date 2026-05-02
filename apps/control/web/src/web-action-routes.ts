@@ -5,7 +5,6 @@ import {
   type Fail2BanApplyRequest,
   type FirewallApplyRequest,
   type EnvironmentParameterMutationRequest,
-  type InventoryImportSummary,
   type JobDispatchResponse,
   type PackageInstallRequest,
   type PackageInventoryRefreshRequest
@@ -39,6 +38,13 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
     const token = await requireSessionToken({ requireSession });
     const form = await readFormBody(request);
     const pathValue = form.get("path")?.trim() || config.inventory.importPath;
+    if (!pathValue) {
+      redirect(
+        response,
+        noticeLocation("Inventory import requires an explicit YAML path.", "error")
+      );
+      return true;
+    }
     const result = await api.importInventory(token, pathValue);
     redirect(
       response,

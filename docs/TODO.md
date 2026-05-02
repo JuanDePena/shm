@@ -1,6 +1,6 @@
 # SimpleHost TODO
 
-Updated on `2026-05-01`.
+Updated on `2026-05-02`.
 
 This file tracks work that is still open after the current monorepo, naming, and runtime cutover work.
 Closed work should stay documented as implemented state elsewhere, not linger here.
@@ -22,10 +22,12 @@ Current baseline:
 
 ## Open items
 
-Only active open item as of `2026-05-01`:
+Active open items as of `2026-05-02`:
 
 - Post-migration operational hardening, tuning, and documentation cleanup are tracked in
   [`/opt/simplehostman/src/docs/OPERATIONAL_INSPECTION_20260501.md`](/opt/simplehostman/src/docs/OPERATIONAL_INSPECTION_20260501.md).
+- The control-plane desired-state transition away from YAML catalog inputs is tracked in
+  [`/opt/simplehostman/src/docs/CONTROL_PLANE_DESIRED_STATE.md`](/opt/simplehostman/src/docs/CONTROL_PLANE_DESIRED_STATE.md).
 
 Historical migration runbooks can retain execution records, validation gates, and conditional
 operator notes, but they should not be treated as active TODOs unless this file links to them.

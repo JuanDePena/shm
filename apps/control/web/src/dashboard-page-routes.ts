@@ -28,7 +28,7 @@ import type { OverviewMetricsCollector } from "./overview-metrics.js";
 
 export function createDashboardHandler(args: {
   api: ControlWebApi;
-  defaultImportPath: string;
+  defaultImportPath: string | null;
   overviewMetrics: OverviewMetricsCollector;
   renderLoginPage: (locale: WebLocale, notice?: PanelNotice) => string;
   version: string;

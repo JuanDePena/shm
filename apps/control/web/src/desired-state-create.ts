@@ -42,7 +42,7 @@ export function buildDesiredStateCreateTab<Copy extends DesiredStateCreateCopy>(
   data: DashboardData;
   locale: WebLocale;
   defaultTabId: DesiredStateTabId;
-  defaultImportPath: string;
+  defaultImportPath: string | null;
   tenantOptions: DesiredStateSelectOption[];
   nodeOptions: DesiredStateSelectOption[];
   zoneOptions: DesiredStateSelectOption[];
@@ -369,7 +369,7 @@ export function buildDesiredStateCreateTab<Copy extends DesiredStateCreateCopy>(
           <input
             type="text"
             name="path"
-            value="${escapeHtml(data.inventory.latestImport?.sourcePath ?? defaultImportPath)}"
+            value="${escapeHtml(defaultImportPath ?? "")}"
           />
           <button
             class="secondary"

@@ -12,7 +12,7 @@ export interface CombinedControlReleaseCandidateConfig {
   readonly origin: string;
   readonly environment: string;
   readonly version: string;
-  readonly inventoryImportPath: string;
+  readonly inventoryImportPath: string | null;
   readonly sessionTtlSeconds: number;
   readonly databaseUrlConfigured: boolean;
   readonly jobPayloadSecretConfigured: boolean;

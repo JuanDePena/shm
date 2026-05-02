@@ -100,7 +100,7 @@ import { copyByLocale, type WebCopy } from "./web-copy.js";
 type RenderDashboardArgs = {
   currentPath: string;
   data: DashboardData;
-  defaultImportPath: string;
+  defaultImportPath: string | null;
   desiredStateTab: DesiredStateTabId;
   focus?: string;
   historyReplaceUrl?: string;
@@ -146,7 +146,7 @@ function renderDesiredStateSection(
   copy: WebCopy,
   locale: WebLocale,
   defaultTabId: DesiredStateTabId,
-  defaultImportPath: string,
+  defaultImportPath: string | null,
   focus?: string,
   options: {
     mode?: "full" | "single" | "workspace";
@@ -196,7 +196,7 @@ function renderSingleDesiredStateObjectView(
   copy: WebCopy,
   locale: WebLocale,
   defaultTabId: DesiredStateTabId,
-  defaultImportPath: string,
+  defaultImportPath: string | null,
   focus?: string,
   panelsOnly = false
 ): string {
@@ -211,7 +211,7 @@ function renderDesiredStateObjectWorkspaceView(
   copy: WebCopy,
   locale: WebLocale,
   defaultTabId: DesiredStateTabId,
-  defaultImportPath: string,
+  defaultImportPath: string | null,
   focus: string | undefined,
   workspaceTabId: string,
   workspaceKind?: "apps" | "proxies"

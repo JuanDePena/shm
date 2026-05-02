@@ -27,7 +27,7 @@ export interface ControlWebRuntimeConfig {
   };
   env: string;
   inventory: {
-    importPath: string;
+    importPath: string | null;
   };
   version: string;
   web: {

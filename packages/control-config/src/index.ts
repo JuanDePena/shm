@@ -24,7 +24,7 @@ export interface ControlAuthRuntimeConfig {
 }
 
 export interface ControlInventoryRuntimeConfig {
-  importPath: string;
+  importPath: string | null;
 }
 
 export interface ControlJobRuntimeConfig {
@@ -132,10 +132,7 @@ export function createControlRuntimeConfig(
       sessionTtlSeconds: readPositiveInt(env.SIMPLEHOST_SESSION_TTL_SECONDS, 43200)
     },
     inventory: {
-      importPath: readString(
-        env.SIMPLEHOST_INVENTORY_PATH,
-        "/etc/simplehost/inventory.apps.yaml"
-      )
+      importPath: readOptionalString(env.SIMPLEHOST_INVENTORY_PATH)
     },
     jobs: {
       payloadSecret:

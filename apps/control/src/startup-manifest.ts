@@ -11,7 +11,7 @@ export interface CombinedControlStartupManifest {
     readonly host: string;
     readonly port: number;
   };
-  readonly inventoryImportPath: string;
+  readonly inventoryImportPath: string | null;
   readonly sessionTtlSeconds: number;
   readonly releaseRoot: "/opt/simplehostman/release";
   readonly configSource: "workspace";
@@ -74,7 +74,7 @@ export function formatCombinedControlStartupManifest(
     `Listener: ${manifest.listener.host}:${manifest.listener.port}`,
     `Environment: ${manifest.environment}`,
     `Version: ${manifest.version}`,
-    `Inventory: ${manifest.inventoryImportPath}`,
+    `Inventory import: ${manifest.inventoryImportPath ?? "disabled"}`,
     `Session TTL: ${manifest.sessionTtlSeconds}s`,
     `Release root: ${manifest.releaseRoot}`,
     `Config source: ${manifest.configSource}`,

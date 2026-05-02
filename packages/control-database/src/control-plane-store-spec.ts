@@ -2600,6 +2600,11 @@ export function createControlPlaneSpecMethods(
   return {
     async importInventory(request, presentedToken) {
       const sourcePath = request.path?.trim() || options.defaultInventoryImportPath;
+      if (!sourcePath) {
+        throw new Error(
+          "Inventory import requires an explicit source path because no YAML inventory path is configured as a runtime default."
+        );
+      }
       const inventory = await readPlatformInventory(sourcePath);
       const desiredStateSpec = buildDesiredStateSpecFromInventory(inventory);
       const importedAt = new Date().toISOString();

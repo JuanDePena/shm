@@ -438,7 +438,7 @@ export interface ControlPlaneStoreOptions {
   bootstrapAdminEmail: string | null;
   bootstrapAdminPassword: string | null;
   bootstrapAdminName: string | null;
-  defaultInventoryImportPath: string;
+  defaultInventoryImportPath: string | null;
   jobPayloadSecret: string | null;
 }
 

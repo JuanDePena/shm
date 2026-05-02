@@ -88,7 +88,7 @@ export function renderDesiredStateSection<Copy extends DesiredStateWorkspaceCopy
   copy: Copy;
   locale: WebLocale;
   defaultTabId: DesiredStateTabId;
-  defaultImportPath: string;
+  defaultImportPath: string | null;
   focus?: string;
   options?: DesiredStateSectionOptions;
   formatDate: (value: string | undefined, locale: WebLocale) => string;
