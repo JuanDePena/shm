@@ -19,9 +19,20 @@ export function createMailReleaseBaselineData(): DashboardData {
       userId: "user-1",
       email: "ops@example.com",
       displayName: "Ops",
+      status: "active",
       globalRoles: ["platform_admin"],
-      memberships: []
+      tenantMemberships: []
     },
+    users: [
+      {
+        userId: "user-1",
+        email: "ops@example.com",
+        displayName: "Ops",
+        status: "active",
+        globalRoles: ["platform_admin"],
+        tenantMemberships: []
+      }
+    ],
     overview: {
       generatedAt: "2026-04-21T00:00:00.000Z",
       nodeCount: 1,

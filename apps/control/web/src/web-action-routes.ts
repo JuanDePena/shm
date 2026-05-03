@@ -1,6 +1,8 @@
 import {
   type AppReconcileRequest,
   type CodeServerUpdateRequest,
+  type ControlGlobalRole,
+  type CreateUserRequest,
   type DatabaseReconcileRequest,
   type Fail2BanApplyRequest,
   type FirewallApplyRequest,
@@ -11,9 +13,22 @@ import {
 } from "@simplehost/control-contracts";
 
 import { noticeLocation, noticeReturnTo } from "./api-client.js";
-import { readFormBody, redirect } from "./request.js";
+import { buildDashboardViewUrl } from "./dashboard-routing.js";
+import { readFormBody, redirect, sanitizeReturnTo } from "./request.js";
 import { requireSessionToken } from "./route-helpers.js";
 import type { WebRouteHandler } from "./web-route-context.js";
+
+function buildOperatorFocusReturnTo(returnTo: string, userId: string): string {
+  const safeReturnTo = sanitizeReturnTo(returnTo);
+  const url = new URL(safeReturnTo, "http://localhost");
+
+  if (url.pathname === "/" && url.searchParams.get("view") === "operators") {
+    url.searchParams.set("focus", userId);
+    return `${url.pathname}${url.search}`;
+  }
+
+  return buildDashboardViewUrl("operators", undefined, userId);
+}
 
 export const handleActionWebRoutes: WebRouteHandler = async ({
   request,
@@ -100,6 +115,35 @@ export const handleActionWebRoutes: WebRouteHandler = async ({
     redirect(
       response,
       noticeReturnTo(returnTo, `Deleted parameter ${key}.`, "success")
+    );
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/actions/operators/create") {
+    const token = await requireSessionToken({ requireSession });
+    const form = await readFormBody(request);
+    const returnTo = form.get("returnTo") ?? "/";
+    const email = form.get("email")?.trim() ?? "";
+    const displayName = form.get("displayName")?.trim() || email;
+    const password = form.get("password") ?? "";
+    const requestedGlobalRole = form.get("globalRole")?.trim();
+    const globalRole: ControlGlobalRole =
+      requestedGlobalRole === "platform_admin" ? "platform_admin" : "platform_operator";
+    const requestBody: CreateUserRequest = {
+      email,
+      displayName,
+      password,
+      globalRoles: [globalRole]
+    };
+    const result = await api.createUser(token, requestBody);
+
+    redirect(
+      response,
+      noticeReturnTo(
+        buildOperatorFocusReturnTo(returnTo, result.user.userId),
+        `Created operator ${result.user.email}.`,
+        "success"
+      )
     );
     return true;
   }

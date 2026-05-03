@@ -41,6 +41,12 @@ function createStubApi(
     loadDashboardData: async () => {
       throw new Error("Unexpected dashboard load in test");
     },
+    loadUsers: async () => {
+      throw new Error("Unexpected users load in test");
+    },
+    createUser: async () => {
+      throw new Error("Unexpected user create in test");
+    },
     loadParameters: async () => {
       throw new Error("Unexpected parameters load in test");
     },
@@ -355,6 +361,7 @@ test("logout clears the local session and starts Authentik outpost sign-out for 
 test("parameter and history actions call the authenticated API and return to the dashboard", async () => {
   const savedRequests: Array<{ key: string; value?: string; sensitive?: boolean }> = [];
   const deletedKeys: string[] = [];
+  const createdUsers: Array<{ email: string; displayName: string; globalRoles?: string[] }> = [];
   const handler = createControlWebSurface(
     {
       config: createConfig(),
@@ -380,6 +387,25 @@ test("parameter and history actions call the authenticated API and return to the
       deleteParameter: async (token, key) => {
         assert.equal(token, "test-token");
         deletedKeys.push(key);
+      },
+      createUser: async (token, request) => {
+        assert.equal(token, "test-token");
+        assert.equal(request.password, "temp-pass");
+        createdUsers.push({
+          email: request.email,
+          displayName: request.displayName,
+          globalRoles: request.globalRoles
+        });
+        return {
+          user: {
+            userId: "user-2",
+            email: request.email,
+            displayName: request.displayName,
+            status: "active",
+            globalRoles: request.globalRoles ?? [],
+            tenantMemberships: []
+          }
+        };
       },
       purgeOperationalHistory: async (token) => {
         assert.equal(token, "test-token");
@@ -441,6 +467,25 @@ test("parameter and history actions call the authenticated API and return to the
   assert.equal(purgeResponse.statusCode, 303);
   assert.match(String(purgeResponse.headers.location), /view=reconciliation/);
   assert.match(String(purgeResponse.headers.location), /Purged/);
+
+  const createUserResponse = await invokeRequestHandler(handler, {
+    method: "POST",
+    url: "/actions/operators/create",
+    body: "email=operator%40example.com&displayName=Operator&password=temp-pass&globalRole=platform_operator&returnTo=%2F%3Fview%3Doperators",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+      cookie: "shp_session=test-token"
+    }
+  });
+
+  assert.equal(createUserResponse.statusCode, 303);
+  assert.deepEqual(createdUsers[0], {
+    email: "operator@example.com",
+    displayName: "Operator",
+    globalRoles: ["platform_operator"]
+  });
+  assert.match(String(createUserResponse.headers.location), /view=operators/);
+  assert.match(String(createUserResponse.headers.location), /focus=user-2/);
 });
 
 test("mail validation failures redirect back to the dashboard with an operator-facing notice", async () => {

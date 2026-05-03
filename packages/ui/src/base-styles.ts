@@ -1395,6 +1395,31 @@ export function renderBaseStyleBlock(): string {
           overflow-wrap: anywhere;
           word-break: break-word;
         }
+
+        #section-operators-table .table-col-operator-email {
+          width: 22rem;
+          max-width: 22rem;
+        }
+
+        #section-operators-table .table-col-operator-name {
+          width: 18rem;
+          max-width: 18rem;
+        }
+
+        #section-operators-table .table-col-operator-status {
+          width: 8rem;
+        }
+
+        #section-operators-table .table-col-operator-roles {
+          width: 16rem;
+        }
+
+        #section-operators-table td.table-col-operator-email,
+        #section-operators-table td.table-col-operator-name,
+        #section-operators-table td.table-col-operator-tenants {
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
       }
 
       .node-health-code-server-cell {

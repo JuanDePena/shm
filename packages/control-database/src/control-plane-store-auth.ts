@@ -1078,7 +1078,10 @@ export function createControlPlaneAuthMethods(
 
     async listUsers(presentedToken) {
       return withTransaction(pool, async (client) => {
-        await requireAuthorizedUser(client, presentedToken, ["platform_admin"]);
+        await requireAuthorizedUser(client, presentedToken, [
+          "platform_admin",
+          "platform_operator"
+        ]);
         const result = await client.query<{ user_id: string }>(
           `SELECT user_id
            FROM control_plane_users

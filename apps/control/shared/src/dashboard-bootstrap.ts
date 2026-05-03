@@ -26,6 +26,7 @@ export interface ControlDashboardBootstrap {
   nodeHealth: NodeHealthSnapshot[];
   jobHistory: JobHistoryEntry[];
   auditEvents: AuditEventSummary[];
+  users: AuthenticatedUserSummary[];
   backups: BackupsOverview;
   rustdesk: RustDeskOverview;
   mail: MailOverview;
@@ -47,6 +48,7 @@ export interface ControlDashboardBootstrapLoaders {
   getNodeHealth(token: string): Promise<NodeHealthSnapshot[]>;
   getJobHistory(token: string): Promise<JobHistoryEntry[]>;
   getAuditEvents(token: string): Promise<AuditEventSummary[]>;
+  getUsers(token: string): Promise<AuthenticatedUserSummary[]>;
   getBackups(token: string): Promise<BackupsOverview>;
   getRustDesk(token: string): Promise<RustDeskOverview>;
   getMail(token: string): Promise<MailOverview>;
@@ -72,6 +74,7 @@ export async function loadControlDashboardBootstrap(
     nodeHealth,
     jobHistory,
     auditEvents,
+    users,
     backups,
     rustdesk,
     mail,
@@ -86,6 +89,7 @@ export async function loadControlDashboardBootstrap(
     loaders.getNodeHealth(token),
     loaders.getJobHistory(token),
     loaders.getAuditEvents(token),
+    loaders.getUsers(token),
     loaders.getBackups(token),
     loaders.getRustDesk(token),
     loaders.getMail(token),
@@ -102,6 +106,7 @@ export async function loadControlDashboardBootstrap(
     nodeHealth,
     jobHistory,
     auditEvents,
+    users,
     backups,
     rustdesk,
     mail,
@@ -124,6 +129,7 @@ export async function loadAuthenticatedControlDashboardBootstrap(
     nodeHealth,
     jobHistory,
     auditEvents,
+    users,
     backups,
     rustdesk,
     mail,
@@ -137,6 +143,7 @@ export async function loadAuthenticatedControlDashboardBootstrap(
     loaders.getNodeHealth(session.token),
     loaders.getJobHistory(session.token),
     loaders.getAuditEvents(session.token),
+    loaders.getUsers(session.token),
     loaders.getBackups(session.token),
     loaders.getRustDesk(session.token),
     loaders.getMail(session.token),
@@ -155,6 +162,7 @@ export async function loadAuthenticatedControlDashboardBootstrap(
       nodeHealth,
       jobHistory,
       auditEvents,
+      users,
       backups,
       rustdesk,
       mail,

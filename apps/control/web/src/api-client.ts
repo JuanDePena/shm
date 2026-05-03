@@ -7,6 +7,8 @@ import {
   type AuthLoginResponse,
   type BackupsOverview,
   type CodeServerUpdateRequest,
+  type CreateUserRequest,
+  type CreateUserResponse,
   type DatabaseReconcileRequest,
   type DesiredStateApplyRequest,
   type DesiredStateExportResponse,
@@ -87,6 +89,8 @@ export interface ControlWebApi extends ControlAuthSurface {
     options?: DashboardLoadOptions
   ): Promise<DashboardBootstrap>;
   loadDashboardData(token: string): Promise<DashboardData>;
+  loadUsers(token: string): Promise<AuthenticatedUserSummary[]>;
+  createUser(token: string, request: CreateUserRequest): Promise<CreateUserResponse>;
   loadParameters(token: string): Promise<EnvironmentParametersSnapshot>;
   upsertParameter(
     token: string,
@@ -256,6 +260,8 @@ export function createControlWebApiFromRequest(request: ControlWebApiRequest): C
       ),
     getAuditEvents: (token: string) =>
       request<AuditEventSummary[]>("/v1/audit/events?limit=30", { token }),
+    getUsers: (token: string) =>
+      request<AuthenticatedUserSummary[]>("/v1/users", { token }),
     getBackups: (token: string) =>
       request<BackupsOverview>("/v1/backups/summary", { token }),
     getRustDesk: (token: string) =>
@@ -308,6 +314,16 @@ export function createControlWebApiFromRequest(request: ControlWebApiRequest): C
     },
     async loadDashboardData(token: string): Promise<DashboardData> {
       return api.loadDashboardBootstrap(token);
+    },
+    loadUsers(token: string): Promise<AuthenticatedUserSummary[]> {
+      return request<AuthenticatedUserSummary[]>("/v1/users", { token });
+    },
+    createUser(token: string, createUserRequest: CreateUserRequest): Promise<CreateUserResponse> {
+      return request<CreateUserResponse>("/v1/users", {
+        method: "POST",
+        token,
+        body: createUserRequest
+      });
     },
     loadParameters(token: string): Promise<EnvironmentParametersSnapshot> {
       return request<EnvironmentParametersSnapshot>("/v1/parameters", { token });

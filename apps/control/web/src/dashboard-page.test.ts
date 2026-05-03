@@ -17,6 +17,17 @@ function createDashboardData(): DashboardData {
     globalRoles: ["platform_admin"],
     tenantMemberships: []
   };
+  data.users = [
+    data.currentUser,
+    {
+      userId: "user-2",
+      email: "operator@example.com",
+      displayName: "Operator",
+      status: "active",
+      globalRoles: ["platform_operator"],
+      tenantMemberships: []
+    }
+  ];
   data.parameters = {
     generatedAt: "2026-04-29T00:00:00.000Z",
     parameterCount: 2,
@@ -215,11 +226,15 @@ test("dashboard sidebar renders logical collapsible groups", () => {
   );
   assert.ok(controlPlaneGroup.indexOf(">Overview<") < controlPlaneGroup.indexOf(">Audit<"));
   assert.ok(controlPlaneGroup.indexOf(">Audit<") < controlPlaneGroup.indexOf(">Jobs<"));
-  assert.ok(controlPlaneGroup.indexOf(">Jobs<") < controlPlaneGroup.indexOf(">Parameters<"));
+  assert.ok(controlPlaneGroup.indexOf(">Jobs<") < controlPlaneGroup.indexOf(">Operators<"));
+  assert.ok(
+    controlPlaneGroup.indexOf(">Operators<") < controlPlaneGroup.indexOf(">Parameters<")
+  );
   assert.ok(
     controlPlaneGroup.indexOf(">Parameters<") < controlPlaneGroup.indexOf(">Reconciliation<")
   );
   assert.match(controlPlaneGroup, />Parameters<[\s\S]*sidebar-badge[^>]*>2<\/span>/);
+  assert.match(controlPlaneGroup, />Operators<[\s\S]*sidebar-badge[^>]*>2<\/span>/);
 
   const continuityGroup = html.slice(
     html.indexOf('data-nav-group-id="continuity"'),
@@ -954,6 +969,17 @@ test("parameters table favors value width over key width", () => {
   assert.match(tableHtml, /table-col-parameter-key/);
   assert.match(tableHtml, /table-col-parameter-value/);
   assert.doesNotMatch(tableHtml, /table-col-runtime-text-compact/);
+});
+
+test("operators workspace lists control-plane users and create form", () => {
+  const html = renderView(createDashboardData(), "operators", "user-2");
+
+  assert.match(html, /id="section-operators"/);
+  assert.match(html, /operator@example\.com/);
+  assert.match(html, />Selected</);
+  assert.match(html, /action="\/actions\/operators\/create"/);
+  assert.match(html, /name="globalRole"/);
+  assert.match(html, /Platform operator/);
 });
 
 test("storage workspace shows selected node tracked path usage beside storage detail", () => {

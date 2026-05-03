@@ -17,6 +17,7 @@ export const navigationCopyByLocale = {
     navDrift: "Resource drift",
     navJobs: "Jobs",
     navParameters: "Parameters",
+    navOperators: "Operators",
     navBackups: "Backups",
     navRustDesk: "RustDesk",
     navUpdates: "Updates",
@@ -106,6 +107,8 @@ export const navigationCopyByLocale = {
       "Monitor jails, failed attempts and bans, then apply the managed SSH jail baseline.",
     parametersWorkspaceDescription:
       "Runtime environment parameters plus UI-managed entries for control-plane operations.",
+    operatorsWorkspaceDescription:
+      "Control-plane users, global roles and access posture for administrative operators.",
     reconciliationWorkspaceDescription:
       "Compare desired resources with the latest applied state and dispatch missing platform work.",
     rustdeskWorkspaceDescription:
@@ -126,6 +129,7 @@ export const navigationCopyByLocale = {
     navDrift: "Drift de recursos",
     navJobs: "Jobs",
     navParameters: "Parameters",
+    navOperators: "Operadores",
     navBackups: "Backups",
     navRustDesk: "RustDesk",
     navUpdates: "Updates",
@@ -220,6 +224,8 @@ export const navigationCopyByLocale = {
       "Monitorea jails, intentos fallidos y bans, y aplica el baseline SSH gestionado.",
     parametersWorkspaceDescription:
       "Variables de entorno runtime y entradas gestionadas desde UI para operaciones del control plane.",
+    operatorsWorkspaceDescription:
+      "Usuarios del control plane, roles globales y postura de acceso para operadores administrativos.",
     reconciliationWorkspaceDescription:
       "Compara recursos deseados con el último estado aplicado y despacha trabajo faltante de plataforma.",
     rustdeskWorkspaceDescription:
